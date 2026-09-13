@@ -27,7 +27,7 @@ Fleet verbs (what cyberfleet owns):
   CLI (the relayed-ratification seam).
 
 The mechanism — unit, mail, unit spawn/close, surfacing — was **extracted into
-`cyberlegion`** (`../../../cyberlegion/.agents/spec/`). A fleet persona runs those verbs directly:
+`cyberlegion`** (https://github.com/cyberuni/cyberlegion/blob/main/packages/cyberlegion/.agents/spec/). A fleet persona runs those verbs directly:
 `cyberlegion unit register`, `cyberlegion mail send`/`inbox`/`read`, `cyberlegion unit
 spawn`/`close`. cyberfleet no longer describes them.
 

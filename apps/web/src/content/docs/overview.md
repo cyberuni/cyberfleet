@@ -44,7 +44,7 @@ The usual way to wire agents together is MCP — which means running a server: a
 ## Installation
 
 ```bash
-npx skills add cyberuni/cyberplace --plugin cyberfleet --global
+npx skills add cyberuni/cyberfleet --global
 ```
 
 Optionally install the `cyberfleet` CLI globally to run it from the command line:

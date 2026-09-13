@@ -88,7 +88,7 @@ port to hold open, config to add to every harness. cyberfleet needs none of it.
 Install the plugin:
 
 ```bash
-npx skills add cyberuni/cyberplace --plugin cyberfleet --global
+npx skills add cyberuni/cyberfleet --global
 ```
 
 The automatons call the `cyberlegion` CLI for identity, mail, and spawning, so install that too:

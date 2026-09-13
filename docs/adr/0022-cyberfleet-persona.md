@@ -31,7 +31,7 @@ references converged:
 - **NieR: Automata** — the Pod (a bridge companion that greets, briefs, and escorts) versus the
   Bunker's operators (6O, 21O — command-center voices that route and dispatch, never in the field).
 
-That maps cleanly onto SDD's existing fleet metaphor (`apps/website/src/content/docs/sdd/metaphor.md`):
+That maps cleanly onto SDD's existing fleet metaphor (https://github.com/cyberuni/cyber-sdd/blob/main/apps/web/src/content/docs/sdd/metaphor.md):
 the Council is already the human/fleet-command role; the metaphor already retired a spawned
 "Operator" that ran missions with no channel to command. The persona layer must reuse "Council"
 as-is and must not resurrect "Operator" in that retired sense.
@@ -103,7 +103,7 @@ Adopt **Option 3**.
    which retires the "activates when the working directory is **not** a ship" framing this decision
    originally carried, and retires "init a first ship" with the `init` verb itself.
    SDD previously retired a role also named "Operator" (a spawned mission-runner with no channel to
-   command, per `apps/website/src/content/docs/sdd/metaphor.md`). That word is free to reuse here
+   command, per https://github.com/cyberuni/cyber-sdd/blob/main/apps/web/src/content/docs/sdd/metaphor.md). That word is free to reuse here
    because the new Operator is the opposite shape — always attended, always has the channel, never
    spawned headless — but the historical ghost is worth flagging so nobody conflates the two.
 
@@ -301,5 +301,5 @@ verbs. **Do not reintroduce an on-disk marker without a consumer that genuinely 
   the `cyberspace` project spec, independent of SDD's own spec; the intent-not-slug discipline
   applies to how this ADR references SDD's fleet metaphor.
 
-**Fleet metaphor reference:** `apps/website/src/content/docs/sdd/metaphor.md` — the Council,
+**Fleet metaphor reference:** https://github.com/cyberuni/cyber-sdd/blob/main/apps/web/src/content/docs/sdd/metaphor.md — the Council,
 the retired Operator, and the leash this ADR's persona layer builds on top of, unmodified.

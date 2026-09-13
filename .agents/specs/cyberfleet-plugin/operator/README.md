@@ -37,7 +37,7 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
   outlives any session: worktrees and panes come and go, and invoking the skill *connects* this
   session to the standing command center rather than standing up a new one. The two objects that
   model it are the standing owner `operator` and its bound presence, both specified in the sibling
-  `cyberlegion` project (`../../../../packages/cyberlegion/.agents/spec/unit/registry/` — standing
+  `cyberlegion` project (https://github.com/cyberuni/cyberlegion/blob/main/packages/cyberlegion/.agents/spec/unit/registry/ — standing
   records and
   `unit claim`). Operator's decisions over them: on connecting it registers this session **under its
   own handle** and takes the claim. It never registers *as* `operator` — an identity keyed on the
@@ -76,7 +76,7 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
 - **Route messages between ships** — when a message must cross ships, `cyberlegion mail send --to
   <handle>`, `cyberlegion mail inbox --unread`, `cyberlegion mail read <msg-id>`, always addressed by handle,
   never a raw id. **Delivery and the doorbell are two outcomes, not one** (the wake never fails the
-  send — `../../../../packages/cyberlegion/.agents/spec/mail/doorbell/`): so Operator reports a send
+  send — https://github.com/cyberuni/cyberlegion/blob/main/packages/cyberlegion/.agents/spec/mail/doorbell/): so Operator reports a send
   whose doorbell went unrung as **delivered**, and does not resend it; only a send that resolved to
   no live unit is undelivered. Reading an unrung doorbell as a failed send is how a working seam gets
   reported as broken.
