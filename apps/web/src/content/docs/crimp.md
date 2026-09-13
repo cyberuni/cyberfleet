@@ -17,6 +17,6 @@ Crew don't come bundled. The **Crimp** recruits them from the [**Tavern**](/tave
 
 ## Related
 
-- [Tavern](/tavern/) — the crew storefront the Crimp recruits from
+- [Tavern](https://cyberuni.github.io/cyberplace/tavern/) — the crew storefront the Crimp recruits from
 - [Mechanic](/cyberfleet/mechanic/) — builds and adjusts automatons, including a crew once it's aboard
 - [cyberfleet Overview](/cyberfleet/overview/)

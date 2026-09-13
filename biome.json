@@ -1,0 +1,35 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.9/schema.json",
+	"extends": ["@repobuddy/biome/recommended"],
+	"files": {
+		"includes": [
+			"!**/dist",
+			"!**/node_modules",
+			"!**/.turbo",
+			"!skills-lock.json",
+			"!.agents",
+			"!**/.astro",
+			"!.cyberfleet",
+			"!plugins/cyberfleet/.claude-plugin/plugin.json",
+			"!plugins/cyberfleet/.codex-plugin/plugin.json",
+			"!.claude-plugin/marketplace.json"
+		]
+	},
+	"overrides": [
+		{
+			"includes": ["packages/cyberfleet/src/**/*.ts"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noConsole": {
+							"level": "error",
+							"options": {
+								"allow": ["log", "info", "warn", "error"]
+							}
+						}
+					}
+				}
+			}
+		}
+	]
+}

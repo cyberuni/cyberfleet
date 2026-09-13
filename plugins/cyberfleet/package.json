@@ -1,7 +1,6 @@
 {
-	"name": "@cyberplace/cyberfleet-plugin",
+	"name": "@cyberuni/cyberfleet-plugin",
 	"private": true,
 	"version": "0.0.0",
-	"type": "module",
-	"scripts": {}
+	"type": "module"
 }

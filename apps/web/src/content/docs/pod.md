@@ -11,7 +11,7 @@ The **Pod** is the bridge-companion of a ship. It greets you when you board, cle
 
 ## What it does
 
-- Surfaces the mission state derived from [SDD](/sdd/overview/).
+- Surfaces the mission state derived from [SDD](https://cyberuni.github.io/cyber-sdd/sdd/overview/).
 - Clears the ship's inbox — reads and acknowledges pending mail from other ships.
 - Drives the mission forward. When work should fan out, it tells you spawning a worktree-ship is the Operator's job, which you invoke directly.
 

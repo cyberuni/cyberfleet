@@ -3,7 +3,7 @@ title: cyberfleet Overview
 description: A harness-agnostic, MCP-free way to direct a fleet of AI agents across your projects — Pod, Operator, Crimp, and Mechanic over the cyberfleet console.
 ---
 
-**cyberfleet** is a harness-agnostic, MCP-free way to direct a fleet of AI agents across your projects. It is the fleet-persona layer on top of [cyberlegion](/cyberlegion/overview/) — it carries only fleet-specific logic (ships, missions, and the Council view, derived from [SDD](/sdd/overview/) state), while the mechanism verbs (register, send, spawn, prune, …) run through the `cyberlegion` console underneath.
+**cyberfleet** is a harness-agnostic, MCP-free way to direct a fleet of AI agents across your projects. It is the fleet-persona layer on top of [cyberlegion](https://cyberuni.github.io/cyberlegion/) — it carries only fleet-specific logic (ships, missions, and the Council view, derived from [SDD](https://cyberuni.github.io/cyber-sdd/sdd/overview/) state), while the mechanism verbs (register, send, spawn, prune, …) run through the `cyberlegion` console underneath.
 
 You're the **Council** — the human. You give directions and make decisions; the fleet is autonomous and carries them out.
 
@@ -55,6 +55,6 @@ npm install -g cyberfleet
 
 ## Related
 
-- [cyberlegion Overview](/cyberlegion/overview/) — the mechanism layer cyberfleet builds on
-- [Tavern](/tavern/) — the storefront of installable crews the Crimp recruits from
-- [SDD Overview](/sdd/overview/) — the mission state the Council view is derived from
+- [cyberlegion Overview](https://cyberuni.github.io/cyberlegion/) — the mechanism layer cyberfleet builds on
+- [Tavern](https://cyberuni.github.io/cyberplace/tavern/) — the storefront of installable crews the Crimp recruits from
+- [SDD Overview](https://cyberuni.github.io/cyber-sdd/sdd/overview/) — the mission state the Council view is derived from
