@@ -7,7 +7,7 @@ Part of the [cyberfleet plugin](/cyberfleet/overview/) — see that page for ins
 
 **Trigger:** invoked when the Council wants to **recruit, browse, or discharge a crew** — a marketplace persona type. Not for spawning a ship instance ([Operator](/cyberfleet/operator/)), building or tuning an automaton ([Mechanic](/cyberfleet/mechanic/)), or authoring a plain workflow skill from scratch.
 
-Crew don't come bundled. The **Crimp** recruits them from the [**Tavern**](/tavern/), the storefront of installable **crews** — each a specialist you command through its own persona. Browse the roster, pick the hands you need, and the Crimp signs them on.
+Crew don't come bundled. The **Crimp** recruits them from the [**Tavern**](https://cyberuni.github.io/cyberplace/tavern/), the storefront of installable **crews** — each a specialist you command through its own persona. Browse the roster, pick the hands you need, and the Crimp signs them on.
 
 ## What it does
 

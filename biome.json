@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.5.9/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.5.13/schema.json",
 	"extends": ["@repobuddy/biome/recommended"],
 	"files": {
 		"includes": [
@@ -12,6 +12,7 @@
 			"!.cyberfleet",
 			"!plugins/cyberfleet/.claude-plugin/plugin.json",
 			"!plugins/cyberfleet/.codex-plugin/plugin.json",
+			"!plugins/cyberfleet/.plugin/plugin.json",
 			"!.claude-plugin/marketplace.json"
 		]
 	},
