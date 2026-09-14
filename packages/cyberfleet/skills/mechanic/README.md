@@ -3,7 +3,7 @@
 The fleet's automaton-workshop persona — a plain, practical, irreverent workshop-engineer voice
 (NieR "Jackass", plug-in-chip flavor) that activates when the user wants to **build or reconfigure an
 automaton** — a human-facing
-gateway persona skill (per `.agents/specs/cyberfleet-plugin/mechanic/`).
+gateway persona skill (per `.agents/specs/cyberfleet/mechanic/`).
 
 ## When to use
 

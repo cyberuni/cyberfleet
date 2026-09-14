@@ -28,40 +28,65 @@ approval:
       cr: operator-command-center-vocab
 ---
 
-# cyberfleet-plugin — the fleet & crew personas (agent behavior)
+# cyberfleet — the fleet layer over cyberlegion
 
-> Root project spec — the **descriptive** top index for the `cyberfleet` **plugin** (the marketplace
-> distribution at `packages/cyberfleet`). Behaviors live in the capability folders below. This
-> project was split out of the combined `cyberfleet` project by the `split-cyberfleet-spec` change,
-> so the spec maps one-to-one onto the plugin. The deterministic engine — the `cyberfleet` CLI —
-> lives in the sibling `cyberfleet` project (`../../../packages/cyberfleet/.agents/spec`, source
-> `packages/cyberfleet`).
+> Root project spec — the **descriptive** top index for the `cyberfleet` package
+> (`packages/cyberfleet`). The package is both the npm CLI and the agent plugin root, so this one
+> project covers both halves: the deterministic `cyberfleet` CLI and the fleet & crew personas that
+> reach for it. The spec stays **central** (`.agents/specs/`) rather than co-located in the package,
+> which keeps it out of the installed plugin and inside the `.agents/specs/` scan that
+> `cyberfleet missions` reads. The two halves were one project, split by `split-cyberfleet-spec`,
+> and merged back when the plugin moved into the npm package.
 
 ## What this is
 
-The `cyberfleet` plugin ships the **persona layer** of the fleet: the agent-behavior that decides
+The `cyberfleet` **CLI** turns the metaphor-free `cyberlegion` mechanism (spawn a session, carry
+mail, identify peers) into a **fleet** view: ships, missions, and the Council. It **depends up** on
+`cyberlegion` — the harness-agnostic, MCP-free primitive that owns session lifecycle, the file
+mailbox, identity/registry, and hook surfacing. cyberfleet adds nothing to that mechanism; it wraps
+it in the fleet's own operations.
+
+The `cyberfleet` **plugin** ships the **persona layer** of the fleet: the agent-behavior that decides
 *when* and *how* an agent reaches for the fleet, recruits or discharges a crew, and builds or
-re-tunes an automaton. Every node here is a per-situation persona gateway skill (ACED carries all four
+re-tunes an automaton. Every persona node is a per-situation gateway skill (ACED carries all four
 eval layers — activation and judgment). Each persona offloads its mechanics to a CLI — `cyberlegion`
 for identity, mail, and spawn; `cyberfleet` for missions — and keeps its voice only in what it says
 around them. Where a mechanic belongs to neither (the merge backstop's `gh`/git/CI), it is offloaded
 to that tool, never re-implemented.
 
-The persona nodes depend on their CLIs by **intent** — register / send / spawn / inbox (the
-`cyberlegion` CLI) and the missions view (the `cyberfleet` CLI) for the fleet personas, and the
-Tavern query / define-agent / manage-model-runners for the crew personas — never by an exact command
-slug (ADR-0021). The dependency is one-way: neither CLI knows anything of these personas.
+A **ship** is a working session an agent runs a mission in. It is **not** a marked directory: there
+is no on-disk ship marker and no mode detection (#225 — `init`/`mode` deleted; the marker gated no
+capability and its only reader was the command that reported it). A session's fleet membership is its
+`cyberlegion unit register` record, which is what `missions` actually enumerates — the registry is
+the only membership fact, and there is no second one on disk. **Command-center** survives only as the
+Operator persona's connection, asserted by invoking that skill; it is not a detectable state of a
+folder. **Fleet** (a group of ships) is a deferred concept — undefined until an operation needs to act
+on one.
 
-## Why this is its own project
+Every dependency is **by intent** (ADR-0021). The CLI imports `cyberlegion` as a library for its own
+verbs and does **not** re-expose the mechanism verbs — that duplication is exactly what the extraction
+removed. The personas run register / send / spawn / inbox against the `cyberlegion` CLI, the missions
+view against the `cyberfleet` CLI, and the Tavern query / define-agent / manage-model-runners for the
+crew personas — never by an exact command slug. The dependency is one-way: neither CLI knows
+anything of the personas.
 
-The `cyberfleet` plugin and the `cyberfleet` CLI are **two packages that deploy differently** — the
-plugin ships to the marketplace, the CLI ships to npm — and the plugin carries genuine agentic
-behavior (spawn judgment, message etiquette, persona voice, crew recruitment/tuning) the CLI cannot.
-Three axes agree on the same cut: artifact-type (agent-behavior vs deterministic script), deploy
-target (marketplace vs npm), and package (`plugins/cyberfleet` vs `packages/cyberfleet`). This
-project holds the four agent-behavior nodes; the four deterministic CLI nodes are the sibling
-`cyberfleet` project. The plugin spec stays **central** (`.agents/specs/`) rather than co-located
-under `packages/cyberfleet` so it is not carried inside the distributed marketplace artifact.
+## What the CLI owns (fleet verbs)
+
+Only the verbs with genuine fleet logic live here — everything else is `cyberlegion`'s:
+
+| Verb | What |
+|---|---|
+| `cyberfleet missions` | the Council view — ships × mission × gate × leash, **derived from SDD state** (the one place cyberfleet reads SDD) |
+| `cyberfleet jump <peer>` | select/focus a ship's session (tmux pane), or print its worktree path to `cd` into |
+| `cyberfleet pause <peer>` | flip a ship record to `status: paused` — a marker only (**not** a bridge to SDD's `pause-mission` checkpoint; that gap is flagged, never papered over) |
+| `cyberfleet gate approve` | **stubbed** — a human ratification cannot be safely relayed through this CLI (the relayed-ratification seam); it prints what it would write and exits non-zero |
+
+## Where the mechanism went
+
+The identity / messaging / session-spawn / decommission / surfacing behaviors were **extracted into
+`cyberlegion`** (`packages/cyberlegion/.agents/spec/` — nodes `identity`/`mail`/`session`/
+`surfacing`, plus `dispatch`/`wake`/`agent`). Those are the canonical, frozen behavioral scenarios
+now; cyberfleet no longer owns or re-describes them.
 
 ## Capability map
 
@@ -72,6 +97,8 @@ under `packages/cyberfleet` so it is not carried inside the distributed marketpl
 | [`recruitment/`](./recruitment/README.md) | behavioral | the **Crimp** persona — recruit/discharge crew types from the Tavern (browse, install, register; uninstall, retire) |
 | [`mechanic/`](./mechanic/README.md) | behavioral | the **Mechanic** persona — build a new automaton or adjust an existing one's program (governance/model/effort/leash), re-chip its loadout, hot-swap the unit |
 
+The CLI verbs have no nodes yet — see the backfill gap below.
+
 ## Placement map
 
 Where a new concept lives — slot here, do not invent placement:
@@ -80,29 +107,45 @@ Where a new concept lives — slot here, do not invent placement:
   Pod does while working a ship) → `pod/` (the Pod persona).
 - **a new fleet-level dispatch behavior** (**any** spawn, list the fleet, route between ships, prune
   — anything the Council calls Operator for) → `operator/` (the Operator persona).
-- **a "which persona am I" concern** → **nowhere — there is no such concern.** Neither persona probes
-  its folder. Operator connects to the command center by invocation; Pod is reached by the Council's
-  ask. The ship marker and `cyberfleet mode` were deleted (#225) because the marker gated no
-  capability and its only reader was the command that reported it. Do not reintroduce a location
-  check in either node.
+- **a "which persona am I" concern, a ship-commissioning or mode-detection operation** →
+  **nowhere — the concept is retired** (#225). Neither persona probes its folder. Operator connects
+  to the command center by invocation; Pod is reached by the Council's ask. There is no ship marker
+  to write or read and no ship-vs-command-center state to report. Do not reintroduce a location
+  check in either node, or an on-disk marker without a consumer that genuinely gates on it.
 - **a new crew-acquisition persona behavior** (recruit/discharge a crew type — browse the Tavern,
   install/register, uninstall/retire) → `recruitment/` (the Crimp persona).
 - **a new automaton-workshop persona behavior** (build a new automaton, or adjust an existing one's
   program — governance/model/effort/leash — re-chip its loadout, hot-swap the unit) → `mechanic/`
   (the Mechanic persona).
-- **a new identity / message-queue / peer-launch / hook-injection CLI operation** → **not here** —
-  that is the `cyberlegion` CLI project (`packages/cyberlegion`). A new mission-view / gate CLI
-  operation is the `cyberfleet` CLI project (`packages/cyberfleet`).
+- **a new Council/mission-view CLI operation** (joining ships to SDD mission/gate/leash state) → the
+  `missions` surface — the only place cyberfleet reads SDD — as a new CLI node when backfilled.
+- **a new ship-navigation CLI operation** (focus a pane, resolve a worktree path) → the `jump`
+  surface, as a new CLI node when backfilled.
+- **a new identity / message-queue / peer-launch / hook-injection / dispatch / wake operation** →
+  **not here** — that is the `cyberlegion` project (`packages/cyberlegion`). cyberfleet depends up on
+  it.
+- **a fleet-level operation over a group of ships** (act on a particular fleet) → **deferred** — the
+  **fleet** grouping (which ships form a fleet) is not defined until the first such verb needs it.
 - **a cross-capability persona e2e** (spans ≥2 persona nodes) → this project's own e2e; a future
   `acceptance/` node may formalize it.
 
 The nesting rule: capabilities at the top; any layering nests *inside* a capability, never as a
 top-level folder. A node is `<capability>` and never nested. Two cross-cutting concerns run through
-this project (see the by-concept index below): `fleet` (the session-coordination personas — pod and
-operator) and `crew-ops` (the crew-operations personas that recruit and tune **crew** — recruitment (Crimp)
-and build+tune (Mechanic)). Note the distinction: a **crew** is a recruited specialist automaton (what
-Crimp signs on from the Tavern); `crew-ops` is the concern of *operating on* crew, not the crew
-itself.
+the persona nodes (see the by-concept index below): `fleet` (the session-coordination personas — pod
+and operator) and `crew-ops` (the crew-operations personas that recruit and tune **crew** —
+recruitment (Crimp) and build+tune (Mechanic)). Note the distinction: a **crew** is a recruited
+specialist automaton (what Crimp signs on from the Tavern); `crew-ops` is the concern of *operating
+on* crew, not the crew itself.
+
+## Backfill gap (known)
+
+Every CLI verb — `missions` / `jump` / `pause` / `gate approve` — is **implemented** (in
+`src/cli.ts`, `src/missions.ts`, with smoke coverage in `src/cli.test.ts`) but **not captured as a
+behavioral node**. The `init/` and `mode/` nodes were deleted by #225 along with the verbs they
+specified. Backfilling the remaining verbs (with `.feature` suites) is a future change request;
+`pause` and `gate approve` carry open design questions (dissolve-vs-bridge, the relayed-ratification
+seam) to settle at that time. `missions` is the highest-value backfill: it is now the CLI's whole
+reason to exist, and the `hal` field it derives is load-bearing for the Pod persona.
 
 <!-- BEGIN generated: by-concept (project-spec/concept-index) -->
 

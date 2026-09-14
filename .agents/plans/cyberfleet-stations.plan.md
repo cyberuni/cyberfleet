@@ -8,7 +8,7 @@ todos:
     status: pending
   - content: "CR-i adapter growth: SessionAdapter open({surface:'tab'|'pane'}) + status() busy-state + watch(); tmux concrete, herdr flagged-unverified"
     status: pending
-  - content: "CR-ii station node: cyberfleet station open/list/reset/close; AgentRecord gains role/station/tab-id; new packages/cyberfleet/.agents/spec/station/ node"
+  - content: "CR-ii station node: cyberfleet station open/list/reset/close; AgentRecord gains role/station/tab-id; new .agents/specs/cyberfleet/station/ node"
     status: pending
   - content: "CR-iii dispatch/nudge/send --nudge + write-lease + event watcher (cyberfleet watch), wired to CR-0 await --thread; cold-spawn fallback = CR-c channel backend"
     status: pending
@@ -71,7 +71,7 @@ Pod (`packages/cyberfleet/skills/pod/SKILL.md`) gains decisions, mechanics stay 
 
 ## Landing (spec-first)
 
-SDD CRs against `packages/cyberfleet/.agents/spec/` (new `station/` node) + `cyberfleet-plugin` spec for Pod. Sequence after CR-0, alongside/after CR-c. Slices CR-i..CR-iv per todos. Prefer TS/npx; delegate concrete builds to sonnet; main loop orchestrates/reviews/commits. `pnpm verify` at repo root before push.
+SDD CRs against the `cyberfleet` spec (`.agents/specs/cyberfleet/` — a new `station/` node, plus the Pod node). Sequence after CR-0, alongside/after CR-c. Slices CR-i..CR-iv per todos. Prefer TS/npx; delegate concrete builds to sonnet; main loop orchestrates/reviews/commits. `pnpm verify` at repo root before push.
 
 ## Verification
 
@@ -82,4 +82,4 @@ SDD CRs against `packages/cyberfleet/.agents/spec/` (new `station/` node) + `cyb
 
 ## NEXT
 
-Design is complete and captured here; nothing built yet. First actionable step is **sequencing**: this initiative is blocked on the Tender program's CR-0 (`await --thread`) and rides the CR-c dispatch seam (ADR-0023) — confirm those land first, then open **CR-i** (adapter growth: `surface:tab|pane` + `status` + `watch`) via `sdd:start-mission` against `packages/cyberfleet/.agents/spec/`. Amend ADR-0022 decision 8 as part of CR-ii (the worktree->tabs relaxation + write-lease). Open question to resolve at CR-i: herdr's actual window/tab + event-feed CLI (adapter is unverified against a live binary).
+Design is complete and captured here; nothing built yet. First actionable step is **sequencing**: this initiative is blocked on the Tender program's CR-0 (`await --thread`) and rides the CR-c dispatch seam (ADR-0023) — confirm those land first, then open **CR-i** (adapter growth: `surface:tab|pane` + `status` + `watch`) via `sdd:start-mission` against `.agents/specs/cyberfleet/`. Amend ADR-0022 decision 8 as part of CR-ii (the worktree->tabs relaxation + write-lease). Open question to resolve at CR-i: herdr's actual window/tab + event-feed CLI (adapter is unverified against a live binary).

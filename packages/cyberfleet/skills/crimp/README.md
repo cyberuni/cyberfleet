@@ -3,7 +3,7 @@
 The fleet's crew-recruitment persona — a tavern recruiter, warm and transactional, sizing the
 Council up across the bar, that activates
 when the Council wants to acquire or retire a crew **type** (a marketplace entry that ships an
-installable persona gateway skill, per `.agents/specs/cyberfleet-plugin/recruitment/`).
+installable persona gateway skill, per `.agents/specs/cyberfleet/recruitment/`).
 
 ## When to use
 

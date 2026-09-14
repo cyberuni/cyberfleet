@@ -1,20 +1,41 @@
-# cyberfleet plugin — the fleet & crew personas (agent behavior)
+# cyberfleet — the fleet layer over cyberlegion
 
-The **persona layer** of the fleet: the agent-behavior that decides *when* and *how* an agent
-reaches for the fleet, recruits or discharges a crew, and builds or re-tunes an automaton. Shipped
-as the `cyberfleet` plugin (`packages/cyberfleet`), distributed to the marketplace.
+One project for the `cyberfleet` package (`packages/cyberfleet`), which is both the npm CLI and the
+agent plugin root.
 
-Every node here is a per-situation persona gateway skill (ACED carries all four eval layers —
+The **CLI** turns the metaphor-free `cyberlegion` mechanism (spawn a session, carry mail, identify
+peers, surface mail) into a **fleet** view: ships, missions, and the Council. It **depends up** on
+`cyberlegion` and adds only the fleet-specific verbs — it does **not** re-expose the mechanism:
+
+- **`cyberfleet missions`** — the Council view: ships × mission × gate × leash, derived from SDD
+  state (the one place cyberfleet reads SDD).
+- **`cyberfleet jump <peer>`** — focus a ship's session pane, or print its worktree path to `cd`
+  into.
+- **`cyberfleet pause <peer>`** — flip a ship record to `status: paused` (a marker only, not the SDD
+  `pause-mission` checkpoint — that gap is flagged).
+- **`cyberfleet gate approve`** — stubbed; a human ratification is not safely relayable through this
+  CLI (the relayed-ratification seam).
+
+A **ship** is a working session an agent runs a mission in — not a marked directory. There is no ship
+marker and no mode detection: `init` and `mode` were deleted (#225) because the marker gated no
+capability and its only reader was the command that reported it. A session joins the fleet by
+registering (`cyberlegion unit register`); that record is what `missions` enumerates.
+
+The **plugin** is the **persona layer** of the fleet: the agent-behavior that decides *when* and
+*how* an agent reaches for the fleet, recruits or discharges a crew, and builds or re-tunes an
+automaton.
+
+Every persona node here is a per-situation persona gateway skill (ACED carries all four eval layers —
 activation and judgment). Each persona offloads its mechanics to a CLI — `cyberlegion` for identity,
 mail, and spawn; `cyberfleet` for missions — and keeps its voice only in what it says around them.
 Where a mechanic belongs to neither (the merge backstop's `gh`/git/CI), it is offloaded to that tool,
 never re-implemented.
 
-This project is the **plugin half**. The deterministic engines are two sibling CLI projects: the
-`cyberfleet` CLI (the SDD-derived mission view + gates — `../../../packages/cyberfleet/.agents/spec`,
-source `packages/cyberfleet`) and the `cyberlegion` CLI (identity, mail, spawn, mux —
-https://github.com/cyberuni/cyberlegion/blob/main/packages/cyberlegion/.agents/spec, source `packages/cyberlegion`). These personas depend on
-both by **intent**, never by their command slugs (ADR-0021); the dependency is one-way.
+The personas depend on two CLIs: this project's own `cyberfleet` CLI (the SDD-derived mission view
++ gates) and the `cyberlegion` CLI (identity, mail, spawn, mux —
+https://github.com/cyberuni/cyberlegion/blob/main/packages/cyberlegion/.agents/spec, source
+`packages/cyberlegion`). They depend on both by **intent**, never by their command slugs (ADR-0021);
+the dependency is one-way.
 
 The end-to-end path the fleet personas orchestrate — register, spawn a peer, message, surface —
 with the filesystem as the only shared state and no process between the two sessions:
@@ -76,5 +97,6 @@ A concrete in-session handler for the leash route stays a deferred non-blocking 
 project has its own cross-capability persona e2e; a future `acceptance/` node may formalize it.
 
 Squad note: all four nodes are agent-behavior (ACED carries all four eval layers — activation and
-judgment). The deterministic CLI behaviors (SDD-default + a script harness — boolean scenarios, no
-rubric) are the sibling `cyberfleet` CLI project.
+judgment). The CLI verbs are deterministic behaviors (SDD-default + a script harness — boolean
+scenarios, no rubric), and none is captured as a node yet: `missions` / `jump` / `pause` /
+`gate approve` remain **implemented but not backfilled** (a known gap — see `spec.md`).
