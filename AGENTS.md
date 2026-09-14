@@ -72,7 +72,8 @@ as one package that is both the npm CLI and the agent plugin root:
   only in what it says around them.
 
 The npm package root doubles as the plugin root, so an installed plugin carries the CLI with it.
-The CLI is still a deterministic mechanism, and the plugin is the agent-behavior layer built on
+The CLI build inlines every runtime dependency (`tsdown.config.ts`), so it runs from a plugin
+directory that has no `node_modules`. The CLI is still a deterministic mechanism, and the plugin is the agent-behavior layer built on
 top of it (and on `cyberlegion` directly).
 
 It is deliberately **not** an MCP server. Coordination acts on filesystem state under a shared
