@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -52,6 +52,12 @@ function seedShip(id: string, handle: string, extra: Record<string, unknown> = {
 }
 
 describe('cli wiring', () => {
+	it('--version reports the package version', () => {
+		const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+		const out = execFileSync('node', [BIN, '--version'], { encoding: 'utf8' })
+		expect(out.trim()).toBe(pkg.version)
+	})
+
 	it('--help lists only the fleet verb surface (no mechanism verbs)', () => {
 		const out = execFileSync('node', [BIN, '--help'], { encoding: 'utf8' })
 		for (const verb of ['missions', 'jump', 'pause', 'gate']) {

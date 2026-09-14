@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readFileSync } from 'node:fs'
 import { Command, Option } from 'commander'
 import {
 	type AgentRecord,
@@ -60,11 +61,14 @@ const rootOpts = (cmd: Command) =>
 		.option('--space <path>', 'alias for --root')
 		.addOption(new Option('--format <format>', 'output format').choices(['toon', 'json']).default('toon'))
 
+// src/ and dist/ sit at the same depth, and package.json ships, so this resolves from both.
+const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string }
+
 const program = new Command()
 program
 	.name('cyberfleet')
 	.description('Fleet layer over cyberlegion — ships, missions, and the Council view')
-	.version('0.0.0')
+	.version(version)
 
 rootOpts(program.command('missions'))
 	.description("who needs the Council's hands — ships × mission × gate × leash, derived from SDD state")
