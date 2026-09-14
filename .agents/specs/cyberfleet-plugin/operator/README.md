@@ -8,7 +8,7 @@ concept: [fleet]
 **Operator** is the dispatcher automaton of the **fleet** — it works the command center, spawning
 every ship, listing who's out there, routing messages between sessions, and sweeping away the dead
 ones. It is a dispatcher voice (NieR's 6O/21O): terse, precise, status-forward. It ships from
-`plugins/cyberfleet/skills/operator` and offloads its fleet mechanics — spawn, who, mail, prune — to
+`packages/cyberfleet/skills/operator` and offloads its fleet mechanics — spawn, who, mail, prune — to
 the `cyberlegion` CLI.
 
 Operator is one of the two **fleet** personas, split from the former `gateway/` node by the
@@ -95,7 +95,7 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
   same miss wearing two coats, and either one is the miss. The voice lives only in what Operator
   says; it never bends a `cyberlegion` call or a handoff.
 - **Drive the lifecycle loop headless (F3)** — when there is no live Council (an unattended or
-  scheduled trigger), the **headless-operator** agent (`plugins/cyberfleet/agents/headless-operator.md`)
+  scheduled trigger), the **headless-operator** agent (`packages/cyberfleet/agents/headless-operator.md`)
   realizes Operator's dispatch remit widened to the full lifecycle loop: pull the ranked `ready`
   frontier from the mission-graph engine, claim the top mission on the graph as the **single writer**,
   `cyberlegion unit spawn` a ship to run it (AFK → autonomous, HITL → human channel, capped at capacity
@@ -107,7 +107,7 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
   the same spawning remit Operator holds in-session, since Pod never spawns. It carries no logic Operator plus the
   mission-graph engine do not already hold — it is that flow, headless.
 - **Retire behind the merge backstop (F3)** — the loop merges completed missions to trunk through
-  **`merge-backstop-governance`** (`plugins/cyberfleet/skills/merge-backstop-governance/`): retire in
+  **`merge-backstop-governance`** (`packages/cyberfleet/skills/merge-backstop-governance/`): retire in
   **Operation order** (a consumer never lands before its producer), land a merge only when **speculative
   CI is green on the merged result**, **bisect** a red stacked batch to hold the culprit and land the
   innocent, and bound speculation depth by **predictor confidence** — so **trunk stays always-green**.

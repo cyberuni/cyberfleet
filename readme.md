@@ -48,7 +48,7 @@ reference.
 
 ## Plugin
 
-The npm package's sibling, `plugins/cyberfleet`, ships the agent plugin — the fleet & crew
+The npm package, `packages/cyberfleet`, is also the agent plugin root. It ships — the fleet & crew
 personas (**Pod**, **Operator**, **Crimp**, **Mechanic**) and the `headless-operator` subagent
 for unattended dispatch.
 

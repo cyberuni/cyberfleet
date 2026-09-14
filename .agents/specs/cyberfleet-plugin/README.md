@@ -2,7 +2,7 @@
 
 The **persona layer** of the fleet: the agent-behavior that decides *when* and *how* an agent
 reaches for the fleet, recruits or discharges a crew, and builds or re-tunes an automaton. Shipped
-as the `cyberfleet` plugin (`plugins/cyberfleet`), distributed to the marketplace.
+as the `cyberfleet` plugin (`packages/cyberfleet`), distributed to the marketplace.
 
 Every node here is a per-situation persona gateway skill (ACED carries all four eval layers —
 activation and judgment). Each persona offloads its mechanics to a CLI — `cyberlegion` for identity,

@@ -9,7 +9,7 @@ concept: [fleet]
 in. Pod is a warm, steady bridge companion (NieR flavor) — a companion to the mission, not a
 greeter: it greets the Council on entry, keeps
 the inbox clear, runs the mission, hails specialist crew when their concern comes up. It never
-spawns — that is Operator's work. It ships from `plugins/cyberfleet/skills/pod` and offloads every
+spawns — that is Operator's work. It ships from `packages/cyberfleet/skills/pod` and offloads every
 mechanic to a CLI — `cyberlegion` for identity and mail, `cyberfleet` for missions.
 
 Pod is one of the two **fleet** personas, split from the former `gateway/` node by the

@@ -57,31 +57,31 @@ challenged on specifics, and that is the process working.
 
 `cyberfleet` — the fleet layer over [`cyberlegion`](https://github.com/cyberuni/cyberlegion)'s
 harness-agnostic, MCP-free session and messaging mechanism (Claude Code, Cursor, Codex). It ships
-as two workspace members:
+as one package that is both the npm CLI and the agent plugin root:
 
 - `packages/cyberfleet/` — the npm package, published as `cyberfleet`, powered by Commander. A
   thin CLI over SDD state: `missions` (the Council view — ships × mission × gate × leash),
   `jump` (session focus), `pause` (a status marker), and `gate approve` (deliberately stubbed —
   human ratification cannot be safely relayed through a CLI). It **depends up** on `cyberlegion`
   for every mechanism verb (register, mail, spawn, prune) rather than re-exposing them.
-- `plugins/cyberfleet/` — the agent plugin: the fleet & crew personas (**Pod**, the in-ship
-  bridge-companion; **Operator**, the fleet-level dispatcher; **Crimp**, crew recruitment;
-  **Mechanic**, automaton building/tuning), plus the `headless-operator` subagent that backs
-  unattended dispatch. Each persona offloads its mechanics to a CLI — `cyberlegion` for identity,
-  mail, and spawn; `cyberfleet` for missions — and keeps its voice only in what it says around
-  them.
+- the agent plugin, from the same `packages/cyberfleet/` directory: the fleet & crew personas
+  (**Pod**, the in-ship bridge-companion; **Operator**, the fleet-level dispatcher; **Crimp**,
+  crew recruitment; **Mechanic**, automaton building/tuning), plus the `headless-operator`
+  subagent that backs unattended dispatch. Each persona offloads its mechanics to a CLI —
+  `cyberlegion` for identity, mail, and spawn; `cyberfleet` for missions — and keeps its voice
+  only in what it says around them.
 
-Unlike a repo where the npm package root doubles as the plugin root, cyberfleet keeps these as
-two separate workspace members — the CLI is a deterministic mechanism, and the plugin is the
-agent-behavior layer built on top of it (and on `cyberlegion` directly).
+The npm package root doubles as the plugin root, so an installed plugin carries the CLI with it.
+The CLI is still a deterministic mechanism, and the plugin is the agent-behavior layer built on
+top of it (and on `cyberlegion` directly).
 
 It is deliberately **not** an MCP server. Coordination acts on filesystem state under a shared
 hub root, through shell commands and skills, not through a remote API or a long-lived process.
 
 ### Plugin layout
 
-Everything the plugin needs lives in `plugins/cyberfleet/` and must stay listed in that
-package's manifests, or a client won't discover it.
+Everything the plugin needs lives in `packages/cyberfleet/` and must stay listed in that
+package's manifests and its `package.json` `files` allowlist, or a client won't discover it.
 
 | Path | Read by |
 | --- | --- |
@@ -91,9 +91,9 @@ package's manifests, or a client won't discover it.
 | `agents/<name>.md` | Claude Code (and any client that reads Agent Plugins subagents) |
 
 `.claude-plugin/marketplace.json` at the **repo root** lists the plugin with a local directory
-source (`./plugins/cyberfleet`) rather than an npm source, since the plugin is not itself
-published to npm. Version bumps flow from `packages/cyberfleet/package.json` through
-`scripts/sync-plugin-version.mjs` on `pnpm version` — add any new manifest to that script's list.
+source (`./packages/cyberfleet`). Version bumps flow from `packages/cyberfleet/package.json`
+through `scripts/sync-plugin-version.mjs` on `pnpm version` — add any new manifest to that
+script's list.
 
 ## Commands
 
@@ -111,8 +111,8 @@ pnpm web dev                     # run the docs site locally
 ## Layout
 
 ```
-packages/cyberfleet/    the npm package — the CLI, pure mechanism over SDD state
-plugins/cyberfleet/     the agent plugin — Pod, Operator, Crimp, Mechanic, headless-operator
+packages/cyberfleet/    the npm package and plugin root — the CLI (src/) plus Pod, Operator,
+                        Crimp, Mechanic, and headless-operator (skills/, agents/)
 apps/web/               Astro + Starlight docs site, deployed to GitHub Pages
 docs/adr/               architecture decision records
 .research/              background research dossiers behind ADRs and design decisions

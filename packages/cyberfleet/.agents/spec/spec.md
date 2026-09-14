@@ -26,7 +26,7 @@ approval:
 > at `packages/cyberfleet`). This project is a thin **fleet layer** built on top of the
 > `cyberlegion` mechanism package. It carries only the fleet-specific verbs; the agent-behavior half
 > — the `fleet` persona gateway and the `crew` personas — lives in the sibling `cyberfleet-plugin`
-> project (`../../../../.agents/specs/cyberfleet-plugin`, source `plugins/cyberfleet`).
+> project (`../../../../.agents/specs/cyberfleet-plugin`, source `packages/cyberfleet`).
 
 ## What this is
 
@@ -82,7 +82,7 @@ Where a new concept lives — slot here, do not invent placement:
 - **a new mechanism operation** (unit, mail, unit spawn/close, surfacing, dispatch, wake)
   → **not here** — that is `cyberlegion` (`packages/cyberlegion`). cyberfleet depends up on it.
 - **a new persona / crew behavior** (when to spawn, message etiquette, recruit or tune a crew) →
-  **not here** — that is the `cyberfleet-plugin` project (`plugins/cyberfleet`).
+  **not here** — that is the `cyberfleet-plugin` project (`packages/cyberfleet`).
 - **a fleet-level operation over a group of ships** (act on a particular fleet) → **deferred** — the
   **fleet** grouping (which ships form a fleet) is not defined until the first such verb needs it.
 

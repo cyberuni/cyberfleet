@@ -10,7 +10,7 @@
 			"name": "cyberfleet",
 			"displayName": "Cyberfleet",
 			"description": "Fleet & crew personas over cyberlegion — Pod (ship's bridge), Operator (command center), Crimp (crew recruitment), and Mechanic (automaton building).",
-			"source": "./plugins/cyberfleet",
+			"source": "./packages/cyberfleet",
 			"author": {
 				"name": "unional"
 			},

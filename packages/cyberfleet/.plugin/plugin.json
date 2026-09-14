@@ -1,0 +1,20 @@
+{
+	"name": "cyberfleet",
+	"version": "0.1.0",
+	"description": "Fleet & crew personas over cyberlegion — Pod (ship's bridge), Operator (command center), Crimp (crew recruitment), and Mechanic (automaton building).",
+	"author": {
+		"name": "unional"
+	},
+	"homepage": "https://github.com/cyberuni/cyberfleet",
+	"repository": "https://github.com/cyberuni/cyberfleet",
+	"keywords": [
+		"agent",
+		"dispatch",
+		"inter-agent",
+		"fleet"
+	],
+	"skills": "./skills",
+	"agents": [
+		"./agents/headless-operator.md"
+	]
+}

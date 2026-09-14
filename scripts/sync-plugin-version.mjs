@@ -1,6 +1,6 @@
 // The canonical plugin manifest carries its own `version`, which nothing bumps on its own.
 // Changesets only touches package.json files, so this runs from the `version` script
-// to keep the manifest in step with the published `cyberlegion` npm package. The vendor
+// to keep the manifest in step with the published `cyberfleet` npm package. The vendor
 // manifests (`.claude-plugin/`, `.codex-plugin/`) are derived from it by
 // `universal-plugin plugin build`, which the `version` script runs next.
 //
@@ -11,8 +11,8 @@
 // formatting (tabs, inlined short arrays) survives untouched.
 import { readFileSync, writeFileSync } from 'node:fs'
 
-const SOURCE = 'packages/cyberlegion/package.json'
-const MANIFESTS = ['packages/cyberlegion/plugin.json']
+const SOURCE = 'packages/cyberfleet/package.json'
+const MANIFESTS = ['packages/cyberfleet/plugin.json']
 
 const { version } = JSON.parse(readFileSync(SOURCE, 'utf8'))
 if (!version) throw new Error(`no version field in ${SOURCE}`)

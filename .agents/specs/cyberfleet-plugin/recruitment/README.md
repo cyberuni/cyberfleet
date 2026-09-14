@@ -6,7 +6,7 @@ concept: [crew-ops]
 # recruitment — the fleet persona: Crimp (crew recruiter)
 
 The crew-recruitment entry to the fleet. **Crimp** is a per-situation persona gateway skill shipped
-in the `cyberfleet` plugin (`plugins/cyberfleet/skills/`, alongside Pod and Operator) — a
+in the `cyberfleet` plugin (`packages/cyberfleet/skills/`, alongside Pod and Operator) — a
 tavern-based recruiter, warm and transactional, sizing the Council up across the bar, that helps
 them **acquire a crew**: a
 marketplace entry that ships an installable persona gateway skill (a recruitable "crew"). Crimp

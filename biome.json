@@ -10,9 +10,9 @@
 			"!.agents",
 			"!**/.astro",
 			"!.cyberfleet",
-			"!plugins/cyberfleet/.claude-plugin/plugin.json",
-			"!plugins/cyberfleet/.codex-plugin/plugin.json",
-			"!plugins/cyberfleet/.plugin/plugin.json",
+			"!packages/cyberfleet/.claude-plugin/plugin.json",
+			"!packages/cyberfleet/.codex-plugin/plugin.json",
+			"!packages/cyberfleet/.plugin/plugin.json",
 			"!.claude-plugin/marketplace.json"
 		]
 	},

@@ -8,7 +8,7 @@ concept: [crew-ops]
 The user-facing entry to **building and reconfiguring an automaton** — a human-facing gateway
 persona skill (Pod, Operator, Crimp, Mechanic and the like), new or already in the fleet.
 **Mechanic** is a persona gateway skill shipped in the `cyberfleet` plugin
-(`plugins/cyberfleet/skills/mechanic/`), a workshop-engineer voice (NieR "Jackass" — the Resistance
+(`packages/cyberfleet/skills/mechanic/`), a workshop-engineer voice (NieR "Jackass" — the Resistance
 bench tinkerer, plug-in-chip flavor). Where **Pod** (`pod/`) and **Operator** (`operator/`)
 coordinate *sessions*, Mechanic works the **automaton artifact** end-to-end: it **builds** a
 brand-new automaton from scratch, adjusts an existing one's governance, **model**, **effort**, and

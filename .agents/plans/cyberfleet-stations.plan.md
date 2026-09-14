@@ -67,7 +67,7 @@ Per-session notify: watcher maps `inbox/<id>` -> pane; new file -> resolve pane 
 
 ## Persona wiring
 
-Pod (`plugins/cyberfleet/skills/pod/SKILL.md`) gains decisions, mechanics stay 100% `cyberfleet` calls: mission -> `station open mission` -> `dispatch mission --task ... --wait` per iter -> at freeze `reset mission` -> at land `station close mission`; never edits mid-mission (no lease). Judges are NOT stations. Operator unchanged.
+Pod (`packages/cyberfleet/skills/pod/SKILL.md`) gains decisions, mechanics stay 100% `cyberfleet` calls: mission -> `station open mission` -> `dispatch mission --task ... --wait` per iter -> at freeze `reset mission` -> at land `station close mission`; never edits mid-mission (no lease). Judges are NOT stations. Operator unchanged.
 
 ## Landing (spec-first)
 

@@ -1,6 +1,6 @@
 ---
 status: implemented
-project-path: plugins/cyberfleet
+project-path: packages/cyberfleet
 approval:
   spec:
     verdict: approve
@@ -31,7 +31,7 @@ approval:
 # cyberfleet-plugin — the fleet & crew personas (agent behavior)
 
 > Root project spec — the **descriptive** top index for the `cyberfleet` **plugin** (the marketplace
-> distribution at `plugins/cyberfleet`). Behaviors live in the capability folders below. This
+> distribution at `packages/cyberfleet`). Behaviors live in the capability folders below. This
 > project was split out of the combined `cyberfleet` project by the `split-cyberfleet-spec` change,
 > so the spec maps one-to-one onto the plugin. The deterministic engine — the `cyberfleet` CLI —
 > lives in the sibling `cyberfleet` project (`../../../packages/cyberfleet/.agents/spec`, source
@@ -61,7 +61,7 @@ Three axes agree on the same cut: artifact-type (agent-behavior vs deterministic
 target (marketplace vs npm), and package (`plugins/cyberfleet` vs `packages/cyberfleet`). This
 project holds the four agent-behavior nodes; the four deterministic CLI nodes are the sibling
 `cyberfleet` project. The plugin spec stays **central** (`.agents/specs/`) rather than co-located
-under `plugins/cyberfleet` so it is not carried inside the distributed marketplace artifact.
+under `packages/cyberfleet` so it is not carried inside the distributed marketplace artifact.
 
 ## Capability map
 
