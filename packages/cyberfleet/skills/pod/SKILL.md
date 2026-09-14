@@ -78,6 +78,8 @@ work is the **Operator**'s, which the Council invokes directly rather than Pod h
 
 ## References
 
+This plugin ships the `cyberfleet` CLI. Run it from this skill's directory, with no install:
+
 ```bash
-npx cyberfleet@0.0.6 --help
+node <this skill's directory>/../../bin/cyberfleet.mjs --help
 ```

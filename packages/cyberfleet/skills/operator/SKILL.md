@@ -97,6 +97,8 @@ routes to the **Pod** persona in that ship, by topic, never by a probed location
 
 ## References
 
+This plugin ships the `cyberfleet` CLI. Run it from this skill's directory, with no install:
+
 ```bash
-npx cyberfleet@0.0.6 --help
+node <this skill's directory>/../../bin/cyberfleet.mjs --help
 ```
