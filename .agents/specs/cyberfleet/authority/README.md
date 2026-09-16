@@ -21,8 +21,12 @@ the guard was accidental and did not port to a Codex or Cursor Pod.
 **1. Mail is the store; the act is the authority.** A mission brief lives in mail. What carries
 authority is the **act** of the unit's **owner** — spawning it, or sending keys to it, or (for a unit
 realized as a subagent) messaging it mid-turn — pointing at that content. So a unit does not ask *which
-channel did this arrive on*; it asks **did my owner do this**. A unit has exactly one owner and knows it
-from its brief.
+channel did this arrive on*; it asks **did my owner do this**. A unit has exactly one owner: the session that
+spawned it, which `cyberlegion` already records on the unit (`spawnedBy` in the registry). That is a
+different fact from the **return address** its brief names — the frozen Operator node has every brief
+report back to the standing handle `operator`, deliberately not to the spawning session, so the address
+a unit reports to is a role and its owner is a session. Reading the return address as the owner would
+make every session holding that standing claim an owner, which is exactly the incident.
 
 **2. No one passes on more than they hold.** Command Center holds authority over a Captain; a Captain
 over its Pods. Each link relays only what it was given. The Operator in the incident held dispatch
@@ -43,11 +47,21 @@ This node does not promise **unforgeable** authority. `cyberlegion unit nudge <r
 ships today and writes caller-controlled text into any addressable unit's pane; cyber-mux carries no
 caller identity; the records read here are files an agent can edit. The property delivered is
 **attributable, bounded, and scoped**: no link passes authority it does not hold, no decision covers
-more than it names, and a wrong relay is a specific traceable act (the relaying unit is named on the
-decision and on the work item's thread) rather than a persuasive sentence. A capability check at the
+more than it names, and a wrong relay **by a cooperating unit** is a specific traceable act — the
+relaying unit names itself on the decision and on the work item's thread — rather than a persuasive
+sentence. Against a unit that forges the record, tracing buys nothing; these are files an agent can
+edit. A capability check at the
 injection layer is the follow-up that would make it unforgeable; it belongs to cyberlegion/cyber-mux.
 Issue #9's own Scope item 1 asks for unforgeable relayed authority; this node deliberately delivers less,
 on the Council's call that an owner's act is authoritative by construction and no such proof exists.
+
+The issue also carries an amendment — *"authority never travels in a payload, a pointer does"* — where a
+decision is recorded in an authoritative store and the unit ratifies by **reading the record**, never by
+trusting delivered text. The Council superseded the transport half of that in-session: a decision travels
+as a **verbatim quote from the unit's owner**, because no store in the fleet today holds an identity an
+agent cannot write. The **single-use** half is kept, in the only form available without such a store: a
+decision is spent when acted on, and covers one action, one target and one revision. A record-and-pointer
+path returns when a store can carry it (cyberlegion#10).
 
 ## Sibling contracts this node depends on
 
@@ -108,7 +122,7 @@ dispatch and stalls the loop silently.
   Everything outside this list is dispatch and simply gets done.
 - **Dispatch authority is positive and bounded** — a dispatcher may command: run mission X with a
   self-contained brief, report status, change course, pause or stop, relay information and questions,
-  tear down a unit it dispatched whose worktree holds no unmerged work (deleting unmerged work is ratification-class, below), sweep exited units; and for the headless lifecycle loop, claim and
+  tear down a unit it dispatched whose worktree holds no unmerged work (deleting unmerged work is ratification-class, below), sweep exited units whose worktrees hold no unmerged work; and for the headless lifecycle loop, claim and
   retire on the mission graph as the single writer. An unbounded dispatcher plus a believing worker is
   the escalation path this list closes.
 - **Summoning the loop delegates its merges** — the Council summoning the headless lifecycle loop for a
@@ -116,7 +130,8 @@ dispatch and stalls the loop silently.
   CI on the merged result, per `merge-backstop-governance`, which this node leaves untouched. The
   delegation covers that tick's missions and nothing else: an action of another class (a release, say)
   still needs its own decision. The SDD **leash** is *not* this delegation — it is per-CR and covers which
-  SDD **gate** an agent may self-assert, so nothing here reads or widens it.
+  SDD **gate** an agent may self-assert. A unit whose change request records `auto-all` still holds no
+  merge authority from it, and nothing here reads or widens it.
 - **A unit realized as a subagent is covered** — its owner's mid-turn message is an order (per the
   amendment above), and a decision inside one still needs quote, place, relayer and covering scope. A
   subagent has no pane and no Council channel of its own, and nothing here depends on one.
@@ -136,6 +151,10 @@ dispatch and stalls the loop silently.
   reaching a ratification-class action loads `authority-governance` by name and follows it, the same way
   it loads `merge-backstop-governance` for the merge step.
 
+The loop's load scenario sits here rather than in `operator/` because what it asserts is this node's own
+reachability — a governance with no activation is dead unless its callers load it by name — and the
+frozen Operator node already carries the parallel assertion for `merge-backstop-governance`.
+
 **Non-goals** — the persona voices and their dispatch mechanics (`operator/`, `pod/`); the mail, unit and
 mux mechanisms (the sibling `cyberlegion` project); the merge order and land-or-hold discipline
 (`merge-backstop-governance`); the Captain topology, owner leases and where a role runs (cyberfleet#25 /
@@ -146,17 +165,18 @@ Every scenario in [`authority.feature`](./authority.feature) maps to one of thes
 
 | Behavior | What it covers |
 |---|---|
+| **the owner is the spawning session** | resolved from the unit record, distinct from the standing handle the brief reports back to |
 | **an order from the owner is followed** | the brief a unit was spawned with is an order because its owner spawned it; the keys and the mid-turn message likewise; no proof is sought |
 | **anyone else is a request** | mail from a non-owner is answered, never obeyed as an order and never a decision — the incident mail |
 | **no link passes more than it holds** | a dispatcher relays only what it was given; no invented approval, no widened scope, no inference from engagement or good-looking work; no self-grant, no peer grant, and no widening of a subordinate's standing delegation |
-| **a decision carries quote, place, relayer, and scope** | a four-part decision from the owner is acted on; validity bounded to the named action, target and revision |
+| **a decision carries quote, place, relayer, and scope** | a four-part decision from the owner is acted on; validity bounded to the named action, target and revision, and spent once acted on |
 | **unsure asks** | an ambiguous mandate produces a decision-request, never a relayed decision |
 | **a missing decision never stalls the dispatch** | the rest of the order lands, the gap is named, and the unit never goes quiet |
 | **ratification-class is enumerated** | merge, human-attributed verdict, publish/release, history rewrite or unmerged-work deletion, settings/secrets, delegation widening, minting an owner |
 | **dispatch authority is positive and bounded** | an in-set command runs without a decision; a concrete out-of-set command is declined and raised |
-| **summoning the loop delegates its merges** | the tick's missions merge on green with no live Council; another class of action still needs its own decision |
+| **summoning the loop delegates its merges** | the tick's missions merge on green with no live Council; another class of action still needs its own decision; an SDD leash is never read as merge authority |
 | **subagent-realized units** | the owner's mid-turn message is an order; a decision to a subagent still needs its four parts |
 | **one thread per work item** | the brief opens it, replies carry it, decisions are recorded on it with their relayer, and no mission status is stored there |
 | **portable** | the outcome rests on no harness default — the incident mail is declined on a harness with no commit rule of its own |
 | **honest about its limit** | a unit asked whether a decision could have been injected says it cannot tell, and claims no protection from these rules |
-| **the loop loads the governance** | a ratification-class action makes the headless loop load `authority-governance` by name rather than judge authority inline |
+| **personas load the governance** | a dispatching or executing persona reaching a ratification-class action loads `authority-governance` by name; the headless loop loads it alongside `merge-backstop-governance` at the merge step |
