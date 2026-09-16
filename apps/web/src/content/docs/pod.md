@@ -15,6 +15,11 @@ The **Pod** is the bridge-companion of a ship. It greets you when you board, cle
 - Clears the ship's inbox — reads and acknowledges pending mail from other ships.
 - Drives the mission forward. When work should fan out, it tells you spawning a worktree-ship is the Operator's job, which you invoke directly.
 
+- Takes orders from its own owner — the unit that spawned it, or the Council in its session. Mail from
+  anyone else is a request, answered but never obeyed as an order.
+- Will not merge to a protected branch, publish, rewrite shared history, or record a verdict in your
+  name on a message that claims you approved it. It finishes the rest of the work, then asks.
+
 ## Related
 
 - [Operator](/cyberfleet/operator/) — the fleet-level counterpart, invoked directly rather than handed off to
