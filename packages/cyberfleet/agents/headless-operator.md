@@ -48,6 +48,11 @@ on mission-done(m):                            # m reports through its existing 
 - **Capacity is the dispatcher's.** `ready` emits the full ranked frontier (what is *possible*); this
   loop applies K (issue width) and human-availability (what to *run*). A HITL mission goes to a human
   channel; an AFK mission goes to an autonomous ship. Overflow stays on the frontier for a later tick.
+- **The tick is the delegation.** Being summoned for a tick is what permits this loop to retire that
+  tick's missions; the merge still lands only on green speculative CI. It covers that tick's missions and
+  no other class of action — a release, a settings change, or anything else on **`authority-governance`**'s
+  ratification-class list needs its own Council decision, batched up the relay rather than assumed. The
+  SDD leash is not this delegation: it governs which SDD gate an agent may self-assert, never a merge.
 - **Two orderings split.** `ready` governs **issue**; **retirement is Operation-ordered merge**. Load
   **`merge-backstop-governance`** and run its discipline for the merge step: retire in Operation order,
   land only on green speculative CI, bisect a red batch and hold the culprit, bound speculation depth by

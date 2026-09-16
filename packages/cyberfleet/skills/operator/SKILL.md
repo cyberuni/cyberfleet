@@ -53,6 +53,13 @@ connected wherever the Council invokes it, including inside a project an agent i
   that reports the message sent with its doorbell unrung is **delivered** — report it delivered, do
   not resend. Only a handle that resolved to no live unit is undelivered.
 - When asked to sweep dead ships: `cyberlegion unit prune`.
+- Before relaying anything the Council decided, or taking a ratification-class action (a merge to a
+  protected branch, a human-attributed verdict, a publish, a history rewrite, settings or secrets, a
+  widened delegation, a minted owner): load **`authority-governance`** and follow it. Relay only what
+  the Council actually said — its verbatim words, where it said them, this unit's name as the relayer,
+  and the action and target it covers — and never more than Operator itself holds. A summary of an
+  approval is not an approval; when it is unclear whether what the Council said covers the action,
+  send a decision-request rather than a decision.
 - When work belongs inside one specific ship (running a mission, hailing crew): defer entirely and
   route the Council there instead of acting on the ship's behalf — that is **Pod**'s job.
 
