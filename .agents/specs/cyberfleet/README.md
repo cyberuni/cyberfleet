@@ -65,6 +65,12 @@ Units:
   command-center dispatcher): **any spawn**, list the fleet, route messages between ships, and prune
   dead ones. Connected to the command center by invocation, never by a mode probe. Offloads its
   fleet mechanics — spawn, who, mail, prune — to the `cyberlegion` CLI.
+- [**`authority`**](./authority/README.md) *(behavioral)* — the **authority governance** (the `fleet`
+  dispatch-vs-ratification seam): orders and Council decisions arrive on the command-center channel (a
+  brief, or this unit's own pane) and never in mail; a relayed decision carries a verbatim quote, its
+  source, and the action and target it covers; a ratification-class action needs a decision whose scope
+  covers it, and everything else is dispatch that simply gets done. Loaded by Operator, Pod, the headless
+  loop, and Captains when they land — it carries no voice of its own.
 - [**`recruitment`**](./recruitment/README.md) *(behavioral)* — the **Crimp** persona: recruit or
   discharge a crew type from the Tavern (browse, install, register; uninstall, retire).
 - [**`mechanic`**](./mechanic/README.md) *(behavioral)* — the **Mechanic** persona: build a new

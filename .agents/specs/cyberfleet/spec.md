@@ -96,6 +96,7 @@ now; cyberfleet no longer owns or re-describes them.
 | [`operator/`](./operator/README.md) | behavioral | the **Operator** persona — the command-center dispatcher: any spawn, list the fleet, route messages, prune dead ships |
 | [`recruitment/`](./recruitment/README.md) | behavioral | the **Crimp** persona — recruit/discharge crew types from the Tavern (browse, install, register; uninstall, retire) |
 | [`mechanic/`](./mechanic/README.md) | behavioral | the **Mechanic** persona — build a new automaton or adjust an existing one's program (governance/model/effort/leash), re-chip its loadout, hot-swap the unit |
+| [`authority/`](./authority/README.md) | behavioral | the **authority governance** — the dispatch-vs-ratification seam every dispatching and executing persona loads: the channel rule, the four message kinds, verbatim quote + scope binding, the ratification-class list, and thread-per-work-item |
 
 The CLI verbs have no nodes yet — see the backfill gap below.
 
@@ -112,6 +113,11 @@ Where a new concept lives — slot here, do not invent placement:
   to the command center by invocation; Pod is reached by the Council's ask. There is no ship marker
   to write or read and no ship-vs-command-center state to report. Do not reintroduce a location
   check in either node, or an on-disk marker without a consumer that genuinely gates on it.
+- **a new rule about what a dispatcher may command, or about what carries Council authority**
+  (a message kind, a channel rule, a scope-binding rule, an addition to the ratification-class list,
+  a thread-correlation rule) → `authority/` (the authority governance). It is persona-independent by
+  design: Operator, Pod, the headless loop and a future Captain load the same node, so a rule written
+  into one persona's own node instead is a rule the next dispatcher will not carry.
 - **a new crew-acquisition persona behavior** (recruit/discharge a crew type — browse the Tavern,
   install/register, uninstall/retire) → `recruitment/` (the Crimp persona).
 - **a new automaton-workshop persona behavior** (build a new automaton, or adjust an existing one's
@@ -156,6 +162,6 @@ reason to exist, and the `hal` field it derives is load-bearing for the Pod pers
 | Concept | Facets |
 |---|---|
 | `crew-ops` | `mechanic/` (behavior) · `recruitment/` (behavior) |
-| `fleet` | `operator/` (behavior) · `pod/` (behavior) |
+| `fleet` | `authority/` (behavior) · `operator/` (behavior) · `pod/` (behavior) |
 
 <!-- END generated: by-concept -->
