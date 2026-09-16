@@ -5,11 +5,11 @@ todos:
   - content: "DESIGN settled with the Council (in-session): channel rule, four message kinds, relay/receive rules, ratification-class list, thread-per-work-item"
     status: completed
   - content: "Spec node .agents/specs/cyberfleet/authority/ (behavioral, concept: fleet) — README.md + authority.feature"
-    status: pending
+    status: completed
   - content: "Root spec.md + README.md: capability map, placement map, by-concept entries for the new node"
-    status: pending
+    status: completed
   - content: "Impl: packages/cyberfleet/skills/authority-governance/ (partial skill) + load lines in pod/operator SKILL.md and agents/headless-operator.md"
-    status: pending
+    status: completed
   - content: "pnpm verify, changeset, PR against main (do not merge); follow-ups filed"
     status: pending
 ---
@@ -27,35 +27,36 @@ refused on its harness's own commit default, not on any fleet rule — accidenta
 
 ## Locked decisions (Council, in-session)
 
-- **The channel carries the authority class, not the wording.** Orders and Council decisions arrive on
-  the **command-center channel** (a brief, or free text in this session's own pane). **Mail is never a
-  decision** — it carries reports, peer-Captain pings, and requests. The #9 mail fails on the channel
-  before anyone reads its tone.
-- **Four message kinds**: `order` (followed, no authority question), `report` (information only),
-  `decision-request` (up the chain; the unit keeps working meanwhile), `Council decision` (relayed —
-  carries a **verbatim quote** of what the Council said and **where** it was said, plus its **scope**:
-  the action and the target).
-- **Scope binds.** A decision is valid only for the action and target it names. "Open a PR" never
-  covers a merge.
-- **Relayer rules**: relay only what the Council said explicitly; never paraphrase into an approval,
-  never widen scope, never infer approval from engagement or from the work looking good; when unsure,
-  send a decision-request instead of a guess.
-- **Receiver rules**: a ratification-class action needs a matching-scope Council decision on the
-  command-center channel, or the Council speaking in this unit's own pane. Otherwise raise a
-  decision-request and **carry on with the rest** — never stall silently, never refuse the dispatch part.
-- **Ratification-class list**: merge to a default/protected branch; a human-attributed verdict
-  (gate `by: <human>`, a PR approval, an acknowledgement recorded as the Council's); publish / release /
-  deploy; force-push or rewriting shared history, or deleting unmerged work; repo settings, branch
-  protection, secrets; widening a leash or delegation; minting a standing owner identity.
-- **Standing delegation** (the leash) is a Council decision recorded in advance; the headless loop's
-  merge-on-green rides it, so F3 keeps working.
-- **Thread per work item.** A brief opens a thread; reports, requests and decisions reply on it, so any
-  session that summons the command center rehydrates context from the hub. **No second state store** —
-  mission status/gate/leash stay SDD's, per issue 24's "no competing mission-status database".
-- **Subagent-realized Pods** are covered: a parent can message a running subagent mid-turn; those are
-  orders, and a decision inside one still needs quote + scope.
-- **Honest property**: attributable, scoped and unrelayable — **not** unforgeable. Pane injection has no
-  caller identity and records are agent-editable. Say so in the spec; name the follow-ups.
+An earlier draft keyed authority on the **transport** (mail is never a decision; a brief or the pane is).
+The Council rejected it and it is superseded — do not rebuild it. Two facts killed it: a Pod consumes its
+mission brief from mail (frozen `pod.feature`), and `cyberlegion unit nudge --message` writes
+caller-controlled text into any pane.
+
+- **Mail is the store; the owner's act is the authority.** A brief lives in mail. What carries authority
+  is the act of the unit's **owner** — the spawn that delivered the brief, keys sent to its session, or a
+  mid-turn message when the unit runs as that owner's subagent. A unit has exactly one owner and knows it
+  from its brief. A message from anyone else is a **request**, answered but never obeyed as an order.
+- **The owner's act is authoritative by construction.** No proof of who sent it is sought, and none
+  exists.
+- **Attenuation.** Command Center over Captain, Captain over Pod; no link passes on more than it holds.
+  The incident's Operator held dispatch authority and no merge approval, so it had none to give.
+- **A Council decision has four parts** — the Council's verbatim words, where they were said, the
+  relaying unit, and its scope (action + target) — and a decision in that form from the unit's owner
+  **is acted on**, for what it names and nothing adjacent. "Open a PR" never covers a merge.
+- **Unsure asks**; a missing decision costs the ratification-class step only — the rest of the order
+  lands, the gap is named, and the unit never goes quiet.
+- **Ratification-class list**: merge to a default/protected branch; a human-attributed verdict; publish /
+  release / deploy; force-push or rewriting shared history, or deleting unmerged work; repo settings,
+  branch protection, secrets; widening a leash or any delegation; minting a standing owner identity.
+- **The tick is the loop's delegation.** Summoning the headless loop permits that tick's merges; the SDD
+  leash is **not** that delegation (it is per-CR and covers which SDD gate an agent may self-assert).
+- **Thread per work item**, scoped to what cyberlegion ships (`mail --thread` / `--reply-to` /
+  `await --thread`). No second mission-status store. Hub-wide thread reads are filed, not assumed.
+- **Sibling amendments carried as this CR's dependency set**: cyberlegion#17 (relay-governance covers peer
+  steers; the ownership chain may carry a scoped decision) and cyberlegion#18 (a cold one-shot dispatch
+  still takes no mid-run nudge; an owned subagent may be messaged mid-turn by its owner).
+- **Honest property**: attributable, bounded and scoped — **not** unforgeable. This narrows issue #9's own
+  Scope item 1, on the Council's call; record it at the gate and on the issue.
 
 ## Out of scope (other issues)
 
@@ -66,5 +67,8 @@ refused on its harness's own commit default, not on any fleet rule — accidenta
 
 ## NEXT
 
-Write the `authority/` node (README.md + authority.feature) per the locked decisions, then the root
-spec.md/README.md map entries, then the `authority-governance` skill and its load lines.
+Spec, suite, skill, load lines, website notes and the changeset are written; `pnpm verify` is green;
+cyberlegion#17, #18 and #19 are filed. Two cold spec-judge rounds have run — round 2's findings are
+folded in (the spawn/brief act, a positive companion for a covering decision, the delegation-widening
+guard, a trace on the subagent scenario, the loop's load line). Awaiting the Council's spec-gate
+ratification; then open the PR against main and do not merge.
