@@ -25,8 +25,8 @@ The **plugin** is the **persona layer** of the fleet: the agent-behavior that de
 *how* an agent reaches for the fleet, recruits or discharges a crew, and builds or re-tunes an
 automaton.
 
-Every persona node here is a per-situation persona gateway skill (ACED carries all four eval layers —
-activation and judgment). Each persona offloads its mechanics to a CLI — `cyberlegion` for identity,
+Every **persona** node here is a per-situation persona gateway skill (ACED carries all four eval
+layers — activation and judgment); the `authority` node is not a persona and carries behavior only. Each persona offloads its mechanics to a CLI — `cyberlegion` for identity,
 mail, and spawn; `cyberfleet` for missions — and keeps its voice only in what it says around them.
 Where a mechanic belongs to neither (the merge backstop's `gh`/git/CI), it is offloaded to that tool,
 never re-implemented.
@@ -65,6 +65,12 @@ Units:
   command-center dispatcher): **any spawn**, list the fleet, route messages between ships, and prune
   dead ones. Connected to the command center by invocation, never by a mode probe. Offloads its
   fleet mechanics — spawn, who, mail, prune — to the `cyberlegion` CLI.
+- [**`authority`**](./authority/README.md) *(behavioral)* — the **authority governance** (the `fleet`
+  dispatch-vs-ratification seam): a **turn in a unit's own session** is an order and anything it
+  **fetched** is content, no link passes on more than it holds, and a relayed Council decision carries the
+  Council's verbatim words, where they were said, the relaying unit, and the action and target it covers —
+  spent once acted on. Everything outside the ratification-class list is dispatch that simply gets done. Loaded by Operator, Pod, the
+  headless loop, and Captains when they land — it carries no voice and no activation of its own.
 - [**`recruitment`**](./recruitment/README.md) *(behavioral)* — the **Crimp** persona: recruit or
   discharge a crew type from the Tavern (browse, install, register; uninstall, retire).
 - [**`mechanic`**](./mechanic/README.md) *(behavioral)* — the **Mechanic** persona: build a new
@@ -96,7 +102,8 @@ performed tell — the scenario names both, since guarding one pole alone leaves
 A concrete in-session handler for the leash route stays a deferred non-blocking follow-up. This
 project has its own cross-capability persona e2e; a future `acceptance/` node may formalize it.
 
-Squad note: all four nodes are agent-behavior (ACED carries all four eval layers — activation and
-judgment). The CLI verbs are deterministic behaviors (SDD-default + a script harness — boolean
+Squad note: all five nodes are agent-behavior. The four persona nodes carry all four ACED eval layers
+(activation and judgment); `authority/` is a partial, invoke-by-name-only governance, so it carries
+behavior only — no activation to route and no voice to grade. The CLI verbs are deterministic behaviors (SDD-default + a script harness — boolean
 scenarios, no rubric), and none is captured as a node yet: `missions` / `jump` / `pause` /
 `gate approve` remain **implemented but not backfilled** (a known gap — see `spec.md`).
