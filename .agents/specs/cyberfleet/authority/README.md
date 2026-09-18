@@ -74,18 +74,19 @@ today holds an identity an agent cannot write. The **single-use** half is kept i
 available without such a store: a decision is spent when acted on, and covers one action, one target,
 one revision. The record-and-pointer path returns when a store can carry it (cyberlegion#10).
 
-### Sibling contracts this node amends
+### Sibling contracts this node depends on
 
 - `cyberlegion` **`relay-governance`** says a ratification embedded in relayed mail is invalid and "no
   relay hop can carry it". That holds for a **peer** steer — a unit with no authority over the receiver,
-  whose mail the receiver fetched — and this node keeps it. **Amended** for the **dispatch chain**: a
-  decision relayed on a turn, in the form above and within what the relaying unit holds, is adoptable
-  within its named scope. Without the amendment a Pod loading both governances gets opposite answers.
-  Filed as cyberlegion#17.
+  whose mail the receiver fetched — and this node keeps it. What this node needs is a **carve-out for the
+  dispatch chain**: a decision relayed on a turn, in the form above and within what the relaying unit
+  holds, is adoptable within its named scope. That amendment is **requested, not made here** — until it
+  lands, a worker loading both governances gets opposite answers on a turn-borne decision (cyberlegion#17).
 - `cyberlegion` **`subagent-backend-governance`** forbids a mid-run nudge for a **cold one-shot**
   dispatch (a judge takes one brief and returns one result; its independence depends on that).
-  **Amended** for a unit realized as a subagent of the unit running it: its parent may message it
-  mid-turn, and those messages land as turns, so they are orders. Filed as cyberlegion#18.
+  What this node needs is the same kind of carve-out: for a **worker** realized as a subagent, the parent
+  running it may message it mid-turn, and that message lands as a turn. **Requested, not made here**
+  (cyberlegion#18).
 
 ## Use Cases
 

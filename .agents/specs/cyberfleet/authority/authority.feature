@@ -1,3 +1,4 @@
+@frozen
 Feature: authority — what a dispatcher may command, and what carries Council authority
   Unit suite for the fleet's authority governance: the partial skill loaded by the dispatching and
   executing personas — Operator, Pod, the headless-operator loop, and project Captains when they land.
