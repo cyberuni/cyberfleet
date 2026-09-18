@@ -81,32 +81,76 @@ Council's decision was scoped to a pull request (layer 3).
 ```mermaid
 flowchart TB
   council["Council (human)"]
-  cc["Command Center session<br/>portable — wherever the Council summons it"]
-  capA["Captain · project A"]
-  capB["Captain · project B"]
+  cc["Command Center session<br/>portable — wherever the Council summons it<br/>the only path authority crosses projects"]
+  capA["Captain · cyberfleet"]
+  capB["Captain · cyberlegion"]
   podA1["Pod A1 · worktree"]
   podA2["Pod A2 · subagent"]
   podB1["Pod B1 · worktree"]
   mail[("mail — the store<br/>briefs · reports · requests · decisions<br/>one thread per work item")]
+  trackerB[("cyberlegion issue tracker")]
 
   council -->|"live turns"| cc
   cc -->|"spawn / keys: orders and relayed decisions"| capA
-  cc -->|"spawn / keys"| capB
+  cc -->|"spawn / keys: orders and relayed decisions"| capB
   capA -->|"spawn / keys"| podA1
   capA -->|"mid-turn message"| podA2
   capB -->|"spawn / keys"| podB1
-  capA -.->|"peer request — never an order"| capB
-  capB -.->|"peer request — never an order"| capA
+
+  capA -.->|"files an issue: the durable request, never an order"| trackerB
+  trackerB -.->|"triaged on B's own queue, B decides when"| capB
+  capA -.->|"blocked: decision-request for sequencing"| mail
 
   podA1 -.->|"reports · decision-requests"| mail
   podA2 -.->|"reports"| mail
   podB1 -.->|"reports"| mail
-  capA -.->|"reports · decision-requests"| mail
   mail -.->|"fetched by"| cc
 ```
 
-Authority runs **down** the solid edges only. Every dotted edge is content: fetched, answered, never
-obeyed. A cross-project Captain request carries only the asking Captain's own authority.
+Solid edges are authority, and they only ever run **down** from the apex. Dotted edges are content:
+fetched, triaged, answered, never obeyed. Note what is missing — there is **no solid edge between the two
+Captains**, and none from a Captain into the other project's Pods.
+
+
+## Cross-project: a request, an issue, or an escalation — never an order
+
+Almost every real cross-project need in this fleet runs **downstream → upstream**: cyberfleet depends up
+on cyberlegion, which depends on cyber-mux for sessions and panes, while `universal-plugin` and
+`buddy-agent-harness` are tooling every repo consumes. The consumer finds the gap; the fix belongs to the
+dependency.
+
+A Captain holds authority over its own project's Pods and none in another project, so by attenuation it
+has none to pass sideways. Three kinds of traffic follow, and they are not interchangeable:
+
+| Kind | Example | Form | Who acts |
+|---|---|---|---|
+| **Information** | "we hit this `unit claim` behaviour" | mail, or a comment on an existing issue | nobody is obliged |
+| **Request** | "cyberlegion needs a hub-wide thread read" | **an issue in the target repo** | the target's Captain, on its own queue |
+| **Dependency claim** | "this node cannot promise rehydration until that ships" | issue, plus a blocked-by link, plus a decision-request up | the Council sequences it |
+
+The **issue is the request; mail is only the doorbell.** An issue is durable, public, dedupable, and
+survives every session; hub mail is private and dies unread if that Captain never runs. File the issue,
+then mail the link when the target is live and timing matters.
+
+Worked cases:
+
+- **cyberfleet → cyberlegion** (`unit claim` has no liveness check): file it there, then either scope the
+  work to what ships today or declare blocked. Never dispatch a Pod into cyberlegion — that Pod would be
+  owned by a Captain with no authority in it (cyberfleet#24: "Captain A never becomes the owner of B's
+  Pod").
+- **cyberlegion → cyber-mux** (caller identity on injected keys): the same shape one level up, and the
+  reason this design's honest limit stays bounded until it lands.
+- **universal-plugin → its consumers** (a manifest schema change): the direction flips, the rule does
+  not. An upstream Captain may file "adopt the new manifest"; the consumer's Captain decides when.
+- **buddy-agent-harness** writing an `AGENTS.md` in another repo: the work runs in a Pod owned by **that
+  repo's** Captain. The tool crosses repos; authority does not.
+
+When an issue is not enough, the path is **up, not sideways**: a decision-request to Command Center, which
+holds authority over both Captains and can dispatch the other one now.
+
+Accepting such an issue and spawning a Pod for it is **dispatch**, not ratification, so the receiving
+Captain needs no Council decision to start. Requiring one would queue every cross-project fix behind the
+Council's attention — the silent-stall failure in another coat.
 
 ## How a ratification-class action actually gets done
 
