@@ -11,7 +11,7 @@ todos:
   - content: "Impl: packages/cyberfleet/skills/authority-governance/ (partial skill) + load lines in pod/operator SKILL.md and agents/headless-operator.md"
     status: completed
   - content: "pnpm verify, changeset, PR against main (do not merge); follow-ups filed"
-    status: pending
+    status: completed
 ---
 
 # CR: 9-authority-boundary — what a dispatcher may command, and what carries Council authority
@@ -73,8 +73,15 @@ caller-controlled text into any pane.
 
 ## NEXT
 
-Spec, suite, skill, load lines, website notes and the changeset are written; `pnpm verify` is green;
-cyberlegion#17, #18 and #19 are filed. Two cold spec-judge rounds have run — round 2's findings are
-folded in (the spawn/brief act, a positive companion for a covering decision, the delegation-widening
-guard, a trace on the subagent scenario, the loop's load line). Awaiting the Council's spec-gate
-ratification; then open the PR against main and do not merge.
+Landed. Both gates ratified in-session by unional: the spec gate froze `authority.feature` at 49
+scenarios with a clearance floor for the narrowing of the issue's own ask, and the impl gate passed on a
+second cold judge (the first withheld on one absorption finding, fixed implementation-side). The project
+spec is at `status: implemented` with both approvals recorded for this CR, and the ledger carries the
+leash, the reopen, both gate lines and the follow-ups; the combat log carries four judge iterations and
+two Council kickbacks.
+
+Open, and deliberately not this CR's work: cyberlegion#17 and #18 are the carve-outs two frozen scenarios
+depend on, filed and unmerged (the ledger's one blocking follow-up); cyberlegion#19 is the thread-read
+gap the node cites rather than assumes; the node carries 49 scenarios against a 40 breadth hint for a
+formation pass; the Pod skill's load trigger is looser than its two siblings'; no Captain exists yet, so
+six scenarios rest on the governance text being generically written.
