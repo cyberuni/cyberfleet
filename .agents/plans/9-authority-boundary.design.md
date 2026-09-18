@@ -129,7 +129,7 @@ sequenceDiagram
   CC->>Cap: relays the decision — verbatim words, where said, relaying unit, scope
   Cap->>P: relays it unchanged, within what Cap holds
   P->>P: scope covers this action + target + revision, and is unspent
-  P->>M: merged; the decision is recorded spent on the thread
+  P->>M: merged, and the decision is recorded spent on the thread
 ```
 
 ## What each layer needs from the record
