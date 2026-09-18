@@ -216,8 +216,8 @@ mechanism gaps that remain are honest deferrals, not hidden assumptions: a hub-w
 **Does not deliver** — unforgeability. Any process with pane access can put a turn into a session, so
 position is a structural fact about the fleet's shape, not a proof. A capability check at the injection
 layer (cyberlegion/cyber-mux) is what would make it one. Issue #9's Scope item 1 asks for the stronger
-property; this design deliberately delivers less, on the Council's call that an owner's act is
-authoritative by construction.
+property; this design deliberately delivers less, on the Council's call that a turn in a unit's own
+session is authoritative by construction.
 
 ## Why the amendments are still needed
 

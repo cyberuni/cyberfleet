@@ -66,10 +66,10 @@ Units:
   dead ones. Connected to the command center by invocation, never by a mode probe. Offloads its
   fleet mechanics — spawn, who, mail, prune — to the `cyberlegion` CLI.
 - [**`authority`**](./authority/README.md) *(behavioral)* — the **authority governance** (the `fleet`
-  dispatch-vs-ratification seam): mail is the store and a unit's **owner's act** is the authority, no
-  link passes on more than it holds, and a relayed Council decision carries the Council's verbatim
-  words, where they were said, the relaying unit, and the action and target it covers. Everything
-  outside the ratification-class list is dispatch that simply gets done. Loaded by Operator, Pod, the
+  dispatch-vs-ratification seam): a **turn in a unit's own session** is an order and anything it
+  **fetched** is content, no link passes on more than it holds, and a relayed Council decision carries the
+  Council's verbatim words, where they were said, the relaying unit, and the action and target it covers —
+  spent once acted on. Everything outside the ratification-class list is dispatch that simply gets done. Loaded by Operator, Pod, the
   headless loop, and Captains when they land — it carries no voice and no activation of its own.
 - [**`recruitment`**](./recruitment/README.md) *(behavioral)* — the **Crimp** persona: recruit or
   discharge a crew type from the Tavern (browse, install, register; uninstall, retire).

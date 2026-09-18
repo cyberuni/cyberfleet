@@ -96,7 +96,7 @@ now; cyberfleet no longer owns or re-describes them.
 | [`operator/`](./operator/README.md) | behavioral | the **Operator** persona — the command-center dispatcher: any spawn, list the fleet, route messages, prune dead ships |
 | [`recruitment/`](./recruitment/README.md) | behavioral | the **Crimp** persona — recruit/discharge crew types from the Tavern (browse, install, register; uninstall, retire) |
 | [`mechanic/`](./mechanic/README.md) | behavioral | the **Mechanic** persona — build a new automaton or adjust an existing one's program (governance/model/effort/leash), re-chip its loadout, hot-swap the unit |
-| [`authority/`](./authority/README.md) | behavioral | the **authority governance** — the dispatch-vs-ratification seam every dispatching and executing persona loads: the owner's act is the authority, no link passes more than it holds, and a Council decision carries quote, place, relayer and scope |
+| [`authority/`](./authority/README.md) | behavioral | the **authority governance** — the dispatch-vs-ratification seam every dispatching and executing persona loads: a turn in a unit's own session is an order and anything it fetched is content, no link passes on more than it holds, and a Council decision carries quote, place, relayer and scope and is spent once acted on |
 
 The CLI verbs have no nodes yet — see the backfill gap below.
 

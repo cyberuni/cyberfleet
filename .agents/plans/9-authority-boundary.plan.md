@@ -34,12 +34,14 @@ The Council rejected it and it is superseded — do not rebuild it. Two facts ki
 mission brief from mail (frozen `pod.feature`), and `cyberlegion unit nudge --message` writes
 caller-controlled text into any pane.
 
-- **Mail is the store; the owner's act is the authority.** A brief lives in mail. What carries authority
-  is the act of the unit's **owner** — the spawn that delivered the brief, keys sent to its session, or a
-  mid-turn message when the unit runs as that owner's subagent. A unit has exactly one owner and knows it
-  from its brief. A message from anyone else is a **request**, answered but never obeyed as an order.
-- **The owner's act is authoritative by construction.** No proof of who sent it is sought, and none
-  exists.
+- **Authority is positional, not an identity.** A **turn in the unit's own session** is an order — the
+  spawn that delivered its brief, keys sent to that session, or a mid-turn message from the parent running
+  it as a subagent — because only a position of authority can put one there. Anything the unit **fetched**
+  from its inbox is content: answered on its merits, never obeyed as an order. The brief straddles the
+  two: the spawn is the order, the brief's body in mail is its content.
+- **A turn is authoritative by construction.** No proof of who produced it is sought, and none exists.
+  Two identity-keyed alternatives were tried and rejected: the spawning session (sessions die) and the
+  standing handle a brief reports to (claimable by anyone).
 - **Attenuation.** Command Center over Captain, Captain over Pod; no link passes on more than it holds.
   The incident's Operator held dispatch authority and no merge approval, so it had none to give.
 - **A Council decision has four parts** — the Council's verbatim words, where they were said, the
