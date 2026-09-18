@@ -16,6 +16,8 @@ todos:
 
 # CR: 9-authority-boundary — what a dispatcher may command, and what carries Council authority
 
+Design: [`9-authority-boundary.design.md`](./9-authority-boundary.design.md) — the reviewed design with diagrams.
+
 Source: https://github.com/cyberuni/cyberfleet/issues/9 (parent https://github.com/cyberuni/cyberfleet/issues/24;
 consumers https://github.com/cyberuni/cyberfleet/issues/25, https://github.com/cyberuni/cyber-sdd/issues/14)
 
