@@ -121,6 +121,10 @@ A brief opens a thread; reports, decision-requests and decisions reply on it (`c
 --thread` / `--reply-to`, `mail await --thread`). A decision is recorded on the thread of the work it
 decides, with its scope and the unit that relayed it — which is what makes a wrong relay traceable.
 
+How a recipient is told that mail is waiting is not this governance's business: `mail send` rings the
+doorbell itself, and the Operator persona owns the rule that a delivered message whose ring never landed
+is not resent. Do not add a notify step here.
+
 The thread carries **no** mission status: gate, leash and status stay SDD's, derived on demand. Do not
 grow a second mission-status store here.
 

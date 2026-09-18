@@ -176,6 +176,22 @@ sequenceDiagram
   P->>M: merged, and the decision is recorded spent on the thread
 ```
 
+## Notification is not this design's business
+
+Nothing here specifies how a recipient learns that content is waiting. `cyberlegion mail send` rings the
+recipient's doorbell itself (it reports `rung: true`, and `--no-nudge` suppresses it), so there is no
+sender-side "then notify them" step to write down. The frozen Operator node already carries the rule that
+matters — **delivery is not the doorbell**: a message whose ring never landed is delivered, not resent,
+and only a handle that resolved to no live unit is undelivered. That is cyberlegion's seam; this design
+cites it and adds nothing.
+
+One consequence does land on this design's seam, and it is the bounded limit rather than a new rule. The
+doorbell arrives as a **turn** in the recipient's session, so by layer 1 it is an order — a harmless one,
+because what it says is "check your inbox", and what the inbox holds is content either way. But the same
+injection path takes caller-controlled text (`unit nudge --message "<text>"`), which is precisely why
+position is a structural fact about the fleet's shape and not a proof. A capability check at that layer is
+what would close it.
+
 ## What each layer needs from the record
 
 - **Position** needs nothing recorded. It is observable to the unit: a turn either arrived in this session
