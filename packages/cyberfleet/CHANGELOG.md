@@ -1,5 +1,23 @@
 # cyberfleet
 
+## 0.1.0
+
+### Minor Changes
+
+- 3676673: Ship the `cyberfleet` agent plugin inside the npm package. The tarball now includes `plugin.json`, the Claude Code and Codex manifests, `skills/`, and `agents/`, so the package directory is also the plugin root.
+- 3aec764: Add `authority-governance`, the fleet's dispatch-versus-ratification rule, and load it from Pod,
+  Operator, and the headless-operator loop. An order is the act of a unit's own owner; a message from
+  anyone else is a request. No link passes on more authority than it holds, and a relayed Council
+  decision carries the Council's verbatim words, where they were said, the relaying unit, and the action
+  and target it covers. A ratification-class action without a covering decision costs that step only —
+  the rest of the order still lands, with the gap named.
+
+### Patch Changes
+
+- 2b3d148: Bundle `commander` and `cyberlegion` into the CLI build, so `cyberfleet` runs from an installed plugin directory that has no `node_modules`.
+- 6d3bf64: `cyberfleet --version` now reports the package version instead of `0.0.0`.
+- 361a7e4: The Pod and Operator skills now run the `cyberfleet` CLI that ships with the plugin, instead of `npx cyberfleet@<version>`. The unused `.plugin/pins.json` is removed.
+
 ## 0.0.6
 
 ### Patch Changes
