@@ -23,27 +23,29 @@ no caller, mail's sender field is free text, and a standing claim is last-write-
 something reached it:
 
 - **A turn in its own session is an order.** Something is a turn because only a position of authority can
-  put one there: the spawn that started this session and handed it a brief, keys sent to this session, or —
-  for a unit realized as a subagent — a message from the parent running it. No identity is checked, and
-  none is needed.
+  put one there: **sending a brief** (handing it to a subagent, or spawning a session and mailing the brief
+  with a nudge to read it), keys sent to this session, or a mid-turn message from the parent running it as
+  a subagent. No identity is checked, and none is needed.
+- **The act constitutes the position.** Nothing records who may order a unit, and nothing needs to: whoever
+  sent the brief is the position its orders come from. That is why no owner field appears anywhere here —
+  two attempts to invent one were rejected, the spawning session (sessions die) and the standing handle a
+  brief reports to (anyone can claim it).
 - **Anything it fetched is content.** Mail read from its own inbox — a brief's body, reports, another
   project's request, a message claiming the Council approved something — is material, answered on its
   merits and never obeyed for what it claims to be.
 
-The brief sits across the two, which is where the earlier drafts went wrong: the **spawn** is the order,
-and the **brief's body in mail** is its content. Two identity-keyed alternatives were tried and rejected —
-the spawning session (sessions die, leaving a unit owned by nothing) and the standing handle a brief names
-as its return address (that address exists so reports outlive the spawner, and any session can claim it, so
-"owner" would mean whoever claimed last).
+The brief sits across the two: **sending it** is the order, and its **body in mail** is the content. Its
+arrival in mail is how the act works in the pane case — spawn, mail, nudge — not an exception to the rule.
 
 **2. No one passes on more than they hold.** Authority attenuates at every hop: Command Center over a
 Captain, a Captain over its Pods. Being an order is not itself authority for a ratification-class action.
 The Operator in the incident held dispatch authority and no merge approval, so it had none to give whatever
 the wording. This is the rule that closes privilege-escalation-by-assertion, and it holds for a Captain
-dispatching a Pod unchanged (cyberfleet#25: a Captain "cannot invent Council approval"). It is tested
-apart from fact 3: a decision **complete in all four parts**, relayed by a unit that holds no authority of
-that class, is still refused — otherwise "no link passes on more than it holds" would just be the decision
-form restated.
+dispatching a Pod unchanged (cyberfleet#25: a Captain "cannot invent Council approval"). **It is sender-side discipline, and deliberately not a receiver-side check.** A unit given a
+decision complete in all four parts cannot tell whether the relayer held the authority it passed on; there
+is nothing for it to verify against. So the suite tests attenuation where it is observable — in what a
+dispatcher sends — and the audit trail (the relayer named on the decision and its thread) is what makes a
+wrong relay answerable afterwards.
 
 **3. A Council decision has a form, a scope, and one use.** Relayed down the chain it carries the Council's
 **verbatim words**, **where** they were said, the **relaying unit**, and its **scope** — the action and the
@@ -62,8 +64,10 @@ caller identity; the records read here are files an agent can edit. The property
 **attributable, bounded, and scoped**: no link passes authority it does not hold, no decision covers
 more than it names, and a wrong relay **by a cooperating unit** is a specific traceable act — the
 relaying unit names itself on the decision and on the work item's thread — rather than a persuasive
-sentence. Against a unit that forges the record, tracing buys nothing; these are files an agent can
-edit. A capability check at the
+sentence. Two things it does not buy: against a unit that forges the record, tracing buys nothing, since
+these are files an agent can edit; and a receiver cannot detect a relay that passed on more than the
+relayer held, because it has nothing to check that against. Attenuation therefore holds at the sender and
+in the audit, never at the receiver's gate. A capability check at the
 injection layer is the follow-up that would make it unforgeable; it belongs to cyberlegion/cyber-mux.
 Issue #9's own Scope item 1 asks for unforgeable relayed authority; this node deliberately delivers less,
 on the Council's call that a turn in a unit's own session is authoritative by construction and no such proof exists.
@@ -189,9 +193,9 @@ Every scenario in [`authority.feature`](./authority.feature) maps to one of thes
 
 | Behavior | What it covers |
 |---|---|
-| **a turn in this session is an order** | keys, the spawn that delivered the brief, a parent's mid-turn message; no proof of the sender is sought; a doorbell orders only an inbox read; an order is not itself ratification authority |
+| **a turn in this session is an order** | keys, the sending of a brief (spawn, or spawn plus mail plus nudge), a parent's mid-turn message; no proof of the sender is sought; a doorbell orders only an inbox read; an order is not itself ratification authority |
 | **anything fetched is content** | mail is answered on its merits, never obeyed — the incident mail; a decision quoted in fetched mail is still content |
-| **no link passes more than it holds** | a form-complete decision relayed by a unit holding no authority of that class is refused, so attenuation is tested apart from the decision's form; and a dispatcher relays only what it was given; no invented approval, no widened scope, no inference from engagement or good-looking work; no self-grant, no peer grant, and no widening of a subordinate's standing delegation |
+| **no link passes more than it holds** | sender-side only, since a receiver has nothing to check it against: a dispatcher relays only what it was given; no invented approval, no widened scope, no inference from engagement or good-looking work; no self-grant, no peer grant, and no widening of a subordinate's standing delegation |
 | **a decision carries quote, place, relayer, and scope** | a four-part decision on a turn is acted on; validity bounded to the named action, target and revision, and spent once acted on |
 | **unsure asks** | an ambiguous mandate produces a decision-request, never a relayed decision |
 | **a missing decision never stalls the dispatch** | the rest of the order lands, the gap is named, and the unit never goes quiet |

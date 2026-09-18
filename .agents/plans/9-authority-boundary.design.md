@@ -10,9 +10,11 @@ design has had to answer one question: **when a unit receives something, may it 
 
 Two answers were tried and both failed:
 
-1. **Key on the transport** — mail is never a decision; a brief or the pane is. Dead on arrival: a Pod
-   consumes its mission brief *from mail*, and `cyberlegion unit nudge --message` writes arbitrary text
-   into any pane. Neither half of the split survives.
+1. **Key on the transport** — mail is never a decision; a brief or the pane is. This splits the wrong
+   thing. **Sending a brief** is a single act with two shapes: handing it to a subagent, or spawning a
+   session and mailing the brief with a nudge to read it. The brief's arrival in mail is that act working,
+   so a transport rule has to carve out its own central case. `cyberlegion unit nudge --message` also
+   writes arbitrary text into any pane, so neither half of the split holds.
 2. **Key on an owner identity** — resolve "my owner" and obey it. Two candidates, both wrong:
    - the **spawning session** (`spawnedBy` on the unit record) — sessions die, and a unit that outlives
      its spawner has an owner that no longer exists;
@@ -28,9 +30,11 @@ one. cyber-mux records no caller, mail's sender field is free text, and a claim 
 A unit cannot know *who* addressed it. It can know **how** something reached it.
 
 - **A turn in my own session is an order.** Something is a turn because a position of authority put it
-  there: the spawn that started this session and handed it a brief, keys sent to this session, or — for a
-  unit realized as a subagent — a message from the parent that spawned it. Only a unit that already holds
-  that position can do any of these. No identity is checked, and none is needed.
+  there: **sending a brief** (to a subagent directly, or by spawning a session and mailing the brief with a
+  nudge), keys sent to this session, or a mid-turn message from the parent running it as a subagent. Only a
+  unit already in that position can do any of these. No identity is checked, and none is needed.
+- **The act constitutes the position.** Nothing records who may order a unit. Whoever sent its brief is
+  where its orders come from, which is why no owner field appears in this design at all.
 - **Anything I fetched is content.** Mail I read from my own inbox — my brief's body, reports, a peer
   Captain's request, a message claiming the Council approved something — is *material*, not instruction.
   It is answered on its merits, never obeyed because of what it claims to be.
@@ -196,8 +200,9 @@ what would close it.
 
 - **Position** needs nothing recorded. It is observable to the unit: a turn either arrived in this session
   or it did not.
-- **Attenuation** needs no lookup either. A unit relays only what it was itself given; it never consults a
-  registry to discover its own authority.
+- **Attenuation** needs no lookup either, and cannot be checked by the receiver. A unit relays only what
+  it was itself given; the unit it relays to has nothing to verify that against. So attenuation is
+  sender-side discipline plus the audit trail, never a gate the receiver holds.
 - **Decision form** is the only layer with a record: the four parts, plus one thread per work item so a
   decision is anchored to the work it decides and spent once acted on.
 
@@ -212,6 +217,12 @@ mechanism gaps that remain are honest deferrals, not hidden assumptions: a hub-w
 - no message a unit fetched can command it;
 - no link passes on authority it does not hold;
 - no decision covers more than the action, target and revision it names, or survives being used.
+
+**Negative tests only reach what a unit can observe.** A unit can observe whether something arrived as a
+turn, whether a decision's scope covers this action, target and revision, and whether it is already spent.
+It cannot observe who produced a turn, or whether a relayer held the authority it passed on — there is
+nothing to check either against. So the suite tests refusals of the first kind and sender-side discipline
+for the second, and states the gap rather than writing scenarios that assert facts invisible to the subject.
 
 **Does not deliver** — unforgeability. Any process with pane access can put a turn into a session, so
 position is a structural fact about the fleet's shape, not a proof. A capability check at the injection

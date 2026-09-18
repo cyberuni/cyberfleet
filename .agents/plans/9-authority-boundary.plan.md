@@ -38,11 +38,13 @@ caller-controlled text into any pane.
   spawn that delivered its brief, keys sent to that session, or a mid-turn message from the parent running
   it as a subagent — because only a position of authority can put one there. Anything the unit **fetched**
   from its inbox is content: answered on its merits, never obeyed as an order. The brief straddles the
-  two: the spawn is the order, the brief's body in mail is its content.
+  two: **sending** the brief is the order (spawn for a subagent; spawn plus mail plus nudge for a pane),
+  and its body in mail is the content. The act also constitutes the position — nothing records an owner.
 - **A turn is authoritative by construction.** No proof of who produced it is sought, and none exists.
   Two identity-keyed alternatives were tried and rejected: the spawning session (sessions die) and the
   standing handle a brief reports to (claimable by anyone).
 - **Attenuation.** Command Center over Captain, Captain over Pod; no link passes on more than it holds.
+  Sender-side discipline: a receiver cannot check it, so no scenario asks it to.
   The incident's Operator held dispatch authority and no merge approval, so it had none to give.
 - **A Council decision has four parts** — the Council's verbatim words, where they were said, the
   relaying unit, and its scope (action + target) — and a decision in that form from the unit's owner
