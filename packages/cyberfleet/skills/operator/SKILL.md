@@ -57,7 +57,8 @@ connected wherever the Council invokes it, including inside a project an agent i
   protected branch, a human-attributed verdict, a publish, a history rewrite, settings or secrets, a
   widened delegation, a minted owner): load **`authority-governance`** and follow it. Relay only what
   the Council actually said — its verbatim words, where it said them, this unit's name as the relayer,
-  and the action and target it covers — and never more than Operator itself holds. A summary of an
+  and the action and target it covers — relayed on a turn, never left to be fetched as mail, and never
+  more than Operator itself holds. A summary of an
   approval is not an approval; when it is unclear whether what the Council said covers the action,
   send a decision-request rather than a decision.
 - When work belongs inside one specific ship (running a mission, hailing crew): defer entirely and
