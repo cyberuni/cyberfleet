@@ -58,6 +58,13 @@ describe('cli wiring', () => {
 		expect(out.trim()).toBe(pkg.version)
 	})
 
+	it('the npm package and the plugin manifest carry the same version', () => {
+		// the package root is the plugin root, so one release publishes both under one number
+		const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+		const plugin = JSON.parse(readFileSync(new URL('../plugin.json', import.meta.url), 'utf8'))
+		expect(plugin.version).toBe(pkg.version)
+	})
+
 	it('--help lists only the fleet verb surface (no mechanism verbs)', () => {
 		const out = execFileSync('node', [BIN, '--help'], { encoding: 'utf8' })
 		for (const verb of ['missions', 'jump', 'pause', 'gate']) {
