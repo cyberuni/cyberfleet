@@ -33,6 +33,12 @@ topic, never by a probed location.
   parallel worktree-ship on a project that is already a ship, with a self-contained brief the new
   Pod reads cold, whose return address is the handle `operator`. All spawning is Operator's; Pod
   never spawns.
+- Watches the pods it spawns: every brief tells the pod to open a pull request, report on its thread,
+  never merge, and rebase when told trunk moved. Operator gates each report against the clean bar in
+  `authority-governance` §7, merges a clean pull request with no further Council turn (the dispatch
+  order is the delegation) and closes its pod, or holds an unclean one and raises a decision-request.
+  With several pods on one order it merges in dependency order and, after each merge, tells every other
+  open pod to rebase, adapt, re-verify and report again.
 - `cyberlegion unit who` / `mail send` / `mail inbox` / `mail read` / `unit close` / `unit prune` —
   lists, messages, tears down one finished pod, and sweeps the fleet.
 - Routes in-ship mission and crew work to `pod`, by topic — never by probing this working

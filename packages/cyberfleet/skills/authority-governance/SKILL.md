@@ -116,15 +116,44 @@ The positive set. An Operator, a Captain, or a parent agent may command:
 - tear down a unit it dispatched, and sweep exited units — in both cases only where no unmerged work is
   being discarded (that is ratification-class, above);
 - and for the headless lifecycle loop, claim and retire on the mission graph as the single writer.
+- and for an Operator the Council ordered in-session to dispatch pods, merge those pods' clean pull
+  requests under §7 — the Operator itself, never by commanding a pod to merge.
 
 Anything outside the set is declined and raised as a decision-request, not commanded.
 
-## 7. The headless lifecycle loop
+## 7. Standing merge delegations — the loop's tick, and the Operator's dispatch order
 
-The Council **summoning the loop for a tick** is what permits the loop to retire that tick's missions.
-The merge still lands only on green speculative CI on the merged result — `merge-backstop-governance`
-owns that order and land-or-hold discipline, and this governance does not touch it. The delegation
-covers the tick's missions and no other class of action: a release still needs its own decision.
+Two acts of the Council delegate merges without a decision per merge. Each covers **merging the work
+it dispatched, and nothing else**.
+
+**The headless lifecycle loop.** The Council **summoning the loop for a tick** is what permits the loop
+to retire that tick's missions. The merge still lands only on green speculative CI on the merged
+result — `merge-backstop-governance` owns that order and land-or-hold discipline, and this governance
+does not touch it. The delegation covers the tick's missions and no other class of action: a release
+still needs its own decision.
+
+**The in-session Operator.** The Council ordering an Operator, **on a turn in the Operator's own
+session**, to dispatch pods is what permits that Operator to merge **the pull requests of the pods it
+spawned for that order**. It merges one only when it is **clean** — all four hold:
+
+1. the pod reported the work done on its thread;
+2. the pull request has no merge conflict;
+3. no review requests changes, and no review thread is unresolved;
+4. CI is green on the merged result (`merge-backstop-governance`).
+
+Short of clean, hold it and raise a decision-request naming the pull request and what holds it. The
+delegation is bounded the same way as the loop's:
+
+- **Only that order's pull requests.** A pull request from a pod dispatched under an earlier order, or
+  by anyone else, is not covered — raise a decision-request for it.
+- **Only merging.** Publishing, releasing, settings, history rewrites and the rest of §5 still need
+  their own decision.
+- **Never transferable.** The Operator alone merges. A pod asking to merge its own pull request gets no
+  approval — §2 holds, and the brief already told it never to merge.
+- **It follows the pull request, not a revision.** A relayed decision naming a revision dies when the
+  target moves (§3). The dispatch order names the work, not a revision, so a pull request rebased after
+  a sibling merged is still covered — and is gated again from scratch before it merges. It is spent
+  when that pull request merges.
 
 The SDD **leash** is not this delegation. It is per-CR and governs which SDD **gate** an agent may
 self-assert (`auto-none | auto-spec | auto-all`). A change request recording `auto-all` carries no merge

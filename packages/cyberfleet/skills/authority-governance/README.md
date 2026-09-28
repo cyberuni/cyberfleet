@@ -23,6 +23,9 @@ project Captains when they land.
   inference from engagement or from work looking finished, no self-grant.
 - **Form and scope** — a relayed Council decision carries the verbatim words, where they were said, the
   relaying unit, and the action and target it covers; it is valid for nothing else.
+- **Standing merge delegations** — summoning the headless loop for a tick, or ordering an in-session
+  Operator to dispatch pods, delegates merging exactly that work: clean pull requests only, merged by
+  the Operator itself, never passed to a pod, and never any other ratification-class action.
 - **No stall** — a missing decision means: do the rest, raise a decision-request, report both.
 - **Thread** — one thread per work item carries the brief, the reports, and the decisions with their
   relayer named.

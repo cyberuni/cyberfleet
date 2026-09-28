@@ -70,6 +70,24 @@ Speculation is an optimization over serial CI-gated merges; it never weakens the
 — every mission's merge is still proven green (in isolation, after a bisect) before it counts as
 retired.
 
+## 5. After a merge — the open pods rebase, and are gated again
+
+A landed merge moves trunk under every mission still open. After each merge, mail every other
+still-open pod of the same dispatch, on its own brief's thread, that trunk moved and it must:
+
+- rebase onto the new trunk;
+- adapt its work to what just landed, not only resolve textual conflicts;
+- re-run its verification, push, and report again on the thread.
+
+```bash
+cyberlegion mail send --to <pod-handle> --thread <brief-thread> --body "trunk moved: <pr> merged. Rebase, adapt, re-verify, push, report again."
+```
+
+Send nothing to the pod whose work just merged — tear it down instead (`cyberlegion unit close`). A
+rebased pull request is **a new candidate**: gate it from scratch on its new report (§2, and the
+clean bar the dispatcher's authority rule sets). A green result from before the rebase never carries
+over.
+
 ## The invariant
 
 Trunk is **always-green**: no merge lands on trunk with red CI on its merged result, under any
