@@ -1,5 +1,23 @@
 # cyberfleet
 
+## 0.3.0
+
+### Minor Changes
+
+- b7b3059: Operator now watches the pods it spawns and merges their pull requests when they are clean. The
+  Council's in-session order to dispatch pods is the delegation: a pull request merges without a further
+  approval once its pod reported it done, it has no merge conflict, no review blocks it, and CI is green
+  on the merged result. Anything short of that is held and raised. With several pods on one order,
+  Operator merges in dependency order and tells the pods still open to rebase, adapt, and re-verify after
+  each merge. Pods never merge their own work.
+
+### Patch Changes
+
+- 0acf3fc: A ship spawned by Operator now reports back to the session that spawned it. Before, every ship reported
+  to the standing `operator` owner, whose doorbell rings whichever session opened Operator most recently,
+  so reports could land in a session that never saw the brief. A ship falls back to `operator` only when
+  the session that spawned it is gone.
+
 ## 0.2.0
 
 ### Minor Changes
