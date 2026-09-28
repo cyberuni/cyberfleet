@@ -48,8 +48,9 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
   doorbell reaches. Where the hub holds **no** standing `operator`, Operator reports it and routes
   the Council to `init-cyberlegion`; minting a durable owner identity is that skill's, gated on an
   explicit human yes, never a side effect of dispatch.
-- **Read what the command center took while nobody was connected** — every brief Operator writes
-  names `operator` as the return address, so the mailbox behind that address is Operator's to drain,
+- **Read what the command center took while nobody was connected** — the standing `operator`
+  mailbox catches what has no live session to go to: a pod whose spawning session is gone falls back
+  to it, and a frameless headless run pushes its report there. So that mailbox is Operator's to drain,
   not merely to route through: on connecting it reads `cyberlegion mail inbox --owner operator
   --unread` and leads with what is waiting, and it acks a report (`mail read --owner operator
   --ack`) once it has acted on that report — never wholesale to tidy the board, which would erase the
@@ -67,13 +68,21 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
   the ship opens in its own herdr workspace, not a pane crowding a neighbor (cyberlegion already
   defaults a new-worktree spawn to `workspace`; Operator passes it explicitly so the intent is on the
   call rather than inherited).
+- **Pods report to the session that spawned them** — a brief's return address is the spawning
+  session's **own registered handle**, never its id (an id is not an address) and never the standing
+  `operator`. The claim on `operator` moves to whichever session connected last, so a pod reporting
+  there rings a session that never saw its brief, cannot gate its pull request against the order it
+  was spawned for, and may be one of several Operators working different orders at once. The session
+  that spawned the pod holds the order and the watch, so its reports go there. The brief also names
+  the fallback: when that handle resolves to no live unit — the spawning session has exited — the pod
+  reports to `operator` instead, where the next session to connect finds it on the board.
 - **Own every spawn** — spawning a worktree-ship is fleet-level work the Council calls Operator for,
   including parallel work on a project that is already a ship. Pod never spawns (ADR-0022 decision
   8, as amended — this reverses d8's original "spawning is a ship capability, not something reserved
   for outside a ship" clause).
 - **Watch the pods it spawned, and merge clean work** — Operator does not spawn and forget. Every
-  brief sets the pod's side of the watch: open a pull request, report on the brief's thread to
-  `operator`, never merge, and when told the default branch moved, rebase onto it, adapt the work to
+  brief sets the pod's side of the watch: open a pull request, report on the brief's thread to the
+  session that spawned it, never merge, and when told the default branch moved, rebase onto it, adapt the work to
   what landed, re-verify, and report again. Operator acts on each report as it arrives, with no further
   turn from the Council: a **clean** pull request (the four-part bar the
   [`authority/`](../authority/README.md) node's UC10 defines) merges behind the merge backstop, and
@@ -141,7 +150,7 @@ Every scenario in [`operator.feature`](./operator.feature) maps to one of these 
 | **connect by invocation** | loading the skill connects this session to the command center; it probes nothing, and stays connected wherever the Council invokes it |
 | **register and take the claim on connecting** | connecting registers this session under its own handle, never as `operator`, and claims the standing `operator` owner (`unit claim operator`) — unconditionally, taking the claim even when another session holds it — so the doorbell reaches this session; a claim that cannot be taken is reported and dispatch continues; a missing standing owner routes to `init-cyberlegion` and is never minted here |
 | **read what the command center took** | on connecting, `mail inbox --owner operator --unread` leads the board; an acted-on report is acked (`mail read --owner operator --ack`), an unacted one stays unread |
-| **the return address is the standing owner's handle** | a spawn brief names the handle `operator`, never this session's id or own handle |
+| **the return address is the spawning session** | a spawn brief names this session's own registered handle, never its id and never `operator`; the pod falls back to `operator` only when that handle resolves to no live unit |
 | **delivery is not the doorbell** | a sent message whose ring never landed is reported delivered and not resent; only a handle that resolved to no live unit is undelivered |
 | **describe the work, not the location** | the `description` names the fleet-level work and states no location condition a harness cannot evaluate |
 | **leave in-ship work to Pod, by topic** | mission work and specialist crew inside one ship are routed to Pod topically, not via a mode probe |

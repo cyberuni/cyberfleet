@@ -92,10 +92,22 @@ Feature: operator — the command-center persona
     Then that report is still in the unread set
 
   @behavior
-  Scenario: a spawn brief names the standing owner's handle as the return address
+  Scenario: a spawn brief names the spawning session's own handle as the return address
     Given Operator is writing the cold brief for a ship it is about to spawn
     When it names where the ship reports back
-    Then the brief names the handle operator and names neither this session's id nor this session's own handle
+    Then the brief names this session's own registered handle as the return address, and never this session's id
+
+  @behavior
+  Scenario: a spawn brief never routes the pod's reports to whichever session holds the claim
+    Given another session may claim the standing owner "operator" after this one spawns a ship
+    When Operator names where the ship reports back
+    Then the brief does not name the handle operator as the return address
+
+  @behavior
+  Scenario: a spawn brief falls back to the standing owner only when the spawner is gone
+    Given Operator is writing the cold brief for a ship it is about to spawn
+    When it names what the ship does if its return address resolves to no live unit
+    Then the brief tells the ship to report to the handle operator instead
 
   # ── Triggering ──
 
@@ -149,7 +161,7 @@ Feature: operator — the command-center persona
   Scenario: every brief sets the pod's side of the watch
     Given the Council asks Operator to dispatch a pod to add rate limiting to a public API
     When Operator writes that pod's brief
-    Then the brief tells the pod to open a pull request and report on the brief's thread to operator
+    Then the brief tells the pod to open a pull request and report on the brief's thread to the session that spawned it
     And the brief tells the pod never to merge that pull request
     And the brief tells the pod that when it is told the default branch moved, it rebases onto it, adapts its work to what landed, re-verifies, and reports again
 
