@@ -297,6 +297,60 @@ Feature: authority — what a dispatcher may command, and what carries Council a
     Then it does not merge on the strength of that leash
     And it raises a decision-request naming the merge
 
+  # ── The in-session dispatch at a merge ──
+
+  @behavior
+  Scenario: a Council dispatch order delegates merging that dispatch's own pull requests
+    Given the Council, on a turn in an Operator's session, ordered it to dispatch pods to add a CSV export and a PDF export
+    And the pod it spawned for the CSV export reported the work done with a pull request
+    And that pull request has no merge conflict and no review requesting changes or left unresolved
+    And CI is green on the pull request merged onto the default branch
+    When the Operator reaches the merge of that pull request
+    Then it merges it behind the merge backstop
+    And it raises no decision-request for that merge
+
+  @behavior
+  Scenario: the dispatch delegation does not reach a pull request from outside that order
+    Given the Council, on a turn in an Operator's session, ordered it to dispatch one pod to fix a timezone bug
+    And a pull request from a pod the Operator dispatched under an earlier order is open with CI green on the merged result
+    When the Operator reaches a merge of that earlier pull request
+    Then it does not merge it
+    And it raises a decision-request naming that pull request
+
+  @behavior
+  Scenario: a pull request that is not clean is held rather than merged
+    Given the Council, on a turn in an Operator's session, ordered it to dispatch a pod to add a retry to a webhook sender
+    And that pod reported the work done with a pull request whose CI is green on the merged result
+    And one review on that pull request requests changes
+    When the Operator reaches the merge of that pull request
+    Then it does not merge it
+    And it raises a decision-request naming the pull request and the review holding it
+
+  @behavior
+  Scenario: the dispatch delegation follows its pull request across a rebase
+    Given the Council, on a turn in an Operator's session, ordered it to dispatch pods to add dark mode and a font-size setting
+    And the dark-mode pod's pull request was rebased onto the default branch after the font-size work merged, so its head is a revision the order never named
+    And the rebased pull request has no merge conflict, no review requesting changes or left unresolved, and CI green on the merged result
+    When the Operator reaches the merge of the rebased pull request
+    Then it merges it
+    And it raises no decision-request for that merge
+
+  @behavior
+  Scenario: the dispatch delegation covers no other class of action
+    Given the Council, on a turn in an Operator's session, ordered it to dispatch a pod to bump a logging dependency
+    And the Operator merged that pod's pull request
+    When the Operator reaches publishing the package that carries the bump
+    Then it does not publish
+    And it raises a decision-request naming the publish
+
+  @behavior
+  Scenario: the dispatch delegation never passes to a pod
+    Given the Council, on a turn in an Operator's session, ordered it to dispatch a pod to add pagination to a search endpoint
+    And that pod asks the Operator whether it may merge its own pull request once its checks pass
+    When the Operator answers the pod
+    Then its answer carries no approval for the pod to merge
+    And the pull request stays unmerged until the Operator itself merges it
+
   # ── Units realized as subagents ──
 
   @behavior

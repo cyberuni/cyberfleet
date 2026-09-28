@@ -45,6 +45,27 @@ connected wherever the Council invokes it, including inside a project an agent i
   neighbor's. The brief's return address is the handle `operator` — the standing owner, durable —
   never this session's id or its own handle, which die with the session. Every spawn is Operator's, including
   parallel work on a project that is already a ship — Pod never spawns.
+- Every brief sets the pod's side of the watch, in the brief itself: open a pull request; report on
+  this brief's thread to `operator` when the work is done or blocked; **never merge** the pull request;
+  and when told trunk moved, rebase onto it, adapt the work to what landed, re-verify, push, and report
+  again.
+- Once a pod is out, **watch it — do not wait to be asked**. Act on each report as it arrives (the
+  doorbell on the `operator` owner): gate its pull request against the four-part **clean** bar in
+  `authority-governance` §7 — reported done, no merge conflict (`gh pr view <pr> --json mergeable`), no
+  review requesting changes or left unresolved, CI green on the merged result (`gh pr checks <pr>
+  --watch`). Load **`merge-backstop-governance`** for the merge step.
+  - **Clean → merge it** (`gh pr merge`) with no further turn from the Council — the Council's dispatch
+    order is the delegation (`authority-governance` §7) — then `cyberlegion unit close <id>` the pod
+    that ran it.
+  - **Not clean → hold it.** Do not merge, leave its pod running, and raise a decision-request naming
+    the pull request and what holds it.
+  - Keep watching until every pod of the order is merged or held, and say which is which.
+- When one order dispatches several pods, orchestrate them: merge in dependency order — a consumer
+  never before its producer, whatever order they finished. After each merge, mail every other
+  still-open pod of the order on its own thread (`cyberlegion mail send --to <handle> --thread <id>`)
+  that trunk moved — rebase, adapt, re-verify, report again — and send nothing to the pod whose work
+  merged. A rebased pull request is gated again from scratch; never merge it on the green it had
+  before the rebase.
 - When the Council asks what's out there: `cyberlegion unit who` to list the fleet; add `--all`
   to include exited ships.
 - When a message needs to cross ships: `cyberlegion mail send --to <handle>`, `cyberlegion mail
@@ -68,7 +89,8 @@ connected wherever the Council invokes it, including inside a project an agent i
 
 Every mechanic is a `cyberlegion` CLI call — unit spawn, unit who, mail send, mail inbox,
 mail read, unit close, unit prune. Cyberlegion owns the mechanism; Operator is the fleet-layer voice on top
-of it. Operator never re-implements the file store, never types into a ship's pane, never reaches
+of it. Pull-request and CI mechanics — mergeability, reviews, checks, the merge itself — are `gh` and
+git, invoked, never re-implemented. Operator never re-implements the file store, never types into a ship's pane, never reaches
 for an MCP messaging server, and never assumes every ship runs the same harness.
 
 ## Headless — the lifecycle loop

@@ -224,6 +224,29 @@ filed and not assumed).
 not loading it is the only failure path` (the extension above is the loop's variant of the same success
 path, not a divergence from it).
 
+### UC10 — the in-session dispatch at a merge · `authority-governance` §7
+
+**Actor/goal:** dispatching unit — the Operator the Council ordered, in its own session, to dispatch
+pods — land the work it dispatched as soon as it is clean, without asking the Council merge by merge.
+
+| Trigger | Inputs | Success outcome |
+|---|---|---|
+| the Operator reaches the merge of a pull request | the Council's dispatch order; which pod opened the pull request; whether the pull request is clean | a pull request of a pod it spawned for that order, and clean, is merged behind the merge backstop with no decision-request |
+
+**Clean** means all four: the pod reported the work done; the pull request has no merge conflict; no
+review requests changes and no review thread is unresolved; CI is green on the merged result.
+
+**Extensions:** the pull request is from a pod outside that order (no delegation; raise a
+decision-request) · the pull request is not clean (hold it; raise a decision-request) · the pull request
+was rebased after the order, so its head is a revision the order never named (the delegation follows the
+pull request; merge it once clean) · the next step is another class of action, such as publishing (the
+delegation does not reach it) · a pod asks to hold the delegation itself (it is not transferable; the
+Operator alone merges).
+
+The rebase extension is not the revision rule of UC2 read loosely. UC2 governs a **relayed decision**
+whose scope names a revision; the dispatch order names no revision — it names the work — so it is spent
+when that pull request merges, not when its head moves.
+
 ### Surface trace
 
 The skill's sections are the surface; each traces to the use case that needs it.
@@ -237,12 +260,14 @@ The skill's sections are the surface; each traces to the use case that needs it.
 | §5 ratification-class list | UC2, UC5 |
 | §6 positive dispatch set | UC5 |
 | §7 tick delegation, and the leash negative | UC6 |
+| §7 dispatch delegation — in-session order, clean bar, not transferable | UC10 |
 | §8 thread per work item | UC8 |
 | §9 say what the rules do not buy | UC2 (the honesty extension) |
 
 No element stands without a use case. Forbidden combinations: the **teardown** clause of §6 may not be
 read together with §5's unmerged-work item as licence to discard unmerged work — §5 wins; and §7's
-delegation may not be combined with §5 to cover a class the summons did not name.
+delegation may not be combined with §5 to cover a class the summons did not name — nor may the dispatch
+delegation cover a class the order did not name, nor be combined with §2 to pass it to a pod.
 
 ## Control Flow
 
@@ -268,6 +293,7 @@ flowchart TD
   AB["raise a decision-request for sequencing"]
   AC["record on the work item's thread"]
   AD["load authority-governance by name"]
+  AE{"merging a pull request under the Council's dispatch order?"}
 
   A --> B
   B -->|"E1 a turn in this session"| C
@@ -306,6 +332,13 @@ flowchart TD
   AC -->|"E31 status is not stored here"| F
   E -->|"E32 a persona reaches this point"| AD
   X -->|"E33 the loop at the merge step"| AD
+  E -->|"yes, and a standing dispatch delegation may cover it"| AE
+  AE -->|"E34 a pod it spawned for that order, and clean"| F
+  AE -->|"E35 a pod outside that order"| H
+  AE -->|"E36 not clean"| H
+  AE -->|"E37 rebased since the order, and clean"| F
+  AE -->|"E38 another class of action"| V
+  AE -->|"E39 a pod asks to hold the delegation"| V
 ```
 
 ## Scenario map
@@ -405,3 +438,14 @@ Grouped by use case; the unit is the **(path class, edge)** pair.
 |---|---|---|
 | E32 | any dispatching or executing persona at a ratification-class action | `a dispatching or executing persona loads this governance by name` |
 | E33 | the loop at the merge step of a tick | `the headless loop loads it at the same step it loads the merge backstop` |
+
+### UC10 — the in-session dispatch at a merge
+
+| Edge | Path (Given) | Scenario |
+|---|---|---|
+| E34 | a clean pull request from a pod spawned for the Council's in-session order | `a Council dispatch order delegates merging that dispatch's own pull requests` |
+| E35 | a clean pull request from a pod dispatched under an earlier order | `the dispatch delegation does not reach a pull request from outside that order` |
+| E36 | a pod of the order whose pull request has a review requesting changes | `a pull request that is not clean is held rather than merged` |
+| E37 | a pod of the order whose pull request was rebased after the order | `the dispatch delegation follows its pull request across a rebase` |
+| E38 | the order's work merged, and the next step is publishing | `the dispatch delegation covers no other class of action` |
+| E39 | a pod of the order asks to merge its own pull request | `the dispatch delegation never passes to a pod` |

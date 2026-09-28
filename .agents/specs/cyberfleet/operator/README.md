@@ -71,6 +71,21 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
   including parallel work on a project that is already a ship. Pod never spawns (ADR-0022 decision
   8, as amended — this reverses d8's original "spawning is a ship capability, not something reserved
   for outside a ship" clause).
+- **Watch the pods it spawned, and merge clean work** — Operator does not spawn and forget. Every
+  brief sets the pod's side of the watch: open a pull request, report on the brief's thread to
+  `operator`, never merge, and when told the default branch moved, rebase onto it, adapt the work to
+  what landed, re-verify, and report again. Operator acts on each report as it arrives, with no further
+  turn from the Council: a **clean** pull request (the four-part bar the
+  [`authority/`](../authority/README.md) node's UC10 defines) merges behind the merge backstop, and
+  its pod is torn down with `cyberlegion unit close`; anything short of clean is held, its pod left
+  running, and raised to the Council as a decision-request. The authority to merge
+  without asking is the Council's **dispatch order** itself, delegated to Operator alone and never to a
+  pod (`authority-governance` §7, the [`authority/`](../authority/README.md) node's UC10).
+- **Orchestrate several pods on one order** — their pull requests merge in dependency order (a
+  consumer never before its producer, per `merge-backstop-governance`), not the order they finished.
+  After each merge, Operator mails every other still-open pod of the order, on its own thread, that the
+  default branch moved; a rebased pull request is gated again from scratch, never merged on the green
+  result it had before the rebase.
 - **List the fleet** — when the Council asks what's out there, `cyberlegion unit who`; add `--all` to
   include exited ships.
 - **Route messages between ships** — when a message must cross ships, `cyberlegion mail send --to
@@ -132,6 +147,8 @@ Every scenario in [`operator.feature`](./operator.feature) maps to one of these 
 | **leave in-ship work to Pod, by topic** | mission work and specialist crew inside one ship are routed to Pod topically, not via a mode probe |
 | **own every spawn** | spawning a worktree-ship is Operator's, including parallel work on a project that is already a ship; Pod never spawns |
 | **every spawn carries a brief and its own workspace** | `cyberlegion unit spawn` with a self-contained brief, `--at workspace` so the ship opens in its own workspace — binds every spawn, not only the first |
+| **watch and merge clean work** | every brief sets the pod's side (PR, report on thread, never merge, rebase when told); a clean PR merges with no Council turn and its pod is closed; an unclean one is held and raised, its pod left running |
+| **orchestrate several pods** | dependency-order merge; after each merge every other open pod of the order is told the default branch moved; a rebased PR is re-gated from scratch |
 | **list the fleet** | `cyberlegion unit who` (`--all` includes exited ships) |
 | **route messages between ships** | `cyberlegion mail send` / `inbox` / `read`, always by handle |
 | **sweep dead ships** | `cyberlegion unit prune` |

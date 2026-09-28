@@ -143,6 +143,65 @@ Feature: operator — the command-center persona
     When the request is routed
     Then Operator spawns that worktree-ship itself, since spawning is fleet-level work the Council calls Operator for, and Pod never spawns
 
+  # ── Watch the pods it spawned, and merge clean work ──
+
+  @behavior
+  Scenario: every brief sets the pod's side of the watch
+    Given the Council asks Operator to dispatch a pod to add rate limiting to a public API
+    When Operator writes that pod's brief
+    Then the brief tells the pod to open a pull request and report on the brief's thread to operator
+    And the brief tells the pod never to merge that pull request
+    And the brief tells the pod that when it is told the default branch moved, it rebases onto it, adapts its work to what landed, re-verifies, and reports again
+
+  @behavior
+  Scenario: a clean pull request is merged without the Council asking
+    Given Operator dispatched a pod on the Council's order to add a CSV export
+    And the pod reports on its thread that the work is done, with a pull request
+    And that pull request has no merge conflict, no review requesting changes or left unresolved, and CI green on the merged result
+    When Operator reads the report
+    Then it merges the pull request with no further turn from the Council
+    And it tears down that pod with cyberlegion unit close
+
+  @behavior
+  Scenario: a pull request that is not clean is held and raised
+    Given Operator dispatched a pod on the Council's order to add a CSV export
+    And the pod reports on its thread that the work is done, with a pull request
+    And CI is red on that pull request merged onto the default branch
+    When Operator reads the report
+    Then it does not merge the pull request
+    And it raises a decision-request naming the pull request and the failing check
+    And it leaves that pod running
+
+  @behavior
+  Scenario: several pods' pull requests merge in dependency order
+    Given Operator dispatched two pods on one Council order, one adding a shared date parser and one adding a report that uses it
+    And both pull requests are clean, and the report's pod reported done first
+    When Operator merges them
+    Then the date parser's pull request merges before the report's pull request
+
+  @behavior
+  Scenario: after a merge, every other open pod of the order is told the default branch moved
+    Given Operator dispatched three pods on one Council order
+    And one pod's pull request has just merged while the other two pull requests are still open
+    When that merge lands
+    Then Operator mails each of the two open pods, on its own brief's thread, that the default branch moved and it must rebase, adapt its work, re-verify, and report again
+    And it sends no such message to the pod whose work merged
+
+  @behavior
+  Scenario: a rebased pull request is gated again before it merges
+    Given a pod's pull request was clean, and Operator then told the pod the default branch moved
+    And the pod reports again after rebasing, and CI is red on the rebased pull request merged onto the default branch
+    When Operator reads the new report
+    Then it does not merge the rebased pull request on the earlier green result
+    And it raises a decision-request naming the pull request and the failing check
+
+  @behavior
+  Scenario: a rebased pull request that is clean again merges
+    Given a pod's pull request was clean, and Operator then told the pod the default branch moved
+    And the pod reports again after rebasing, and the rebased pull request has no merge conflict, no review requesting changes or left unresolved, and CI green on the merged result
+    When Operator reads the new report
+    Then it merges the rebased pull request with no further turn from the Council
+
   # ── List the fleet ──
 
   @behavior

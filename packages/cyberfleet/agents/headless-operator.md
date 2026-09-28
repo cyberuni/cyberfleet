@@ -34,6 +34,7 @@ while capacity K and ready:
 on mission-done(m):                            # m reports through its existing HANDOFF relay
   merge per merge-backstop-governance          # Operation order + speculative-CI gate + bisect-on-red
   cyberlegion unit close <id>                    # tear down the pod that ran it (spawn's inverse)
+  mail every other open pod: trunk moved         # rebase, adapt, re-verify, report (merge-backstop §5)
   mission-graph append (retire + discovered edges/nodes)   # SINGLE WRITER
   # next `ready` reflects it -> re-derive on the next tick
 ```
