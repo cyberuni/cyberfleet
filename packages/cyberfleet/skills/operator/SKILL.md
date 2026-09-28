@@ -26,9 +26,10 @@ connected wherever the Council invokes it, including inside a project an agent i
   last died there and mints a new holder of the handle in every new pane), then `cyberlegion unit
   claim operator` to take the claim on the standing `operator` owner, always — even when another
   session already holds it, since last claim wins and the doorbell rings whoever holds it. Register
-  before claiming; the claim needs an identity in this session. Then read the mailbox behind the
-  address every brief names: `cyberlegion mail inbox --owner operator --unread`, and lead with what
-  the command center took while nobody was connected. `cyberlegion mail read <msg-id> --owner
+  before claiming; the claim needs an identity in this session. Then read the standing mailbox, which
+  holds what had no live session to go to (a pod whose spawner is gone, a frameless headless report):
+  `cyberlegion mail inbox --owner operator --unread`, and lead with what the command center took while
+  nobody was connected. `cyberlegion mail read <msg-id> --owner
   operator --ack` a report once acted on — never sweep the unread set to tidy the board.
 - **No multiplexer, so no presence can be bound and the claim cannot be taken:** report the standing
   `operator` owner unclaimed and carry on dispatching. This is fail-soft — an unclaimed owner costs
@@ -42,15 +43,18 @@ connected wherever the Council invokes it, including inside a project an agent i
   <claude|cursor|codex> --handle <name> --task "<self-contained brief>" --at workspace` — the brief
   must stand on its own since the new Pod starts cold and reads it through its own SessionStart
   hook, and `--at workspace` opens the ship in its own herdr workspace rather than a pane crowding a
-  neighbor's. The brief's return address is the handle `operator` — the standing owner, durable —
-  never this session's id or its own handle, which die with the session. Every spawn is Operator's, including
+  neighbor's. The brief's return address is **this session's own registered handle** — the session
+  that holds the order and watches the pod — never its id and never `operator`: the claim on
+  `operator` moves to whichever session connected last, which never saw this brief. The brief also
+  names the fallback: if that handle resolves to no live unit, report to `operator` instead. Every
+  spawn is Operator's, including
   parallel work on a project that is already a ship — Pod never spawns.
 - Every brief sets the pod's side of the watch, in the brief itself: open a pull request; report on
-  this brief's thread to `operator` when the work is done or blocked; **never merge** the pull request;
+  this brief's thread to the return address when the work is done or blocked; **never merge** the pull request;
   and when told trunk moved, rebase onto it, adapt the work to what landed, re-verify, push, and report
   again.
 - Once a pod is out, **watch it — do not wait to be asked**. Act on each report as it arrives (the
-  doorbell on the `operator` owner): gate its pull request against the four-part **clean** bar in
+  doorbell on this session's own handle): gate its pull request against the four-part **clean** bar in
   `authority-governance` §7 — reported done, no merge conflict (`gh pr view <pr> --json mergeable`), no
   review requesting changes or left unresolved, CI green on the merged result (`gh pr checks <pr>
   --watch`). Load **`merge-backstop-governance`** for the merge step.

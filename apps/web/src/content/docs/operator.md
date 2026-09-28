@@ -13,7 +13,8 @@ The **Operator** is the dispatcher of the fleet. It's where you survey what's ou
 
 - Spawns every ship — your first, a new peer session, or a parallel worktree-ship on a project that's already a ship. All spawning is Operator's; Pod never spawns.
 - Lists the live ships and, via `cyberfleet missions`, which need the Council's hands — ships × mission × gate × leash, derived from [SDD](https://cyberuni.github.io/cyber-sdd/sdd/overview/) state.
-- Watches the ships it spawns and lands their work. Each ship opens a pull request and reports back.
+- Watches the ships it spawns and lands their work. Each ship opens a pull request and reports back
+  to the session that spawned it, not to whichever session opened Operator most recently.
   When a pull request is clean (the ship reported it done, it has no merge conflict, no review is
   blocking it, and CI is green on the merged result), Operator merges it without asking you again,
   because your order to dispatch the work covers that. Anything short of clean waits for you.
