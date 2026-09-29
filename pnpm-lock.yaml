@@ -58,8 +58,8 @@ importers:
         specifier: ^14.0.3
         version: 14.0.3
       cyberlegion:
-        specifier: ^0.3.1
-        version: 0.3.2
+        specifier: ^0.5.0
+        version: 0.5.0
     devDependencies:
       '@types/node':
         specifier: ^24.10.1
@@ -1848,8 +1848,8 @@ packages:
     engines: {node: '>=22'}
     hasBin: true
 
-  cyberlegion@0.3.2:
-    resolution: {integrity: sha512-W//Q4xkPeyr3OAdBzv3kQ4VINDoA+Wgqkh/wSfEX47Q+h858QjyR2ojRzc+gAbU53VrAcJptn0k81WZr92kjrA==}
+  cyberlegion@0.5.0:
+    resolution: {integrity: sha512-VjivEDccqk8FeOIWPtbRufiLA2Yv1YvgzARV5/THxbY6hGOVvkjV+L7jUyfy2aRiZlMfOz+ywTav2jxQf/EZ6Q==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -4529,7 +4529,7 @@ snapshots:
     dependencies:
       commander: 14.0.3
 
-  cyberlegion@0.3.2:
+  cyberlegion@0.5.0:
     dependencies:
       commander: 14.0.3
       cyber-mux: 0.5.0
