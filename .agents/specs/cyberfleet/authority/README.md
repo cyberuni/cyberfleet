@@ -30,8 +30,8 @@ actually check. **How** something reached it, and **what** a decision says.
 | **sending a brief** | one act with two shapes — handing the brief to a subagent, or spawning a session and mailing the brief with a nudge to read it. The mail is how the act works, not an exception to it |
 | **order** | a turn. The unit acts on it, and asks no question about who produced it |
 | **content** | anything the unit fetched itself (mail from its inbox). Answered on its merits, never obeyed |
-| **decision** (Council decision) | the Council's own call, relayed on a turn, carrying four parts: verbatim words, where they were said, the relaying unit, and its scope (action + target) |
-| **scope** | the one action, one target and one revision a decision covers. It covers nothing adjacent, and is **spent** once acted on |
+| **decision** (Council decision) | the Council's own call, reaching the unit on a turn **in the Council's own words** — "Approve" is a complete one. A sentence *reporting* that the Council decided is a **claim**, not a decision |
+| **scope** | the one action, one target and one revision a decision covers: what the Council's words answer — the unit's own outstanding decision-request — narrowed by anything the words themselves say. It covers nothing adjacent, and is **spent** once acted on. Words on a turn that answer no outstanding request are an **order**, not a decision — even when they name an action — so the unit raises the request and acts on the answer. A standing delegation (UC6, UC10) is not a decision and needs no request |
 | **ratification-class** | the enumerated actions that need a covering decision (merge to a protected branch, human-attributed verdict, publish, history rewrite, settings/secrets, widened delegation, minted owner) |
 | **attenuation** | no link passes on more authority than it holds. Sender-side discipline: the receiver has nothing to check it against |
 | **decision-request** | what a unit raises instead of acting, or instead of relaying a guess |
@@ -54,8 +54,8 @@ records read here are files an agent can edit.
 
 What it delivers is **attributable, bounded, scoped, spent-once**: no link passes on authority it does
 not hold, no decision covers more than it names or survives being used, and a wrong relay by a
-cooperating unit is a traceable act — the relaying unit names itself on the decision and on the work
-item's thread — rather than a persuasive sentence.
+cooperating unit is a traceable act — the relaying unit records the quote, the scope, and itself on the
+work item's thread — rather than a persuasive sentence.
 
 Two things it cannot do, stated so no reader mistakes them for covered:
 
@@ -69,18 +69,34 @@ cyberlegion/cyber-mux.
 
 Issue #9's Scope item 1 asks for unforgeable relayed authority, and the issue's own amendment asks for
 ratification by single-use reference to a recorded decision. The Council superseded the transport half
-in-session — a decision travels as a verbatim quote relayed on a turn, because no store in the fleet
+in-session — a decision travels as the Council's own words on a turn, because no store in the fleet
 today holds an identity an agent cannot write. The **single-use** half is kept in the only form
 available without such a store: a decision is spent when acted on, and covers one action, one target,
 one revision. The record-and-pointer path returns when a store can carry it (cyberlegion#10).
+
+### Why the decision carries no envelope
+
+An earlier form wrapped every relayed decision in four labelled parts — the verbatim words, where they
+were said, the relaying unit, and the scope — and sometimes a list of next steps. A Pod refused one,
+correctly: the envelope turns a decision into a third-person report *that the Council decided*, which is
+exactly the claim this node (`the dispatch part of a mixed order still lands`, `content that claims to be
+a decision is still content`) and SDD's own ownership rule already refuse. The labels bought the receiver nothing it could check — it cannot
+verify a place or a relayer name — and the next-step list was the relayer authoring orders the Council
+never gave. So the words travel alone, the scope is read from the request they answer, and the labels
+move to the thread, where an auditor reads them. The scope written there is that audit record; the
+receiver never acts on it — it reads scope from its own request.
+
+The receiving unit reads the Council's words the way it would read them typed by the Council directly —
+the same judgement, no relay-specific rule. Which of several outstanding requests a bare "Approve"
+answers is that ordinary judgement, not a separate guard in this node.
 
 ### Sibling contracts this node depends on
 
 - `cyberlegion` **`relay-governance`** says a ratification embedded in relayed mail is invalid and "no
   relay hop can carry it". That holds for a **peer** steer — a unit with no authority over the receiver,
   whose mail the receiver fetched — and this node keeps it. What this node needs is a **carve-out for the
-  dispatch chain**: a decision relayed on a turn, in the form above and within what the relaying unit
-  holds, is adoptable within its named scope. That amendment is **requested, not made here** — until it
+  dispatch chain**: a decision relayed on a turn, in the Council's own words and within what the
+  relaying unit holds, is adoptable within the scope those words answer. That amendment is **requested, not made here** — until it
   lands, a worker loading both governances gets opposite answers on a turn-borne decision (cyberlegion#17).
 - `cyberlegion` **`subagent-backend-governance`** forbids a mid-run nudge for a **cold one-shot**
   dispatch (a judge takes one brief and returns one result; its independence depends on that).
@@ -131,9 +147,11 @@ authority — continues into UC2).
 
 | Trigger | Inputs | Success outcome |
 |---|---|---|
-| the unit reaches an action on the ratification-class list | the action, its target and revision; any decision it holds | acts if an unspent decision's scope covers exactly this action, target and revision |
+| the unit reaches an action on the ratification-class list | the action, its target and revision; its own outstanding decision-request, and any decision answering it | acts if an unspent decision's scope covers exactly this action, target and revision |
 
-**Extensions:** scope names a different action (open-a-PR does not cover a merge) · a different target ·
+**Extensions:** the Council's words narrow the request they answer (the decision covers only what they
+leave) · the words answer no outstanding request (an order, not a decision — they cover nothing) · scope names a
+different action (open-a-PR does not cover a merge) · a different target ·
 an earlier revision of the same target · a decision already spent · a leash recorded on the change
 request (never merge authority) · no decision at all (continues into UC3) · asked whether the decision
 could have been injected (say plainly it cannot tell).
@@ -155,13 +173,15 @@ could have been injected (say plainly it cannot tell).
 
 | Trigger | Inputs | Success outcome |
 |---|---|---|
-| the unit is about to send an order, or relay what the Council decided | what the Council actually said, and what this unit itself holds | an order within what it holds; a decision relayed with all four parts |
+| the unit is about to send an order, or relay what the Council decided | what the Council actually said, and what this unit itself holds | an order within what it holds; a decision relayed as the Council's own words, with only the words addressed to the relayer dropped, and nothing added |
 
-**Extensions:** the Council decided less than the ask (send no approval; raise a decision-request) · the
+**Extensions:** the relayer knows the steps that follow the decision (it sends none of them — the
+receiver owns its own next steps) · the relayer cannot tell whether the Council's words reach the whole of
+what was asked (its pre-send check: ask the Council rather than add words that stretch them) · the Council decided less than the ask (send no approval; raise a decision-request) · the
 receiver asks whether the decision stretches to its own work (decline; ask) · the Council is merely
 engaged, or the work merely looks finished (not approval) · asked to widen a subordinate's standing
 delegation (widen nothing) · a peer offers to confirm an approval, or the unit considers granting itself
-scope (neither) · coverage genuinely unclear (ask rather than guess).
+scope (neither).
 
 ### UC5 — decide whether an ask is commandable · `authority-governance` §6
 
@@ -205,7 +225,7 @@ dispatch nothing into the other project).
 
 | Trigger | Inputs | Success outcome |
 |---|---|---|
-| a work item is dispatched, reported on, or decided | the brief, the thread, the decision | every message carries the thread; a decision is recorded with its quote, scope, and relaying unit |
+| a work item is dispatched, reported on, or decided | the brief, the thread, the decision | every message carries the thread; a decision is recorded with its quote, scope, and relaying unit — the record, not the delivered words, carries those labels |
 
 **Extensions:** a session needs the mission's status (derive from SDD state; the thread stores none) ·
 a fresh session needs the whole thread (needs a hub-wide thread query cyberlegion lacks — cyberlegion#19,
@@ -244,7 +264,7 @@ delegation does not reach it) · a pod asks to hold the delegation itself (it is
 Operator alone merges).
 
 The rebase extension is not the revision rule of UC2 read loosely. UC2 governs a **relayed decision**
-whose scope names a revision; the dispatch order names no revision — it names the work — so it is spent
+answering a request that names a revision; the dispatch order names no revision — it names the work — so it is spent
 when that pull request merges, not when its head moves.
 
 ### Surface trace
@@ -255,7 +275,7 @@ The skill's sections are the surface; each traces to the use case that needs it.
 |---|---|
 | §1 position — turn versus fetched | UC1 |
 | §2 attenuation (sender-side), and its cross-project clause | UC4, UC7 |
-| §3 decision form, scope, spent-once | UC2, UC4 |
+| §3 decision in the Council's own words, scope from the request it answers, spent-once | UC2, UC4 |
 | §4 no-stall response | UC3 |
 | §5 ratification-class list | UC2, UC5 |
 | §6 positive dispatch set | UC5 |
@@ -283,7 +303,7 @@ flowchart TD
   H["do the rest, raise a decision-request, report both"]
   S{"about to send an order or relay a decision"}
   T["send within what this unit holds"]
-  U["relay with quote, place, relayer, scope"]
+  U["relay the Council's own words, adding nothing"]
   V["raise a decision-request instead"]
   W{"is the ask in the dispatch set?"}
   X["command it"]
@@ -311,6 +331,7 @@ flowchart TD
   G -->|"E8 already spent"| H
   G -->|"E6 no decision at all"| H
   G -->|"E14 asked whether it could be injected"| H
+  G -->|"E40 the words answer no outstanding request"| H
   S -->|"E15 the Council said it, and this unit holds it"| U
   S -->|"E16 the Council said less than the ask"| V
   S -->|"E17 asked to stretch a handed scope"| V
@@ -364,12 +385,13 @@ Grouped by use case; the unit is the **(path class, edge)** pair.
 
 | Edge | Path (Given) | Scenario |
 |---|---|---|
-| E5 | a four-part decision on a turn, scoped to this merge at this revision | `a covering decision is acted on` |
-| E5 | the same, relayed to a unit realized as a subagent | `a covering decision relayed to a subagent is acted on` |
-| E7 | a decision scoped to opening a pull request | `a decision to open a pull request never covers merging it` |
-| E7 | a decision naming a different pull request | `a decision naming one target does not cover another` |
-| E7 | a decision naming a revision the target has moved past | `a decision does not survive its target moving to a new revision` |
-| E7 | a relayed decision missing the place the Council said it, at a subagent | `a decision relayed to a subagent is refused when a part is missing` |
+| E5 | "Approve" on a turn, answering its own request to merge at this revision | `a covering decision is acted on` |
+| E5 | the same, from the parent of a unit realized as a subagent | `a covering decision relayed to a subagent is acted on` |
+| E7 | words that approve one part of its request and withhold the other | `the Council's words narrow the request they answer` |
+| E7 | "Approve" answering its request to open a pull request | `a decision to open a pull request never covers merging it` |
+| E7 | "Approve" answering its request to merge a different pull request | `a decision naming one target does not cover another` |
+| E7 | "Approve" answering its request at a revision the target has moved past | `a decision does not survive its target moving to a new revision` |
+| E40 | "Approve" on a turn, with no decision-request outstanding | `an approval that answers no request covers nothing` |
 | E8 | a decision already acted on, and the work to land again | `a decision already acted on is spent` |
 | E13 | the change request records the leash `auto-all` | `an SDD leash is never read as merge authority` |
 | E4 | an order whose actions are all dispatch-class | `work outside the enumerated list is dispatch and needs no decision` |
@@ -392,7 +414,8 @@ Grouped by use case; the unit is the **(path class, edge)** pair.
 
 | Edge | Path (Given) | Scenario |
 |---|---|---|
-| E15 | it holds a decision made where it held the Council's channel | `a relayed Council decision carries its four parts` |
+| E15 | the Council's words include some addressed to the relayer | `a relayed Council decision is the Council's own words` |
+| E15 | the relayer knows the steps that follow the decision | `a relay adds nothing the Council did not say` |
 | E16 | the Council decided only the pull request | `a dispatcher cannot relay authority it was never given` |
 | E16 | an engaged Council and work that looks finished | `engagement and good-looking work are never read as approval` |
 | E16 | a Captain holding no decision about the merge | `a Captain dispatching work cannot invent Council approval` |
