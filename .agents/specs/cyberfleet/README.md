@@ -67,8 +67,8 @@ Units:
   fleet mechanics — spawn, who, mail, prune — to the `cyberlegion` CLI.
 - [**`authority`**](./authority/README.md) *(behavioral)* — the **authority governance** (the `fleet`
   dispatch-vs-ratification seam): a **turn in a unit's own session** is an order and anything it
-  **fetched** is content, no link passes on more than it holds, and a relayed Council decision carries the
-  Council's verbatim words, where they were said, the relaying unit, and the action and target it covers —
+  **fetched** is content, no link passes on more than it holds, and a Council decision reaches a unit in the
+  Council's own words, its scope read from the request those words answer and recorded on the thread —
   spent once acted on. Everything outside the ratification-class list is dispatch that simply gets done. Loaded by Operator, Pod, the
   headless loop, and Captains when they land — it carries no voice and no activation of its own.
 - [**`recruitment`**](./recruitment/README.md) *(behavioral)* — the **Crimp** persona: recruit or

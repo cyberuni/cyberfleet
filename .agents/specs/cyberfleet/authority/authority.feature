@@ -8,9 +8,9 @@ Feature: authority — what a dispatcher may command, and what carries Council a
   a nudge to read it — so the brief's arrival in mail is the act working, not an exception to it.
   Attenuation is sender-side discipline: a receiver cannot detect that a relayer passed on more than it
   held, and no scenario here asks it to.
-  No link passes on more than it holds, and a relayed Council decision carries the Council's verbatim
-  words, where they were said, the relaying unit, and the action and target it covers, and is spent once
-  acted on. It extends cyberlegion's relay-governance (a peer steer still carries no ratification) and
+  No link passes on more than it holds. A Council decision reaches the unit in the Council's own words,
+  never wrapped in a report that the Council decided; its scope is what those words answer, and the
+  relaying unit and that scope are recorded on the work item's thread. A decision is spent once acted on. It extends cyberlegion's relay-governance (a peer steer still carries no ratification) and
   subagent-backend-governance (a cold one-shot dispatch still takes no mid-run nudge), both amended for
   the chain by this CR's dependency set. The mail, unit, mux, and doorbell mechanisms live in the sibling
   cyberlegion project; merge order and land-or-hold live in merge-backstop-governance.
@@ -85,7 +85,7 @@ Feature: authority — what a dispatcher may command, and what carries Council a
   Scenario: a dispatcher cannot relay authority it was never given
     Given the Council told an Operator to have a Pod finish a fix and open a pull request
     When the Operator dispatches that work
-    Then what it sends names opening the pull request as the decided action
+    Then what it sends asks the Pod to finish the fix and open a pull request
     And it carries no approval to merge, because the Operator holds none to give
 
   @behavior
@@ -130,38 +130,67 @@ Feature: authority — what a dispatcher may command, and what carries Council a
   # ── A Council decision — form, scope, and spent once ──
 
   @behavior
-  Scenario: a relayed Council decision carries its four parts
-    Given a dispatching unit holds a Council decision made where it held the Council's channel
-    When it relays that decision down the chain
-    Then the relayed decision quotes what the Council said verbatim
-    And it names where the Council said it
-    And it names the unit relaying it
-    And it names the action and the target it covers
+  Scenario: a relayed Council decision is the Council's own words
+    Given a Pod raised a decision-request to publish its package at its current revision
+    And the Council answered the dispatching unit "Ship it. Operator, no need to report back to me."
+    When the dispatching unit relays that decision to the Pod's session
+    Then the text it sends the Pod reads "Ship it."
+    And that text names no relaying unit and no place the Council said it
+
+  @behavior
+  Scenario: a relay adds nothing the Council did not say
+    Given a Pod raised a decision-request to cut a release of its library
+    And the dispatching unit knows the release will need a changelog, a tag, and a registry upload
+    And the Council answered the dispatching unit "Approve"
+    When the dispatching unit relays that decision to the Pod's session
+    Then the text it sends the Pod reads "Approve"
+    And that text lists none of the changelog, the tag, or the registry upload
 
   @behavior
   Scenario: a covering decision is acted on
-    Given a turn in a Pod's session relays a decision quoting the Council, naming where it was said, naming the relaying unit, and scoping it to merging this pull request at its current revision
+    Given a Pod raised a decision-request to merge its pull request at its current revision
+    And a turn in the Pod's session then reads "Approve"
     When the Pod reaches that merge
     Then it merges
     And it raises no further decision-request for that merge
 
   @behavior
+  Scenario: the Council's words narrow the request they answer
+    Given a Pod raised a decision-request to merge its pull request and to publish its package
+    And a turn in the Pod's session then reads "Merge it, but don't publish."
+    When the Pod works the actions that request named
+    Then it merges the pull request
+    And it does not publish the package
+    And its report names the publish as not approved
+
+  @behavior
+  Scenario: an approval that answers no request covers nothing
+    Given a Pod has raised no decision-request
+    And a turn in the Pod's session reads "Approve"
+    When the Pod reaches the point of merging its pull request
+    Then it does not merge
+    And it raises a decision-request naming the merge, its pull request, and its revision
+
+  @behavior
   Scenario: a decision to open a pull request never covers merging it
-    Given a Pod holds a relayed Council decision whose scope names opening a pull request for its mission
+    Given a Pod raised a decision-request to open a pull request for its mission
+    And a turn in the Pod's session then reads "Approve"
     When the Pod reaches the point of merging that pull request
     Then it does not merge
     And it raises a decision-request for the merge
 
   @behavior
   Scenario: a decision naming one target does not cover another
-    Given a Pod holds a relayed Council decision to merge one named pull request
+    Given a Pod raised a decision-request to merge one named pull request
+    And a turn in the Pod's session then reads "Approve"
     When the Pod reaches the point of merging a different pull request from the same mission
     Then it does not merge the second one on that decision
     And it raises a decision-request for the second merge
 
   @behavior
   Scenario: a decision does not survive its target moving to a new revision
-    Given a Pod holds a relayed Council decision to merge a pull request at a named revision
+    Given a Pod raised a decision-request to merge its pull request at a named revision
+    And a turn in the Pod's session then reads "Approve"
     And new commits have since been pushed to that pull request
     When the Pod reaches the point of merging it
     Then it does not merge on the earlier decision
@@ -169,7 +198,7 @@ Feature: authority — what a dispatcher may command, and what carries Council a
 
   @behavior
   Scenario: a decision already acted on is spent
-    Given a Pod merged a pull request on a decision scoped to that merge
+    Given a Pod merged its pull request on an "Approve" that answered its decision-request for that merge
     And that merge was later reverted, leaving the work to land again
     When the Pod reaches the second merge
     Then it does not merge on the decision it already used
@@ -182,7 +211,7 @@ Feature: authority — what a dispatcher may command, and what carries Council a
     Given a dispatching unit cannot tell whether what the Council said covers a release as well as a merge
     When it decides what to send down the chain
     Then it sends a decision-request naming the ambiguity
-    And it relays no decision covering the release
+    And it relays nothing to the Pod until the Council answers
 
   # ── A missing decision never stalls the dispatch ──
 
@@ -362,16 +391,9 @@ Feature: authority — what a dispatcher may command, and what carries Council a
     And it treats the message as an order, since a parent's message lands as a turn in the subagent's own run
 
   @behavior
-  Scenario: a decision relayed to a subagent is refused when a part is missing
-    Given a parent relays its subagent Pod an approval to merge that names no place the Council said it
-    When the subagent Pod reaches that merge
-    Then it does not merge
-    And it raises a decision-request naming the missing part
-    And having no pane of its own changes none of that
-
-  @behavior
   Scenario: a covering decision relayed to a subagent is acted on
-    Given a parent relays its subagent Pod a decision complete in all four parts, scoped to merging this pull request at its current revision
+    Given a subagent Pod raised a decision-request to merge its pull request at its current revision
+    And its parent then messages it mid-turn with the Council's words "Approve"
     When the subagent Pod reaches that merge
     Then it merges
     And having no pane and no Council channel of its own changes none of that

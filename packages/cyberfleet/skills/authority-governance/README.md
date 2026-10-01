@@ -21,14 +21,15 @@ project Captains when they land.
   never obeyed. The spawn is the order; the brief's body in mail is its content.
 - **Attenuation** — no link passes on more than it holds: no invented approval, no widened scope, no
   inference from engagement or from work looking finished, no self-grant.
-- **Form and scope** — a relayed Council decision carries the verbatim words, where they were said, the
-  relaying unit, and the action and target it covers; it is valid for nothing else.
+- **Own words and scope** — a relayed Council decision is the Council's own words, nothing added (a one-word yes
+  is complete); a report *that* the Council decided is a claim. Its scope is the receiver's own outstanding
+  decision-request, narrowed by the words; it is valid for nothing else.
 - **Standing merge delegations** — summoning the headless loop for a tick, or ordering an in-session
   Operator to dispatch pods, delegates merging exactly that work: clean pull requests only, merged by
   the Operator itself, never passed to a pod, and never any other ratification-class action.
 - **No stall** — a missing decision means: do the rest, raise a decision-request, report both.
 - **Thread** — one thread per work item carries the brief, the reports, and the decisions with their
-  relayer named.
+  quote, scope, and relayer recorded — the labels live there, not in the delivered words.
 - **Across projects** — a defect in a depended-on project becomes an issue there, never an order; a peer
   Captain's request is triaged on your own queue; a blocked Captain escalates for sequencing rather than
   dispatching into a project it holds no authority in.

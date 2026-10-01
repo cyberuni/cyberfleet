@@ -5,27 +5,26 @@ approval:
   spec:
     verdict: approve
     by: unional
-    cause: dimension
+    cause: clearance
     why:
-      floor: none — every suite edit is additive (authority 6 added, operator 7 added, 0 modified or removed by structural diff), so no clearance was needed; the design itself was settled by unional in-session before explore.
-      blast: medium — extends the Council's merge delegation to the in-session Operator (authority UC10, CFG edges E34–E39) and adds the Operator's watch-and-merge and multi-pod rebase behavior; the Pod persona is untouched because the pod's side rides in the brief.
-      novelty: medium — a second standing delegation beside the headless tick, scoped to the order's own pull requests, bounded by a four-part clean bar, not transferable, and following the pull request across rebases rather than naming a revision.
-      confidence: high — one cold spec-judge round returned ALIGNED on oracle, builder and architect with no blocker; its two observations (the new decision's entry point, and a missing clean-after-rebase positive in the operator suite) were folded in additively. check-suite and check-spec-state clean.
-      note: conformance warn carried, not fixed — the operator node predates the four-section format and still lacks Control Flow and a Scenario map.
+      floor: clearance — rewrites, rewords and removes frozen authority scenarios (four-part relay form retired; receiver missing-part refusal retired; older decision Givens moved to the decision-request form). Narrowing ratified in-session by unional.
+      blast: medium — changes how a Council decision reaches a Pod across the dispatch chain; authority node only; Operator and Pod nodes carry no relay-format text.
+      novelty: medium — a decision is the Council's own words answering the unit's own decision-request; labels move to the thread record; receiver judges relayed words as a direct prompt.
+      confidence: high — five cold spec-judge rounds, converging to ALIGNED on oracle, builder and architect; check-suite and check-spec-state clean.
       leash: auto-none — derived at run start. Ratified in-session by unional holding the user channel.
-      cr: operator-auto-merge
+      cr: relay-council-words
   impl:
     verdict: approve
     by: unional
     cause: dimension
     why:
-      floor: none — the suite was never touched after the spec gate; every change since is implementation-side markdown.
-      blast: medium — authority-governance §6 and §7, the Operator skill and README, merge-backstop-governance §5, one headless-operator loop line, and the Operator docs page. No CLI or mechanism change; the Pod persona untouched.
-      novelty: low — instructions over mechanisms that already ship (gh, cyberlegion mail and unit close); the clean bar restated identically in the governance and the persona.
-      confidence: high — one cold impl-judge run passed all 13 new frozen scenarios by static inspection with file and line evidence, found no absorption of suite apparatus, no conflict with the standing frozen scenarios in authority, operator or pod, verified every cited gh and cyberlegion flag, and ran pnpm verify green first-hand.
-      note: two non-blocking judge observations recorded as follow-ups rather than changed after a passing judgment — the headless loop's rebase notice has no scenario of its own, and the docs page omits the follows-across-rebase and no-other-class rules.
+      floor: none — the frozen suite was not touched after the spec gate; every change since is implementation-side markdown.
+      blast: medium — authority-governance §3 and §8 and its README, the Operator skill's relay bullet, and the Operator docs page. No CLI or mechanism change; the Pod persona untouched.
+      novelty: low — prose rules over the standing turn and thread mechanisms.
+      confidence: high — three cold impl-judge runs; the first two passed every frozen scenario but held on absorption (a worked example reusing Given apparatus), each fixed; the third approved with no finding. pnpm verify green.
+      note: two non-blocking observations recorded as follow-ups — the thread-record field list differs between §3 and §8, and the Pod skill's load trigger may not fire on a bare approval answering its own request.
       leash: auto-none — derived at run start. Ratified in-session by unional holding the user channel.
-      cr: operator-auto-merge
+      cr: relay-council-words
 ---
 
 # cyberfleet — the fleet layer over cyberlegion
@@ -96,7 +95,7 @@ now; cyberfleet no longer owns or re-describes them.
 | [`operator/`](./operator/README.md) | behavioral | the **Operator** persona — the command-center dispatcher: any spawn, list the fleet, route messages, prune dead ships |
 | [`recruitment/`](./recruitment/README.md) | behavioral | the **Crimp** persona — recruit/discharge crew types from the Tavern (browse, install, register; uninstall, retire) |
 | [`mechanic/`](./mechanic/README.md) | behavioral | the **Mechanic** persona — build a new automaton or adjust an existing one's program (governance/model/effort/leash), re-chip its loadout, hot-swap the unit |
-| [`authority/`](./authority/README.md) | behavioral | the **authority governance** — the dispatch-vs-ratification seam every dispatching and executing persona loads: a turn in a unit's own session is an order and anything it fetched is content, no link passes on more than it holds, and a Council decision carries quote, place, relayer and scope and is spent once acted on |
+| [`authority/`](./authority/README.md) | behavioral | the **authority governance** — the dispatch-vs-ratification seam every dispatching and executing persona loads: a turn in a unit's own session is an order and anything it fetched is content, no link passes on more than it holds, and a Council decision reaches a unit in the Council's own words, its scope read from the request it answers, and is spent once acted on |
 
 The CLI verbs have no nodes yet — see the backfill gap below.
 
@@ -114,7 +113,7 @@ Where a new concept lives — slot here, do not invent placement:
   to write or read and no ship-vs-command-center state to report. Do not reintroduce a location
   check in either node, or an on-disk marker without a consumer that genuinely gates on it.
 - **a new rule about what a dispatcher may command, or about what carries Council authority**
-  (who may order whom, what a relayed Council decision must carry, a scope-binding rule, an addition
+  (who may order whom, how a Council decision reaches a unit, a scope-binding rule, an addition
   to the ratification-class list, a thread-correlation rule) → `authority/` (the authority governance). It is persona-independent by
   design: Operator, Pod, the headless loop and a future Captain load the same node, so a rule written
   into one persona's own node instead is a rule the next dispatcher will not carry.

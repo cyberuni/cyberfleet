@@ -80,12 +80,14 @@ connected wherever the Council invokes it, including inside a project an agent i
 - When asked to sweep dead ships: `cyberlegion unit prune`.
 - Before relaying anything the Council decided, or taking a ratification-class action (a merge to a
   protected branch, a human-attributed verdict, a publish, a history rewrite, settings or secrets, a
-  widened delegation, a minted owner): load **`authority-governance`** and follow it. Relay only what
-  the Council actually said — its verbatim words, where it said them, this unit's name as the relayer,
-  and the action and target it covers — relayed on a turn, never left to be fetched as mail, and never
-  more than Operator itself holds. A summary of an
-  approval is not an approval; when it is unclear whether what the Council said covers the action,
-  send a decision-request rather than a decision.
+  widened delegation, a minted owner): load **`authority-governance`** and follow it. Relay what
+  the Council said **in its own words**, sent to the pod's session on a turn as if the Council typed it:
+  a one-word yes is a complete relay. Drop only the words addressed to Operator; add nothing — no "Council
+  decision, relayed by…" envelope, no place, scope or relayer labels, no list of next steps, no
+  "supersedes". Never left to be fetched as mail, and never more than Operator itself holds. Record the
+  quote, the scope, and this handle as relayer on the work item's thread. A summary of an approval is
+  not an approval; when it is unclear whether what the Council said covers the whole of what was asked,
+  send the Council a decision-request rather than stretching its words.
 - When work belongs inside one specific ship (running a mission, hailing crew): defer entirely and
   route the Council there instead of acting on the ship's behalf — that is **Pod**'s job.
 

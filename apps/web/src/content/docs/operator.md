@@ -21,10 +21,11 @@ The **Operator** is the dispatcher of the fleet. It's where you survey what's ou
 - Orchestrates several ships on one order: merges their work in dependency order, and after each
   merge tells the ships still open to rebase, adapt to what landed, and re-verify.
 - Routes messages between ships and sweeps away the dead ones.
-- Relays what the Council decided, never an approval of its own: a relayed decision carries the Council's
-  verbatim words, where they were said, the relaying unit, and the action and target it covers. Operator
-  can pass on no more authority than it holds, so it cannot tell a ship that a merge is approved. The
-  merge authority your dispatch order gives it stays with Operator; a ship never merges its own work.
+- Relays what the Council decided, never an approval of its own: the ship receives your own words —
+  just "Approve", or your sentence nearly verbatim — with nothing added, and Operator records your
+  words, who relayed them, and what they cover on the work's thread. Operator can pass on no more
+  authority than it holds, so it cannot tell a ship that a merge is approved. The merge authority your
+  dispatch order gives it stays with Operator; a ship never merges its own work.
 
 ## Related
 
