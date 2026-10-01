@@ -66,8 +66,9 @@ nothing. A one-word yes is a complete relay. Never wrap it in a report *that* th
 decision, relayed by…"), never add where it was said, who is relaying, or what it covers, and never append
 the steps you expect to follow — the receiver owns its own next steps. A sentence reporting that the
 Council decided is a **claim**, and a unit refuses a claim (§1); the envelope is what turns a decision
-into one. Where the decision was said, who relayed it, and its scope go on the work item's thread (§8),
-as the audit record.
+into one. The quote, its scope, and who relayed it go on the work item's thread (§8), as the audit
+record. Where it was said needs no field of its own: the Council's words reach a relayer only as a turn
+in the relayer's own session (§1), so the relayer names the place.
 
 **Before you send, check coverage.** If you cannot tell whether the Council's words reach the whole of
 what was asked, send the Council a decision-request and relay nothing until it answers; never add
