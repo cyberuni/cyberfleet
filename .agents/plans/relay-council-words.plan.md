@@ -5,11 +5,11 @@ todos:
   - content: "Reopen root spec.md to draft (rewrites frozen authority scenarios: Clearance); ledger leash + reopen"
     status: completed
   - content: "Spec: authority/ — decision arrives in the Council's own voice; scope from the Pod's own decision-request"
-    status: pending
+    status: completed
   - content: "Spec gate: cold spec-judge, then Council ratification (Clearance on the narrowed scenarios)"
-    status: pending
+    status: completed
   - content: "Impl: authority-governance §3/§8, operator SKILL.md + README, pod skill if it restates the form"
-    status: pending
+    status: in_progress
   - content: "Impl gate: cold impl-judge, Council ratification; pnpm verify; changeset; PR"
     status: pending
 ---
