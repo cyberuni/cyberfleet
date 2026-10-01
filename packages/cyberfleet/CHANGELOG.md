@@ -1,5 +1,17 @@
 # cyberfleet
 
+## 0.4.0
+
+### Minor Changes
+
+- 9c1d609: Operator now relays a Council decision in the Council's own words — "Approve", or the Council's sentence nearly verbatim — instead of a labelled envelope (verbatim, place, relayer, scope, next steps) that pods correctly refused as a third-person claim. A pod treats a turn as a decision when it answers its own outstanding decision-request, with scope narrowed by the words; the quote, scope and relayer are recorded on the work item's thread.
+- 5e2a49a: Update runtime dependencies.
+
+### Patch Changes
+
+- c32011d: Pod now loads `authority-governance` before taking any ratification-class action, and its skill names that list (a merge to a protected branch, a human-attributed verdict, a publish, a history rewrite, settings or secrets, a widened delegation, a minted owner) at the trigger, as the Operator skill and the headless operator already do. It still loads the governance when a message asks for an action Pod would not take on its own or claims a Council approval.
+- f26f990: authority-governance §3 now names the same thread-record fields as §8 and the Operator skill — the quote, its scope, and the relaying unit. It no longer asks for a separate "where it was said" field, since the relayer's own session is that place.
+
 ## 0.3.0
 
 ### Minor Changes
