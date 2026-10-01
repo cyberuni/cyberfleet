@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 project-path: packages/cyberfleet
 approval:
   spec:
@@ -18,13 +18,13 @@ approval:
     by: unional
     cause: dimension
     why:
-      floor: none — the suite was never touched after the spec gate; every change since is implementation-side markdown.
-      blast: medium — authority-governance §6 and §7, the Operator skill and README, merge-backstop-governance §5, one headless-operator loop line, and the Operator docs page. No CLI or mechanism change; the Pod persona untouched.
-      novelty: low — instructions over mechanisms that already ship (gh, cyberlegion mail and unit close); the clean bar restated identically in the governance and the persona.
-      confidence: high — one cold impl-judge run passed all 13 new frozen scenarios by static inspection with file and line evidence, found no absorption of suite apparatus, no conflict with the standing frozen scenarios in authority, operator or pod, verified every cited gh and cyberlegion flag, and ran pnpm verify green first-hand.
-      note: two non-blocking judge observations recorded as follow-ups rather than changed after a passing judgment — the headless loop's rebase notice has no scenario of its own, and the docs page omits the follows-across-rebase and no-other-class rules.
+      floor: none — the frozen suite was not touched after the spec gate; every change since is implementation-side markdown.
+      blast: medium — authority-governance §3 and §8 and its README, the Operator skill's relay bullet, and the Operator docs page. No CLI or mechanism change; the Pod persona untouched.
+      novelty: low — prose rules over the standing turn and thread mechanisms.
+      confidence: high — three cold impl-judge runs; the first two passed every frozen scenario but held on absorption (a worked example reusing Given apparatus), each fixed; the third approved with no finding. pnpm verify green.
+      note: two non-blocking observations recorded as follow-ups — the thread-record field list differs between §3 and §8, and the Pod skill's load trigger may not fire on a bare approval answering its own request.
       leash: auto-none — derived at run start. Ratified in-session by unional holding the user channel.
-      cr: operator-auto-merge
+      cr: relay-council-words
 ---
 
 # cyberfleet — the fleet layer over cyberlegion

@@ -9,9 +9,9 @@ todos:
   - content: "Spec gate: cold spec-judge, then Council ratification (Clearance on the narrowed scenarios)"
     status: completed
   - content: "Impl: authority-governance §3/§8, operator SKILL.md + README, pod skill if it restates the form"
-    status: in_progress
+    status: completed
   - content: "Impl gate: cold impl-judge, Council ratification; pnpm verify; changeset; PR"
-    status: pending
+    status: completed
 ---
 
 # CR: relay-council-words — relay a Council decision in the Council's own words
@@ -40,4 +40,5 @@ list was the Operator authoring orders the Council never gave (a §2 breach).
 
 ## NEXT
 
-Spec gate ratified by unional; authority.feature frozen. Next: impl — authority-governance §3/§8 + README, operator SKILL.md/README, then the cold impl-judge.
+Landed: spec gate and impl gate ratified by unional; authority.feature frozen; spec status implemented.
+Two backlog follow-ups recorded in the ledger and filed as issues. No resume action remains.
