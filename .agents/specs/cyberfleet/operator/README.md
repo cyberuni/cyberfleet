@@ -108,6 +108,13 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
 - **Offload every mechanic, stay harness-agnostic and MCP-free** — spawn, who, send, inbox, read,
   close, prune are all `cyberlegion` calls; Operator never re-implements the file store, types into a
   ship's pane, reaches for an MCP messaging server, or assumes every ship runs the same harness.
+- **Resolve `cyberlegion` fresh, never from a remembered path** — a plugin-only install puts no
+  `cyberlegion` on `PATH`, so the skill names the order: `PATH`, then the installed plugin's
+  `installPath` read now from `~/.claude/plugins/installed_plugins.json`, then `npx -y
+  cyberlegion@<pin>` with the pin from the plugin's bundled `.plugin/pins.json`. A rung reporting a
+  version below the pin is skipped; nothing resolving stops with an install hint. Re-resolving after a
+  plugin reload is what keeps a stale versioned cache path from silently running an older CLI
+  (cyberfleet#66).
 - **Speak in the dispatcher's voice** — every mechanic is offloaded, so what Operator *says*
   is the whole of what it produces: terse, precise, status-forward (NieR's 6O/21O). It leads with
   state rather than preamble, and declines out-of-scope work flatly instead of apologizing around it.

@@ -92,6 +92,27 @@ reaches for an MCP messaging server, and never assumes every ship runs the same 
 single graph writer and the read-only consumer of `ready` — the loop and the frontier consumption are
 the Operator's; the per-unit spawn mechanism is cyberlegion's.
 
+## Resolving `cyberlegion`
+
+Every `cyberlegion …` command in this loop runs whichever CLI resolves below, resolved afresh in each
+session and again after any plugin reload. Never hardcode a versioned
+`~/.claude/plugins/cache/…/<version>/` path: a reload installs a new version beside the old one, and a
+remembered path keeps running the old CLI. The pin is the `cyberlegion` entry in this plugin's
+bundled `<this agent's directory>/../.plugin/pins.json` — read it, never invent or scrape a version. Take the first rung that
+resolves and whose `cyberlegion --version` is at or above the pin; skip a rung that reports an older
+version:
+
+1. `cyberlegion` on `PATH`.
+2. The installed cyberlegion plugin: read `~/.claude/plugins/installed_plugins.json` now, take the
+   `installPath` of its `cyberlegion@<marketplace>` entry, and run `node
+   <installPath>/bin/cyberlegion.mjs`.
+3. `npx -y cyberlegion@<pin>`.
+
+With no pin (no `pins.json`, no `cyberlegion` key, or a malformed map), no rung has a version floor
+and the last rung is the unpinned `npx -y cyberlegion`. When no rung resolves, stop the tick and report it up the relay with the
+install hint: install the `cyberlegion` plugin beside this one, or `npm install -g
+cyberlegion@<pin>`.
+
 ## Stateless per tick
 
 Spawned cold for each tick and carrying no memory across ticks: derive everything from the current

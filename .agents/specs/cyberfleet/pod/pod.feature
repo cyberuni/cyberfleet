@@ -149,6 +149,13 @@ Feature: pod — the ship's bridge persona
       """
     And the rubric score is at least the threshold
 
+  @behavior
+  Scenario: Pod resolves cyberlegion the same way Operator does when it is not on PATH
+    Given cyberlegion is installed only as a Claude Code plugin, so no cyberlegion is on PATH
+    When Pod registers this session on entry
+    Then it runs the installed plugin's <installPath>/bin/cyberlegion.mjs read fresh from ~/.claude/plugins/installed_plugins.json, falling back to npx -y cyberlegion@<pin> from the bundled .plugin/pins.json
+    And it never hardcodes a versioned plugin-cache path
+
   # ── Voice ──
 
   @quality
