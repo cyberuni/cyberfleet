@@ -26,6 +26,24 @@ function runBin(root: string, args: string[]) {
 }
 
 describe('bin/cyberfleet.mjs at an install location', () => {
+	it('runs from bin, dist/cli.mjs, and package.json alone', () => {
+		const root = installShape(['bin/cyberfleet.mjs', 'dist/cli.mjs', 'package.json'])
+
+		const res = runBin(root, ['--version'])
+
+		expect(res.stderr).toBe('')
+		expect(res.stdout.trim()).toBe(VERSION)
+	})
+
+	it('prints its help from the install shape', () => {
+		const root = installShape(['bin/cyberfleet.mjs', 'dist/cli.mjs', 'package.json'])
+
+		const res = runBin(root, ['--help'])
+
+		expect(res.status).toBe(0)
+		expect(res.stdout).toContain('Usage: cyberfleet')
+	})
+
 	it('names the missing dist/cli.mjs and a way out instead of a raw module-not-found', () => {
 		const root = installShape(['bin/cyberfleet.mjs', 'package.json'])
 

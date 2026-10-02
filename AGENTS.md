@@ -90,6 +90,14 @@ package's manifests and its `package.json` `files` allowlist, or a client won't 
 | `.codex-plugin/plugin.json` | Codex |
 | `skills/<name>/SKILL.md` | All of them (fixed location) |
 | `agents/<name>.md` | Claude Code (and any client that reads Agent Plugins subagents) |
+| `dist/cli.mjs` | `bin/cyberfleet.mjs`, at a source install — committed, see below |
+
+`dist/cli.mjs` is the one build output in git. A marketplace install copies the package directory
+from the repo, and no harness runs a build after the copy, so the bundled CLI has to be in the
+checkout for the installed `bin` to run. `pnpm check:bundle` fails when a build changes the tracked
+copy; it runs in `pnpm verify` and in the pre-commit hook, so after a change under `src/` (or a
+dependency bump) stage the rebuilt `dist/cli.mjs` with it. Renovate PRs get it rebuilt by the
+`renovate-changeset` workflow.
 
 `.claude-plugin/marketplace.json` at the **repo root** lists the plugin with a local directory
 source (`./packages/cyberfleet`). Version bumps flow from `packages/cyberfleet/package.json`
