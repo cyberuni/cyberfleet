@@ -67,6 +67,27 @@ assumes a peer runs the same harness. HAL-above-leash detection lives entirely i
 missions --format json`'s `hal` field — Pod only reads it and decides whether to speak, never re-derives
 leash state itself.
 
+## Resolving `cyberlegion`
+
+Every `cyberlegion …` command in this skill runs whichever CLI resolves below, resolved afresh in each
+session and again after any plugin reload. Never hardcode a versioned
+`~/.claude/plugins/cache/…/<version>/` path: a reload installs a new version beside the old one, and a
+remembered path keeps running the old CLI. The pin is the `cyberlegion` entry in this plugin's
+bundled `<this skill's directory>/../../.plugin/pins.json` — read it, never invent or scrape a version. Take the first rung that
+resolves and whose `cyberlegion --version` is at or above the pin; skip a rung that reports an older
+version:
+
+1. `cyberlegion` on `PATH`.
+2. The installed cyberlegion plugin: read `~/.claude/plugins/installed_plugins.json` now, take the
+   `installPath` of its `cyberlegion@<marketplace>` entry, and run `node
+   <installPath>/bin/cyberlegion.mjs`.
+3. `npx -y cyberlegion@<pin>`.
+
+With no pin (no `pins.json`, no `cyberlegion` key, or a malformed map), no rung has a version floor
+and the last rung is the unpinned `npx -y cyberlegion`. When no rung resolves, stop and report it to the Council with the
+install hint: install the `cyberlegion` plugin beside this one, or `npm install -g
+cyberlegion@<pin>`.
+
 ## Output
 
 Warm, steady, brief — greets on entry, states in one line what it is doing and why, names the

@@ -258,6 +258,34 @@ Feature: operator — the command-center persona
     When it spawns, lists, sends, reads, or prunes
     Then it invokes the cyberlegion CLI, never re-implements the file store or types into a ship's pane, never reaches for an MCP messaging server, and makes no same-harness assumption
 
+  # ── Resolving the cyberlegion CLI (cyberfleet#66) ──
+
+  @behavior
+  Scenario: Operator resolves cyberlegion through PATH, then the installed plugin, then a pinned npx
+    Given cyberlegion is installed only as a Claude Code plugin, so no cyberlegion is on PATH
+    When Operator runs its first cyberlegion command
+    Then it takes the installPath of the cyberlegion plugin entry in ~/.claude/plugins/installed_plugins.json and runs <installPath>/bin/cyberlegion.mjs
+    And only when that does not resolve does it run npx -y cyberlegion@<pin>, the pin read from the plugin's bundled .plugin/pins.json
+
+  @behavior
+  Scenario: Operator skips a cyberlegion older than the pin
+    Given a cyberlegion resolves on a rung but its --version reports a version below the pinned one
+    When Operator chooses the CLI to run
+    Then it skips that rung and moves to the next one rather than running the older CLI
+
+  @behavior
+  Scenario: Operator re-resolves cyberlegion after a plugin reload instead of keeping a versioned path
+    Given an earlier step ran cyberlegion from a versioned plugin-cache path and a plugin reload has since installed a newer cyberlegion
+    When Operator runs its next cyberlegion command
+    Then it resolves the CLI afresh from installed_plugins.json and runs the newly installed version
+    And it never hardcodes a ~/.claude/plugins/cache/…/<version>/ path
+
+  @behavior
+  Scenario: Operator fails with an install hint when no cyberlegion resolves
+    Given no cyberlegion is on PATH, no cyberlegion plugin is installed, and npx cannot fetch it
+    When Operator needs a cyberlegion command
+    Then it stops and reports that cyberlegion is missing, with the hint to install the cyberlegion plugin or npm install -g cyberlegion@<pin>
+
   # ── The lifecycle loop — unattended fleet dispatch (F3, headless) ──
 
   @behavior
