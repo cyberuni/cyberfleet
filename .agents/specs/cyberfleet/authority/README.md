@@ -151,7 +151,9 @@ authority — continues into UC2).
 | the unit reaches an action on the ratification-class list | the action, its target and revision; its own outstanding decision-request, and any decision answering it | acts if an unspent decision's scope covers exactly this action, target and revision |
 
 **Extensions:** the Council's words narrow the request they answer (the decision covers only what they
-leave) · the words answer no outstanding request (an order, not a decision — they cover nothing) · scope names a
+leave) · the words answer no outstanding request (an order, not a decision — they cover nothing) · a pod
+whose brief said never merge answers on its own merge offer (a decision that outranks the brief; not a
+transfer of any delegation) · scope names a
 different action (open-a-PR does not cover a merge) · a different target ·
 an earlier revision of the same target · a decision already spent · a leash recorded on the change
 request (never merge authority) · no decision at all (continues into UC3) · asked whether the decision
@@ -298,6 +300,7 @@ The skill's sections are the surface; each traces to the use case that needs it.
 | §7 tick delegation in the summons' own words, and the leash negative | UC6 |
 | §7 dispatch delegation — the announcement and the Council's reply, clean bar, not transferable | UC10 |
 | §7 a refused merge stays refused | UC6, UC10 |
+| §7 a pod's own merge offer, answered — a decision, not a transfer | UC2 |
 | §8 thread per work item | UC8 |
 | §9 say what the rules do not buy | UC2 (the honesty extension) |
 

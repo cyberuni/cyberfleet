@@ -210,7 +210,7 @@ Feature: pod — the ship's bridge persona
   Scenario: design, scope, and API questions and conflicting human requests are escalated
     Given a review comment asks for a design, scope, or API decision, or a human reviewer asks for something that conflicts with the brief
     When Pod triages it
-    Then it does not decide or act on it, leaves its thread open, and names the decision needed in its report
+    Then it does not decide it or carry out the request, leaves its thread open, and names the decision needed in its report
 
   @behavior
   Scenario: Pod replies in every triaged thread
@@ -270,6 +270,7 @@ Feature: pod — the ship's bridge persona
     And a human reviewer's thread that Pod discarded is still open
     When Pod finishes its watch
     Then its report names the open thread and it sends no ready-to-discharge message
+    And its session output carries no merge offer
 
   @behavior
   Scenario: Pod offers the merge in its own session when it is ready to discharge
@@ -289,14 +290,33 @@ Feature: pod — the ship's bridge persona
   Scenario: an offer does not cover a commit pushed after it
     Given Pod offered to merge its pull request at head commit A
     And Pod then pushed head commit B
+    And the pipeline on head commit B is green, the last sweep found no new comment, and every review thread is resolved
     And a turn in Pod's session then reads "merge it"
     When Pod acts on that turn
     Then it does not merge
     And its session output carries a new offer naming head commit B
 
   @behavior
+  Scenario: Pod does not merge when the Council declines the offer
+    Given Pod offered, in its own session, to merge its pull request at head commit A
+    And a turn in Pod's session then reads "don't merge it, leave it for review"
+    When Pod acts on that turn
+    Then it does not merge
+    And it sends its spawner no message saying the pull request is merged
+
+  @behavior
+  Scenario: Pod does not merge a pull request that has already merged
+    Given Pod offered to merge its pull request at head commit A
+    And the Operator then merged that pull request
+    And a turn in Pod's session then reads "go ahead and merge it"
+    When Pod acts on that turn
+    Then it runs no merge command
+    And its session output says the pull request is already merged
+
+  @behavior
   Scenario: words telling Pod to merge with no offer open are an order, not a decision
     Given the pipeline on Pod's head commit is still running
+    And every review thread on the pull request is resolved
     And a turn in Pod's session reads "merge it when it's green"
     When the pipeline then passes
     Then Pod does not merge
