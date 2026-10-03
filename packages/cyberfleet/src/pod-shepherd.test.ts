@@ -72,3 +72,15 @@ describe('pod shepherding', () => {
 		expect(section).toMatch(/human decision/i)
 	})
 })
+
+describe("operator brief: the pod's side of the watch", () => {
+	const operator = readFileSync(fileURLToPath(new URL('skills/operator/SKILL.md', PLUGIN_ROOT)), 'utf8')
+	const clause = operator.slice(operator.indexOf("Every brief sets the pod's side of the watch"))
+	const bullet = clause.slice(0, clause.indexOf('\n- '))
+
+	it('tells the pod to shepherd its pull request, and sets the shepherding knobs', () => {
+		expect(bullet).toMatch(/shepherd/)
+		expect(bullet).toMatch(/per-turn timeout/)
+		expect(bullet).toMatch(/threads/)
+	})
+})

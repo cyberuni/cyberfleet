@@ -162,6 +162,7 @@ Feature: operator — the command-center persona
     Given the Council asks Operator to dispatch a pod to add rate limiting to a public API
     When Operator writes that pod's brief
     Then the brief tells the pod to open a pull request and report on the brief's thread to the session that spawned it
+    And the brief tells the pod to shepherd that pull request until CI is green, setting the per-turn timeout and which review threads the pod resolves
     And the brief tells the pod never to merge that pull request
     And the brief tells the pod that when it is told the default branch moved, it rebases onto it, adapts its work to what landed, re-verifies, and reports again
 
