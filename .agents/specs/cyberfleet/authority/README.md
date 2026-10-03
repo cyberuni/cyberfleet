@@ -205,7 +205,8 @@ in-set teardown).
 | the loop reaches a ratification-class step while retiring a tick's missions | the summons for this tick, and whether it carries the Council's own words authorizing the tick's merges; CI on the merged result | merges the tick's missions behind the merge backstop when the summons authorizes them; otherwise holds each merge and reports a decision-request up its relay |
 
 **Extensions:** the summons is silent on merging (being summoned is not the delegation; hold the merge and
-report it) · the step is another class of action, such as a release (report the decision it needs) · a
+report it) · the harness refuses a merge the summons authorized (never retry it or reach it another way;
+hold it, leave the mission unretired, and report the refusal up the relay) · the step is another class of action, such as a release (report the decision it needs) · a
 leash recorded on the change request (not the delegation, and never merge authority).
 
 ### UC7 — get a change from another project · `authority-governance` §2 (across projects)
@@ -293,7 +294,7 @@ The skill's sections are the surface; each traces to the use case that needs it.
 | §6 positive dispatch set | UC5 |
 | §7 tick delegation in the summons' own words, and the leash negative | UC6 |
 | §7 dispatch delegation — the announcement and the Council's reply, clean bar, not transferable | UC10 |
-| §7 a refused merge stays refused | UC10 |
+| §7 a refused merge stays refused | UC6, UC10 |
 | §8 thread per work item | UC8 |
 | §9 say what the rules do not buy | UC2 (the honesty extension) |
 
@@ -358,6 +359,7 @@ flowchart TD
   W -->|"E20 out of set"| V
   X -->|"E23 summons authorizes the tick's merges, green CI on the merged result"| F
   X -->|"E41 summons silent on merging"| H
+  X -->|"E47 the harness refused a merge the summons authorized"| H
   X -->|"E24 another class of action"| V
   Y -->|"E25 a defect in a depended-on project"| Z
   Y -->|"E26 a request from a peer Captain"| AA
@@ -372,9 +374,9 @@ flowchart TD
   AE -->|"E34 a pod it spawned for that order, the Council's reply covers it, and clean"| F
   AE -->|"E42 the order itself asked for the merge, and clean"| F
   AE -->|"E43 no reply to the announcement"| H
-  AE -->|"E46 a reply unclear for this merge"| H
   AE -->|"E44 the reply held this merge back"| AF
   AE -->|"E45 the harness refused the merge"| H
+  AE -->|"E46 a reply unclear for this merge"| H
   AE -->|"E35 a pod outside that order"| H
   AE -->|"E36 not clean"| H
   AE -->|"E37 rebased since the order, and clean"| F
@@ -457,6 +459,7 @@ Grouped by use case; the unit is the **(path class, edge)** pair.
 |---|---|---|
 | E23 | a summons authorizing the tick's merges, CI green on the merged result | `a summons that authorizes the tick's merges in the Council's own words delegates them` |
 | E41 | a summons with no words about merging, CI green on the merged result | `summoning the loop alone delegates no merge` |
+| E47 | a merge the summons authorized, refused by the harness | `a merge the harness refuses is held by the loop, never retried` |
 | E24 | a retirement that would publish a release | `the delegation covers the tick's missions and no other class of action` |
 
 ### UC7 — get a change from another project
@@ -490,9 +493,9 @@ Grouped by use case; the unit is the **(path class, edge)** pair.
 | E34 | a clean pull request from a pod spawned for the order, after the Council replied to the merge announcement | `the Council's reply to the merge announcement delegates merging that dispatch's own pull requests` |
 | E42 | a clean pull request from an order that itself asked for the merge | `an order that itself asks for the merges delegates them` |
 | E43 | a clean pull request with no reply to the merge announcement | `the dispatch order alone delegates no merge` |
-| E46 | a clean pull request whose announcement drew only a question back | `a reply that does not answer the announcement delegates no merge` |
 | E44 | a clean pull request the Council's reply held back | `a reply that holds a merge back leaves that merge to the Council` |
 | E45 | a covered, clean pull request whose merge the harness refused | `a refused merge is never retried or worked around` |
+| E46 | a clean pull request whose announcement drew only a question back | `a reply that does not answer the announcement delegates no merge` |
 | E35 | a clean pull request from a pod dispatched under an earlier order | `the dispatch delegation does not reach a pull request from outside that order` |
 | E36 | a pod of the order whose pull request has a review requesting changes | `a pull request that is not clean is held rather than merged` |
 | E37 | a pod of the order whose pull request was rebased after the order | `the dispatch delegation follows its pull request across a rebase` |

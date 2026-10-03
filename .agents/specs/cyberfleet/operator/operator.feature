@@ -173,6 +173,13 @@ Feature: operator — the command-center persona
     And it asks the Council to reply to that before any of those merges
 
   @behavior
+  Scenario: an order that asks for the merges still gets the clean bar, and no wait for a reply
+    Given the Council asks Operator to dispatch a pod to add an export endpoint and to merge its pull request once it is clean
+    When Operator dispatches it
+    Then it names the clean bar to the Council with the dispatch
+    And it does not wait for a reply before merging that pod's pull request once it is clean
+
+  @behavior
   Scenario: a clean pull request merges under the Council's reply to the announcement
     Given Operator dispatched a pod on the Council's order to add a CSV export
     And the Council replied "yes, go ahead" to Operator's announcement that it would merge that pod's pull request once clean

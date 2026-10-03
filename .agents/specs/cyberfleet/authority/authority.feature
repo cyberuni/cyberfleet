@@ -313,6 +313,14 @@ Feature: authority — what a dispatcher may command, and what carries Council a
     And it reports a decision-request naming that merge up its relay
 
   @behavior
+  Scenario: a merge the harness refuses is held by the loop, never retried
+    Given the Council's summons authorized merging the missions of a tick
+    And the harness denies the loop's merge of a mission that reported done with CI green on the merged result
+    When the loop handles the denial
+    Then it does not run the merge again, and does not reach it by another command, an API call, another unit, or a changed setting
+    And it leaves the mission unretired and reports a decision-request naming the merge and the refusal up its relay
+
+  @behavior
   Scenario: a summons that authorizes the tick's merges in the Council's own words delegates them
     Given the Council summons the headless lifecycle loop for a tick with "run the tick, and merge whatever goes green"
     And a dispatched mission reports done with speculative CI green on the merged result

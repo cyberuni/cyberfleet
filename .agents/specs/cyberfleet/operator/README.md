@@ -139,8 +139,7 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
   `cyberlegion unit spawn` a ship to run it (AFK → autonomous, HITL → human channel, capped at capacity
   K), and on each completion merge in Operation order behind the merge backstop — only when the
   summons carries the Council's own words authorizing that tick's merges; otherwise hold the merge,
-  leave the mission unretired, and batch a decision-request up the relay; a consumer of a held mission
-  waits behind it, since `merge-backstop-governance` never lands a consumer before its producer — tear down the pod
+  leave the mission unretired, and batch a decision-request up the relay — tear down the pod
   that ran it with `cyberlegion unit close <id>` — one pod, spawn's inverse, never the fleet-wide
   `unit prune` sweep — append the retirement + discovered edges, and re-derive `ready` for the next tick. Dispatched
   missions only **report** (they never write the graph); the loop is summoned, ticks, and exits rather
