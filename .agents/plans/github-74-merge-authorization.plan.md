@@ -10,8 +10,8 @@ todos:
     status: completed
   - content: "Impl: authority-governance §3/§6/§7 + README, operator SKILL.md/README, headless-operator, docs page, changeset"
     status: completed
-  - content: "Cold spec-judge and impl-judge; pnpm verify; PR"
-    status: in_progress
+  - content: "Cold spec-judge (ALIGNED round 3) and impl-judge (pass); pnpm verify; PR #76"
+    status: completed
   - content: "Spec gate (Clearance — narrowing) and impl gate: Council ratification"
     status: pending
 ---
