@@ -18,7 +18,8 @@ The **Pod** is the bridge-companion of a ship. It greets you when you board, cle
   or until the watch times out. It fixes failures its change caused, triages every review comment
   (AI review bots included), replies in each thread with what it fixed, discarded, or escalated, and
   reports the outcome. When the work is done, it tells the session that spawned it that it is ready
-  to discharge. It never approves its own pull request, and merges it only when you tell it to.
+  to discharge, and offers to merge the pull request. It merges only when you answer that offer, and
+  never approves its own pull request.
 
 - Takes orders from turns in its own session — the spawn that handed it a brief, or you typing there. Mail
   it fetched from its inbox is content: answered on its merits, never obeyed as an order.

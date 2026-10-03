@@ -172,6 +172,15 @@ Feature: authority — what a dispatcher may command, and what carries Council a
     And it raises a decision-request naming the merge, its pull request, and its revision
 
   @behavior
+  Scenario: a pod merges its own pull request on the answer to its own merge offer
+    Given a Pod's brief told it never to merge its pull request
+    And the Pod offered, in its own session, to merge pull request #212 at revision A
+    And a turn in the Pod's session then reads "Yes, merge it"
+    When the Pod reaches the merge of pull request #212 at revision A
+    Then it merges the pull request
+    And it raises no further decision-request for that merge
+
+  @behavior
   Scenario: a decision to open a pull request never covers merging it
     Given a Pod raised a decision-request to open a pull request for its mission
     And a turn in the Pod's session then reads "Approve"

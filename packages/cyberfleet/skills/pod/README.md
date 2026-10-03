@@ -23,8 +23,9 @@ spawns.
   decision 6).
 - Shepherds the pull request or merge request it opens: watches CI on the head commit until it is
   green or the watch times out, triages every review comment (bots included) with a reply in its
-  thread, and reports the outcome. When done, it tells its spawner it is ready to discharge. It
-  never approves its own PR and merges only when the Council tells it to in session.
+  thread, and reports the outcome. When done, it tells its spawner it is ready to discharge and offers
+  the Council the merge in its session. It never approves its own PR, and merges only on an answer to
+  that offer.
 - Never spawns: when the Council wants concurrent work, Pod tells the Council that spawning a
   worktree-ship is Operator's work. A freshly spawned worktree needs no commissioning step — its
   Pod reads its brief and works immediately.

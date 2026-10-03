@@ -52,7 +52,7 @@ describe('pod shepherding', () => {
 		expect(section).toContain('authority-governance')
 	})
 
-	it('never merges and never approves its own pull request', () => {
+	it('never approves its own pull request and never merges outside its own offer', () => {
 		expect(section).toMatch(/never merge/i)
 		expect(section).toMatch(/never approve/i)
 	})
@@ -72,9 +72,11 @@ describe('pod shepherding', () => {
 		expect(section).toMatch(/spawner/)
 	})
 
-	it("merges only on the Council's own order in this session, then reports ready to discharge", () => {
-		expect(section).toMatch(/Council itself tells you, in this session, to merge/)
-		expect(section).toMatch(/never counts as that order/)
+	it('offers the merge in its own session and merges only on an answer to that offer', () => {
+		expect(section).toMatch(/Offer the merge in this session/)
+		expect(section).toMatch(/decision-request/)
+		expect(section).toMatch(/no longer covers the new head/)
+		expect(section).toMatch(/never answers the offer/)
 	})
 
 	it('reports the CI result and how each finding was handled', () => {

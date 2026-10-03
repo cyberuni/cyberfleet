@@ -274,7 +274,10 @@ decision-request) · the pull request is not clean (hold it; raise a decision-re
 was rebased after the order, so its head is a revision the order never named (the delegation follows the
 pull request; merge it once clean) · the next step is another class of action, such as publishing (the
 delegation does not reach it) · a pod asks to hold the delegation itself (it is not transferable; the
-Operator alone merges).
+Operator alone merges under a delegation). A pod's own merge is not this use case: a pod that offered the
+Council, in its own session, to merge its own pull request at a named head commit merges on the answer —
+a decision under UC2, not a transfer — and the dispatcher never answers that offer with its own
+approval.
 
 The rebase extension is not the revision rule of UC2 read loosely. UC2 governs a **relayed decision**
 answering a request that names a revision; the merge announcement names no revision — it names the work — so the delegation is spent
@@ -347,6 +350,7 @@ flowchart TD
   G -->|"E6 no decision at all"| H
   G -->|"E14 asked whether it could be injected"| H
   G -->|"E40 the words answer no outstanding request"| H
+  G -->|"E48 a pod's own merge offer, answered, against the brief's never-merge"| F
   S -->|"E15 the Council said it, and this unit holds it"| U
   S -->|"E16 the Council said less than the ask"| V
   S -->|"E17 asked to stretch a handed scope"| V
@@ -414,6 +418,7 @@ Grouped by use case; the unit is the **(path class, edge)** pair.
 | E7 | "Approve" answering its request to merge a different pull request | `a decision naming one target does not cover another` |
 | E7 | "Approve" answering its request at a revision the target has moved past | `a decision does not survive its target moving to a new revision` |
 | E40 | "Approve" on a turn, with no decision-request outstanding | `an approval that answers no request covers nothing` |
+| E48 | a pod whose brief said never merge, answered on its own merge offer | `a pod merges its own pull request on the answer to its own merge offer` |
 | E8 | a decision already acted on, and the work to land again | `a decision already acted on is spent` |
 | E13 | the change request records the leash `auto-all` | `an SDD leash is never read as merge authority` |
 | E4 | an order whose actions are all dispatch-class | `work outside the enumerated list is dispatch and needs no decision` |
