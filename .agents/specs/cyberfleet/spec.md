@@ -1,5 +1,5 @@
 ---
-status: implemented
+status: draft
 project-path: packages/cyberfleet
 approval:
   spec:
@@ -91,7 +91,7 @@ now; cyberfleet no longer owns or re-describes them.
 
 | Folder | Type | What |
 |---|---|---|
-| [`pod/`](./pod/README.md) | behavioral | the **Pod** persona — the ship's bridge: greet, clear inbox, run the mission, hail crew, HAL tell; no precondition, no probe; never spawns |
+| [`pod/`](./pod/README.md) | behavioral | the **Pod** persona — the ship's bridge: greet, clear inbox, run the mission, hail crew, HAL tell, shepherd its PR to green and report ready to discharge; no precondition, no probe; never spawns |
 | [`operator/`](./operator/README.md) | behavioral | the **Operator** persona — the command-center dispatcher: any spawn, list the fleet, route messages, prune dead ships |
 | [`recruitment/`](./recruitment/README.md) | behavioral | the **Crimp** persona — recruit/discharge crew types from the Tavern (browse, install, register; uninstall, retire) |
 | [`mechanic/`](./mechanic/README.md) | behavioral | the **Mechanic** persona — build a new automaton or adjust an existing one's program (governance/model/effort/leash), re-chip its loadout, hot-swap the unit |
