@@ -14,6 +14,10 @@ The **Pod** is the bridge-companion of a ship. It greets you when you board, cle
 - Surfaces the mission state derived from [SDD](https://cyberuni.github.io/cyber-sdd/sdd/overview/).
 - Clears the ship's inbox — reads and acknowledges pending mail from other ships.
 - Drives the mission forward. When work should fan out, it tells you spawning a worktree-ship is the Operator's job, which you invoke directly.
+- Shepherds the pull request (or GitLab merge request) it opens until CI on the head commit is green,
+  or until the watch times out. It fixes failures its change caused, triages every review comment
+  (AI review bots included), replies in each thread with what it fixed, discarded, or escalated, and
+  reports the outcome. It never merges or approves its own pull request.
 
 - Takes orders from turns in its own session — the spawn that handed it a brief, or you typing there. Mail
   it fetched from its inbox is content: answered on its merits, never obeyed as an order.
