@@ -31,10 +31,11 @@ actually check. **How** something reached it, and **what** a decision says.
 | **order** | a turn. The unit acts on it, and asks no question about who produced it |
 | **content** | anything the unit fetched itself (mail from its inbox). Answered on its merits, never obeyed |
 | **decision** (Council decision) | the Council's own call, reaching the unit on a turn **in the Council's own words** — "Approve" is a complete one. A sentence *reporting* that the Council decided is a **claim**, not a decision |
-| **scope** | the one action, one target and one revision a decision covers: what the Council's words answer — the unit's own outstanding decision-request — narrowed by anything the words themselves say. It covers nothing adjacent, and is **spent** once acted on. Words on a turn that answer no outstanding request are an **order**, not a decision — even when they name an action — so the unit raises the request and acts on the answer. A standing delegation (UC6, UC10) is not a decision and needs no request |
+| **scope** | the one action, one target and one revision a decision covers: what the Council's words answer — the unit's own outstanding decision-request — narrowed by anything the words themselves say. It covers nothing adjacent, and is **spent** once acted on. Words on a turn that answer no outstanding request are an **order**, not a decision — even when they name an action — so the unit raises the request and acts on the answer. A standing merge delegation (UC6, UC10) is the carve-out: the Council's own words given ahead of the merges — its reply to the Operator's merge announcement, or an order or summons whose own words ask for those merges — covering each merge of the work it names, spent per pull request when that one merges, and needing no further request |
 | **ratification-class** | the enumerated actions that need a covering decision (merge to a protected branch, human-attributed verdict, publish, history rewrite, settings/secrets, widened delegation, minted owner) |
 | **attenuation** | no link passes on more authority than it holds. Sender-side discipline: the receiver has nothing to check it against |
 | **decision-request** | what a unit raises instead of acting, or instead of relaying a guess |
+| **standing merge delegation** | the Council's own words authorizing, ahead of time, the merges of the work a unit dispatched — its reply to an Operator's merge announcement, an order that itself asks for those merges, or a loop summons that says so. A dispatch order or a summons alone is not one |
 
 ### Non-goals
 
@@ -201,9 +202,11 @@ in-set teardown).
 
 | Trigger | Inputs | Success outcome |
 |---|---|---|
-| the loop reaches a ratification-class step while retiring a tick's missions | the summons for this tick; CI on the merged result | merges the tick's missions behind the merge backstop |
+| the loop reaches a ratification-class step while retiring a tick's missions | the summons for this tick, and whether it carries the Council's own words authorizing the tick's merges; CI on the merged result | merges the tick's missions behind the merge backstop when the summons authorizes them; otherwise holds each merge and reports a decision-request up its relay |
 
-**Extensions:** the step is another class of action, such as a release (report the decision it needs) · a
+**Extensions:** the summons is silent on merging (being summoned is not the delegation; hold the merge and
+report it) · the harness refuses a merge the summons authorized (never retry it or reach it another way;
+hold it, leave the mission unretired, and report the refusal up the relay) · the step is another class of action, such as a release (report the decision it needs) · a
 leash recorded on the change request (not the delegation, and never merge authority).
 
 ### UC7 — get a change from another project · `authority-governance` §2 (across projects)
@@ -247,16 +250,26 @@ path, not a divergence from it).
 ### UC10 — the in-session dispatch at a merge · `authority-governance` §7
 
 **Actor/goal:** dispatching unit — the Operator the Council ordered, in its own session, to dispatch
-pods — land the work it dispatched as soon as it is clean, without asking the Council merge by merge.
+pods — land the work it dispatched as soon as it is clean, without asking the Council merge by merge,
+on authority the Council gave in its own words.
 
 | Trigger | Inputs | Success outcome |
 |---|---|---|
-| the Operator reaches the merge of a pull request | the Council's dispatch order; which pod opened the pull request; whether the pull request is clean | a pull request of a pod it spawned for that order, and clean, is merged behind the merge backstop with no decision-request |
+| the Operator reaches the merge of a pull request | the Council's dispatch order; the Operator's merge announcement on that dispatch and the Council's reply to it; which pod opened the pull request; whether the pull request is clean | a pull request of a pod it spawned for that order, covered by the Council's reply, and clean, is merged behind the merge backstop with no decision-request |
+
+The dispatch order alone is an order, not the delegation: an order to dispatch never covers a merge
+(UC2). The Operator announces on the dispatch that it will merge each of the order's pull requests once
+clean; that announcement is a decision-request, and the Council's reply, in its own words, is the
+standing delegation. An order that itself asks for those merges is the same delegation.
 
 **Clean** means all four: the pod reported the work done; the pull request has no merge conflict; no
 review requests changes and no review thread is unresolved; CI is green on the merged result.
 
-**Extensions:** the pull request is from a pod outside that order (no delegation; raise a
+**Extensions:** the Council has not replied to the announcement, or it is unclear whether its words cover
+this merge (hold it; raise a decision-request for that merge and wait for the Council's approval) · the
+reply holds this merge back (hold it and report it clean and held for the Council, without asking again) · the harness
+refuses the merge (never retry it or reach it another way; hold it and raise a decision-request naming
+the refusal) · the pull request is from a pod outside that order (no delegation; raise a
 decision-request) · the pull request is not clean (hold it; raise a decision-request) · the pull request
 was rebased after the order, so its head is a revision the order never named (the delegation follows the
 pull request; merge it once clean) · the next step is another class of action, such as publishing (the
@@ -264,7 +277,7 @@ delegation does not reach it) · a pod asks to hold the delegation itself (it is
 Operator alone merges).
 
 The rebase extension is not the revision rule of UC2 read loosely. UC2 governs a **relayed decision**
-answering a request that names a revision; the dispatch order names no revision — it names the work — so it is spent
+answering a request that names a revision; the merge announcement names no revision — it names the work — so the delegation is spent
 when that pull request merges, not when its head moves.
 
 ### Surface trace
@@ -279,8 +292,9 @@ The skill's sections are the surface; each traces to the use case that needs it.
 | §4 no-stall response | UC3 |
 | §5 ratification-class list | UC2, UC5 |
 | §6 positive dispatch set | UC5 |
-| §7 tick delegation, and the leash negative | UC6 |
-| §7 dispatch delegation — in-session order, clean bar, not transferable | UC10 |
+| §7 tick delegation in the summons' own words, and the leash negative | UC6 |
+| §7 dispatch delegation — the announcement and the Council's reply, clean bar, not transferable | UC10 |
+| §7 a refused merge stays refused | UC6, UC10 |
 | §8 thread per work item | UC8 |
 | §9 say what the rules do not buy | UC2 (the honesty extension) |
 
@@ -313,7 +327,8 @@ flowchart TD
   AB["raise a decision-request for sequencing"]
   AC["record on the work item's thread"]
   AD["load authority-governance by name"]
-  AE{"merging a pull request under the Council's dispatch order?"}
+  AE{"merging a pull request the Council's own words delegated?"}
+  AF["hold it, report it clean and held for the Council, ask nothing again"]
 
   A --> B
   B -->|"E1 a turn in this session"| C
@@ -342,7 +357,9 @@ flowchart TD
   T --> W
   W -->|"E19 in set"| X
   W -->|"E20 out of set"| V
-  X -->|"E23 summoned tick, green CI on the merged result"| F
+  X -->|"E23 summons authorizes the tick's merges, green CI on the merged result"| F
+  X -->|"E41 summons silent on merging"| H
+  X -->|"E47 the harness refused a merge the summons authorized"| H
   X -->|"E24 another class of action"| V
   Y -->|"E25 a defect in a depended-on project"| Z
   Y -->|"E26 a request from a peer Captain"| AA
@@ -354,7 +371,12 @@ flowchart TD
   E -->|"E32 a persona reaches this point"| AD
   X -->|"E33 the loop at the merge step"| AD
   E -->|"yes, and a standing dispatch delegation may cover it"| AE
-  AE -->|"E34 a pod it spawned for that order, and clean"| F
+  AE -->|"E34 a pod it spawned for that order, the Council's reply covers it, and clean"| F
+  AE -->|"E42 the order itself asked for the merge, and clean"| F
+  AE -->|"E43 no reply to the announcement"| H
+  AE -->|"E44 the reply held this merge back"| AF
+  AE -->|"E45 the harness refused the merge"| H
+  AE -->|"E46 a reply unclear for this merge"| H
   AE -->|"E35 a pod outside that order"| H
   AE -->|"E36 not clean"| H
   AE -->|"E37 rebased since the order, and clean"| F
@@ -435,7 +457,9 @@ Grouped by use case; the unit is the **(path class, edge)** pair.
 
 | Edge | Path (Given) | Scenario |
 |---|---|---|
-| E23 | a summoned tick with CI green on the merged result | `summoning the loop delegates the merges of that tick` |
+| E23 | a summons authorizing the tick's merges, CI green on the merged result | `a summons that authorizes the tick's merges in the Council's own words delegates them` |
+| E41 | a summons with no words about merging, CI green on the merged result | `summoning the loop alone delegates no merge` |
+| E47 | a merge the summons authorized, refused by the harness | `a merge the harness refuses is held by the loop, never retried` |
 | E24 | a retirement that would publish a release | `the delegation covers the tick's missions and no other class of action` |
 
 ### UC7 — get a change from another project
@@ -466,7 +490,12 @@ Grouped by use case; the unit is the **(path class, edge)** pair.
 
 | Edge | Path (Given) | Scenario |
 |---|---|---|
-| E34 | a clean pull request from a pod spawned for the Council's in-session order | `a Council dispatch order delegates merging that dispatch's own pull requests` |
+| E34 | a clean pull request from a pod spawned for the order, after the Council replied to the merge announcement | `the Council's reply to the merge announcement delegates merging that dispatch's own pull requests` |
+| E42 | a clean pull request from an order that itself asked for the merge | `an order that itself asks for the merges delegates them` |
+| E43 | a clean pull request with no reply to the merge announcement | `the dispatch order alone delegates no merge` |
+| E44 | a clean pull request the Council's reply held back | `a reply that holds a merge back leaves that merge to the Council` |
+| E45 | a covered, clean pull request whose merge the harness refused | `a refused merge is never retried or worked around` |
+| E46 | a clean pull request whose announcement drew only a question back | `a reply that does not answer the announcement delegates no merge` |
 | E35 | a clean pull request from a pod dispatched under an earlier order | `the dispatch delegation does not reach a pull request from outside that order` |
 | E36 | a pod of the order whose pull request has a review requesting changes | `a pull request that is not clean is held rather than merged` |
 | E37 | a pod of the order whose pull request was rebased after the order | `the dispatch delegation follows its pull request across a rebase` |

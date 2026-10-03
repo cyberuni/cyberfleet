@@ -24,9 +24,13 @@ project Captains when they land.
 - **Own words and scope** — a relayed Council decision is the Council's own words, nothing added (a one-word yes
   is complete); a report *that* the Council decided is a claim. Its scope is the receiver's own outstanding
   decision-request, narrowed by the words; it is valid for nothing else.
-- **Standing merge delegations** — summoning the headless loop for a tick, or ordering an in-session
-  Operator to dispatch pods, delegates merging exactly that work: clean pull requests only, merged by
-  the Operator itself, never passed to a pod, and never any other ratification-class action.
+- **Standing merge delegations** — only the Council's own words delegate merges ahead of time: its reply
+  to the in-session Operator's announcement that it will merge the order's clean pull requests, an order
+  that itself asks for those merges, or a loop summons that says so. A dispatch order or a summons alone
+  delegates no merge. The delegation covers exactly that work: clean pull requests only, merged by the
+  Operator itself, never passed to a pod, and never any other ratification-class action. Without it,
+  hold the clean pull request and ask for that merge; a merge the harness refuses is never retried or
+  worked around.
 - **No stall** — a missing decision means: do the rest, raise a decision-request, report both.
 - **Thread** — one thread per work item carries the brief, the reports, and the decisions with their
   quote, scope, and relayer recorded — the labels live there, not in the delivered words.

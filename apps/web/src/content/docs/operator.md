@@ -15,9 +15,13 @@ The **Operator** is the dispatcher of the fleet. It's where you survey what's ou
 - Lists the live ships and, via `cyberfleet missions`, which need the Council's hands — ships × mission × gate × leash, derived from [SDD](https://cyberuni.github.io/cyber-sdd/sdd/overview/) state.
 - Watches the ships it spawns and lands their work. Each ship opens a pull request and reports back
   to the session that spawned it, not to whichever session opened Operator most recently.
-  When a pull request is clean (the ship reported it done, it has no merge conflict, no review is
-  blocking it, and CI is green on the merged result), Operator merges it without asking you again,
-  because your order to dispatch the work covers that. Anything short of clean waits for you.
+  When it dispatches, Operator tells you it will merge each of those pull requests once it is clean
+  (the ship reported it done, it has no merge conflict, no review is blocking it, and CI is green on
+  the merged result), and asks you to reply. Your reply is what lets it merge them without asking you
+  again — the order to dispatch alone does not, and neither does it for Claude Code auto mode, which
+  blocks a merge you did not ask for in your own words. Until you reply, a clean pull request waits for
+  you to approve that merge. A merge the harness refuses waits for you too; Operator never retries it
+  or works around it. Anything short of clean waits for you.
 - Orchestrates several ships on one order: merges their work in dependency order, and after each
   merge tells the ships still open to rebase, adapt to what landed, and re-verify.
 - Routes messages between ships and sweeps away the dead ones.
@@ -25,7 +29,7 @@ The **Operator** is the dispatcher of the fleet. It's where you survey what's ou
   just "Approve", or your sentence nearly verbatim — with nothing added, and Operator records your
   words, who relayed them, and what they cover on the work's thread. Operator can pass on no more
   authority than it holds, so it cannot tell a ship that a merge is approved. The merge authority your
-  dispatch order gives it stays with Operator; a ship never merges its own work.
+  reply gives it stays with Operator; a ship never merges its own work.
 
 ## Related
 

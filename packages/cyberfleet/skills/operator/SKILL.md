@@ -53,14 +53,27 @@ connected wherever the Council invokes it, including inside a project an agent i
   this brief's thread to the return address when the work is done or blocked; **never merge** the pull request;
   and when told trunk moved, rebase onto it, adapt the work to what landed, re-verify, push, and report
   again.
+- With the dispatch, **announce the merges** to the Council: say that you will merge each pull request of
+  this order's pods once it is clean, name the four-part bar below, and ask the Council to reply before
+  the first one lands. The Council's reply, in its own words, is what authorizes those merges — the order
+  to dispatch does not (`authority-governance` §7). When the order itself already asks for the merges,
+  announce the bar and wait for nothing more.
 - Once a pod is out, **watch it — do not wait to be asked**. Act on each report as it arrives (the
   doorbell on this session's own handle): gate its pull request against the four-part **clean** bar in
   `authority-governance` §7 — reported done, no merge conflict (`gh pr view <pr> --json mergeable`), no
   review requesting changes or left unresolved, CI green on the merged result (`gh pr checks <pr>
   --watch`). Load **`merge-backstop-governance`** for the merge step.
-  - **Clean → merge it** (`gh pr merge`) with no further turn from the Council — the Council's dispatch
-    order is the delegation (`authority-governance` §7) — then `cyberlegion unit close <id>` the pod
-    that ran it.
+  - **Clean and covered → merge it** (`gh pr merge`) with no further turn from the Council — the
+    Council's reply to the announcement, or an order that itself asked for the merges, is the
+    delegation (`authority-governance` §7) — then
+    `cyberlegion unit close <id>` the pod that ran it.
+  - **Clean, but no reply yet, a reply that only asks back, or unclear whether the reply reaches this
+    pull request → hold it.** Leave
+    its pod running, raise a decision-request naming that merge, and merge only once the Council's
+    answer approves it. If the reply held this one back, report it clean and held; do not ask again.
+  - **Merge refused → hold it.** When the harness or host refuses `gh pr merge`, do not run it again or
+    reach it another way (another command, the API, a pod, a setting). Leave its pod running, raise a decision-request naming
+    the pull request and the refusal, and wait for the Council's answer.
   - **Not clean → hold it.** Do not merge, leave its pod running, and raise a decision-request naming
     the pull request and what holds it.
   - Keep watching until every pod of the order is merged or held, and say which is which.

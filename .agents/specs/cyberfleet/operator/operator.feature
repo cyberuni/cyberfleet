@@ -166,13 +166,46 @@ Feature: operator — the command-center persona
     And the brief tells the pod that when it is told the default branch moved, it rebases onto it, adapts its work to what landed, re-verifies, and reports again
 
   @behavior
-  Scenario: a clean pull request is merged without the Council asking
+  Scenario: dispatching announces the merges up front
+    Given the Council asks Operator to dispatch pods to add a CSV export and a PDF export, with no words about merging
+    When Operator dispatches them
+    Then it tells the Council, with the dispatch, that it will merge each of those pods' pull requests once it is clean, and names the clean bar
+    And it asks the Council to reply to that before any of those merges
+
+  @behavior
+  Scenario: an order that asks for the merges still gets the clean bar, and no wait for a reply
+    Given the Council asks Operator to dispatch a pod to add an export endpoint and to merge its pull request once it is clean
+    When Operator dispatches it
+    Then it names the clean bar to the Council with the dispatch
+    And it does not wait for a reply before merging that pod's pull request once it is clean
+
+  @behavior
+  Scenario: a clean pull request merges under the Council's reply to the announcement
     Given Operator dispatched a pod on the Council's order to add a CSV export
+    And the Council replied "yes, go ahead" to Operator's announcement that it would merge that pod's pull request once clean
     And the pod reports on its thread that the work is done, with a pull request
     And that pull request has no merge conflict, no review requesting changes or left unresolved, and CI green on the merged result
     When Operator reads the report
     Then it merges the pull request with no further turn from the Council
     And it tears down that pod with cyberlegion unit close
+
+  @behavior
+  Scenario: a clean pull request with no standing authorization waits for the Council's approval of that merge
+    Given Operator dispatched a pod on the Council's order to add a CSV export
+    And the Council has not replied to Operator's announcement that it would merge that pod's pull request once clean
+    And the pod reports on its thread that the work is done, with a pull request that is clean
+    When Operator reads the report
+    Then it does not merge the pull request
+    And it raises a decision-request naming the merge of that pull request, and leaves that pod running
+    And it merges nothing for that pull request while that request is unanswered
+
+  @behavior
+  Scenario: a merge the harness refuses is held, never retried
+    Given Operator holds the Council's reply authorizing the merge of a pod's clean pull request
+    And the harness denies Operator's gh pr merge for that pull request
+    When Operator handles the denial
+    Then it does not retry the merge or reach it another way
+    And it raises a decision-request naming the pull request and the denial, and leaves that pod running
 
   @behavior
   Scenario: a pull request that is not clean is held and raised
@@ -209,7 +242,7 @@ Feature: operator — the command-center persona
 
   @behavior
   Scenario: a rebased pull request that is clean again merges
-    Given a pod's pull request was clean, and Operator then told the pod the default branch moved
+    Given a pod's pull request was clean and covered by the Council's reply to Operator's merge announcement, and Operator then told the pod the default branch moved
     And the pod reports again after rebasing, and the rebased pull request has no merge conflict, no review requesting changes or left unresolved, and CI green on the merged result
     When Operator reads the new report
     Then it merges the rebased pull request with no further turn from the Council
@@ -321,8 +354,17 @@ Feature: operator — the command-center persona
   @behavior
   Scenario: completion retires in Operation order and re-derives the next frontier
     Given a mission reports done at handoff (its PR created)
+    And the loop's summons carries the Council's own words authorizing the merges of this tick
     When the lifecycle loop handles the completion
     Then it merges in Operation order behind the merge backstop, tears down the pod that ran it, appends the retirement and any discovered edges or nodes as the single writer, and re-derives ready to dispatch the next mission
+
+  @behavior
+  Scenario: a tick with no merge authorization holds the merge and reports it
+    Given a mission reports done at handoff with CI green on its merged result
+    And the loop's summons carries no Council words authorizing a merge
+    When the lifecycle loop handles the completion
+    Then it does not merge, and leaves the mission claimed and unretired with its pod running
+    And it batches a decision-request naming that merge into its return packet, or pushes it to the owner inbox when started frameless
 
   @behavior
   Scenario: the loop's spawns invoke no rule of the in-ship Pod persona
