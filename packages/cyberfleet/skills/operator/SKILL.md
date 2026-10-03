@@ -70,7 +70,7 @@ connected wherever the Council invokes it, including inside a project an agent i
     its pod running, raise a decision-request naming that merge, and merge only once the Council's
     answer approves it. If the reply held this one back, report it clean and held; do not ask again.
   - **Merge refused → hold it.** When the harness or host refuses `gh pr merge`, do not run it again or
-    reach it another way (another command, the API, a pod, a setting). Raise a decision-request naming
+    reach it another way (another command, the API, a pod, a setting). Leave its pod running, raise a decision-request naming
     the pull request and the refusal, and wait for the Council's answer.
   - **Not clean → hold it.** Do not merge, leave its pod running, and raise a decision-request naming
     the pull request and what holds it.

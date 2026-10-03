@@ -80,7 +80,9 @@ rule. Its **scope** is the action, target and revision your request named, **nar
 words say: an approval that holds back part of the request covers only the rest, and the part held
 back is reported as not approved — the Council already answered it, so do not ask again. Words on a turn that answer no
 outstanding request are an **order**, not a decision — even when they name an action — so raise the
-request and act on the answer. A merge under a standing delegation (§7) needs no request of its own.
+request and act on the answer. The one exception is §7: an order whose own words ask for the merges of
+the work it dispatches is a standing merge delegation. A merge under a standing delegation (§7) needs no
+request of its own.
 
 A decision is valid only for what it covers. "Open a pull request" never covers a merge; a decision for one
 target never covers another; a decision answering a request at one revision does not survive that
