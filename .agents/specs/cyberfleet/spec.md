@@ -1,5 +1,5 @@
 ---
-status: draft
+status: implemented
 project-path: packages/cyberfleet
 approval:
   spec:
@@ -7,24 +7,24 @@ approval:
     by: unional
     cause: clearance
     why:
-      floor: clearance — rewrites, rewords and removes frozen authority scenarios (four-part relay form retired; receiver missing-part refusal retired; older decision Givens moved to the decision-request form). Narrowing ratified in-session by unional.
-      blast: medium — changes how a Council decision reaches a Pod across the dispatch chain; authority node only; Operator and Pod nodes carry no relay-format text.
-      novelty: medium — a decision is the Council's own words answering the unit's own decision-request; labels move to the thread record; receiver judges relayed words as a direct prompt.
-      confidence: high — five cold spec-judge rounds, converging to ALIGNED on oracle, builder and architect; check-suite and check-spec-state clean.
+      floor: clearance — rewrites frozen authority and operator scenarios so a dispatch order or a loop summons alone no longer delegates merging (summoning-the-loop and dispatch-order delegation scenarios rewritten; several Givens now require the Council's reply to the merge announcement). Narrowing ratified in-session by unional.
+      blast: medium — moves the standing merge delegation to the Council's own words across the in-session Operator and the headless loop; authority and operator nodes; the Pod persona untouched.
+      novelty: medium — the Operator announces the merges at dispatch and the Council's reply is the delegation; a missing, unanswering or unclear reply holds the merge behind a decision-request; a refused merge is never retried or worked around.
+      confidence: high — three cold spec-judge rounds converging to ALIGNED on oracle, builder and architect; three blockers found and folded (unclear reply, key-term contradiction, headless refusal). check-suite and align-spec could not run (gherkin-cli import, cyberuni/cyber-sdd#57); suites parsed and the scenario map checked 1:1 by hand.
+      note: conformance warn carried, not fixed — the operator node still lacks What, Control Flow and Scenario map sections.
       leash: auto-none — derived at run start. Ratified in-session by unional holding the user channel.
-      cr: relay-council-words
+      cr: github-74-merge-authorization
   impl:
     verdict: approve
     by: unional
     cause: dimension
     why:
-      floor: none — the frozen suite was not touched after the spec gate; every change since is implementation-side markdown.
-      blast: medium — authority-governance §3 and §8 and its README, the Operator skill's relay bullet, and the Operator docs page. No CLI or mechanism change; the Pod persona untouched.
-      novelty: low — prose rules over the standing turn and thread mechanisms.
-      confidence: high — three cold impl-judge runs; the first two passed every frozen scenario but held on absorption (a worked example reusing Given apparatus), each fixed; the third approved with no finding. pnpm verify green.
-      note: two non-blocking observations recorded as follow-ups — the thread-record field list differs between §3 and §8, and the Pod skill's load trigger may not fire on a bare approval answering its own request.
+      floor: none — every change since the spec folds is implementation-side markdown.
+      blast: medium — authority-governance §3, §6 and §7 and its README, the Operator skill and README, headless-operator, and the Operator docs page. No CLI or mechanism change.
+      novelty: low — instructions over mechanisms that already ship (gh, cyberlegion mail and unit close, the mission graph).
+      confidence: high — two cold impl-judge runs, both IMPLEMENTATION_PASS true with file and line evidence, no absorption, no conflict with merge-backstop-governance or the standing authority, operator and pod scenarios; pnpm verify green first-hand.
       leash: auto-none — derived at run start. Ratified in-session by unional holding the user channel.
-      cr: relay-council-words
+      cr: github-74-merge-authorization
 ---
 
 # cyberfleet — the fleet layer over cyberlegion

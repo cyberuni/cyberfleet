@@ -13,7 +13,7 @@ todos:
   - content: "Cold spec-judge (ALIGNED round 3) and impl-judge (pass); pnpm verify; PR #76"
     status: completed
   - content: "Spec gate (Clearance — narrowing) and impl gate: Council ratification"
-    status: pending
+    status: completed
 ---
 
 # CR: github-74-merge-authorization — a merge delegation the harness recognizes
@@ -42,5 +42,5 @@ the Operator proceeds on a delegation the harness does not recognize.
 
 ## NEXT
 
-Both gates wait on the Council: the spec gate needs Clearance for the narrowing rewrite of frozen
-authority and operator scenarios. Then ratify the impl gate and merge the PR.
+Landed: both gates ratified by unional in-session. Merging PR #76 is the Council's call. Nothing left
+to resume.
