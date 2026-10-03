@@ -63,9 +63,10 @@ folder to decide whether it is allowed to work here, and it never spawns (that i
 ## Shepherding the pull request
 
 Watch the pull request until the pipeline on its **head commit** passes, triaging review comments as
-they arrive. The watch has a **timeout**: the brief's, if it sets one, otherwise 60 minutes from
-opening. Also stop after three fix pushes that leave the same check red. When the watch times out,
-stop and report the state as it stands. Never loop past the timeout.
+they arrive. The watch has a **timeout** on each turn, meaning each wait on a head pipeline, from
+opening the pull request or from a push. The limit is the brief's, if it sets one, otherwise 12
+minutes per turn. Also stop after three fix pushes that leave the same check red. When the watch
+times out, stop and report the state as it stands. Never loop past the timeout.
 
 1. **Watch CI.** Run `gh pr checks <pr> --watch` on GitHub, or `glab ci status --live` on the MR's
    branch on GitLab. On a failure, read the failing job's log before acting:

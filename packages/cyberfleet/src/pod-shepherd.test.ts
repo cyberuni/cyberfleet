@@ -25,6 +25,7 @@ describe('pod shepherding', () => {
 	it('puts a timeout on the watch and reports on it', () => {
 		expect(section).toMatch(/timeout/i)
 		expect(section).toMatch(/times out/)
+		expect(section).toMatch(/12\s+minutes per turn/)
 	})
 
 	it('triages every review comment, bot and AI ones included', () => {
