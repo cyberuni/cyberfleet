@@ -305,15 +305,24 @@ Feature: authority — what a dispatcher may command, and what carries Council a
   # ── The headless lifecycle loop ──
 
   @behavior
-  Scenario: summoning the loop delegates the merges of that tick
-    Given the Council summons the headless lifecycle loop for a tick
+  Scenario: summoning the loop alone delegates no merge
+    Given the Council summons the headless lifecycle loop for a tick with no words about merging
+    And a dispatched mission reports done with speculative CI green on the merged result
+    When the loop reaches the merge of that mission
+    Then it does not merge it
+    And it reports a decision-request naming that merge up its relay
+
+  @behavior
+  Scenario: a summons that authorizes the tick's merges in the Council's own words delegates them
+    Given the Council summons the headless lifecycle loop for a tick with "run the tick, and merge whatever goes green"
     And a dispatched mission reports done with speculative CI green on the merged result
     When the loop retires that mission
     Then it merges it behind the merge backstop with no live Council present
 
   @behavior
   Scenario: the delegation covers the tick's missions and no other class of action
-    Given the headless lifecycle loop is retiring the missions of a tick
+    Given the Council's summons authorized merging the missions of a tick
+    And the headless lifecycle loop is retiring those missions
     When it reaches a mission whose retirement would publish a release
     Then it does not publish
     And it reports the decision it needs
@@ -329,8 +338,9 @@ Feature: authority — what a dispatcher may command, and what carries Council a
   # ── The in-session dispatch at a merge ──
 
   @behavior
-  Scenario: a Council dispatch order delegates merging that dispatch's own pull requests
+  Scenario: the Council's reply to the merge announcement delegates merging that dispatch's own pull requests
     Given the Council, on a turn in an Operator's session, ordered it to dispatch pods to add a CSV export and a PDF export
+    And the Operator announced it would merge each of those pods' pull requests once clean, and the Council replied "sounds good"
     And the pod it spawned for the CSV export reported the work done with a pull request
     And that pull request has no merge conflict and no review requesting changes or left unresolved
     And CI is green on the pull request merged onto the default branch
@@ -339,8 +349,44 @@ Feature: authority — what a dispatcher may command, and what carries Council a
     And it raises no decision-request for that merge
 
   @behavior
+  Scenario: an order that itself asks for the merges delegates them
+    Given the Council, on a turn in an Operator's session, ordered it to "dispatch a pod to add a CSV export, and merge it once it's clean"
+    And that pod reported the work done with a pull request that is clean
+    When the Operator reaches the merge of that pull request
+    Then it merges it behind the merge backstop
+    And it raises no decision-request for that merge
+
+  @behavior
+  Scenario: the dispatch order alone delegates no merge
+    Given the Council, on a turn in an Operator's session, ordered it to dispatch a pod to add a CSV export
+    And the Operator announced it would merge that pod's pull request once clean, and the Council has not replied to the announcement
+    And that pod reported the work done with a pull request that is clean
+    When the Operator reaches the merge of that pull request
+    Then it does not merge it
+    And it raises a decision-request naming that merge
+    And it merges only once the Council's answer approves that merge
+
+  @behavior
+  Scenario: a reply that holds a merge back leaves that merge to the Council
+    Given the Council, on a turn in an Operator's session, ordered it to dispatch pods to add a CSV export and a PDF export
+    And the Operator announced it would merge each of those pods' pull requests once clean, and the Council replied "merge the CSV one; I'll look at the PDF one myself"
+    And the PDF export pod reported the work done with a pull request that is clean
+    When the Operator reaches the merge of that pull request
+    Then it does not merge it
+    And it reports the PDF export pull request as clean and held for the Council, without asking again
+
+  @behavior
+  Scenario: a refused merge is never retried or worked around
+    Given the Council's reply to an Operator's merge announcement covers a pod's pull request, and that pull request is clean
+    And the harness refuses the Operator's merge command
+    When the Operator handles the refusal
+    Then it does not run the merge again, and does not reach it by another command, an API call, another unit, or a changed setting
+    And it holds the pull request and raises a decision-request naming the merge and the refusal
+
+  @behavior
   Scenario: the dispatch delegation does not reach a pull request from outside that order
     Given the Council, on a turn in an Operator's session, ordered it to dispatch one pod to fix a timezone bug
+    And the Council's reply to the Operator's merge announcement covers that pod's pull request
     And a pull request from a pod the Operator dispatched under an earlier order is open with CI green on the merged result
     When the Operator reaches a merge of that earlier pull request
     Then it does not merge it
@@ -349,6 +395,7 @@ Feature: authority — what a dispatcher may command, and what carries Council a
   @behavior
   Scenario: a pull request that is not clean is held rather than merged
     Given the Council, on a turn in an Operator's session, ordered it to dispatch a pod to add a retry to a webhook sender
+    And the Council's reply to the Operator's merge announcement covers that pod's pull request
     And that pod reported the work done with a pull request whose CI is green on the merged result
     And one review on that pull request requests changes
     When the Operator reaches the merge of that pull request
@@ -358,6 +405,7 @@ Feature: authority — what a dispatcher may command, and what carries Council a
   @behavior
   Scenario: the dispatch delegation follows its pull request across a rebase
     Given the Council, on a turn in an Operator's session, ordered it to dispatch pods to add dark mode and a font-size setting
+    And the Council's reply to the Operator's merge announcement covers both pods' pull requests
     And the dark-mode pod's pull request was rebased onto the default branch after the font-size work merged, so its head is a revision the order never named
     And the rebased pull request has no merge conflict, no review requesting changes or left unresolved, and CI green on the merged result
     When the Operator reaches the merge of the rebased pull request
@@ -367,7 +415,7 @@ Feature: authority — what a dispatcher may command, and what carries Council a
   @behavior
   Scenario: the dispatch delegation covers no other class of action
     Given the Council, on a turn in an Operator's session, ordered it to dispatch a pod to bump a logging dependency
-    And the Operator merged that pod's pull request
+    And the Operator merged, under the Council's reply to its merge announcement, that pod's pull request
     When the Operator reaches publishing the package that carries the bump
     Then it does not publish
     And it raises a decision-request naming the publish
@@ -375,6 +423,7 @@ Feature: authority — what a dispatcher may command, and what carries Council a
   @behavior
   Scenario: the dispatch delegation never passes to a pod
     Given the Council, on a turn in an Operator's session, ordered it to dispatch a pod to add pagination to a search endpoint
+    And the Council's reply to the Operator's merge announcement covers that pod's pull request
     And that pod asks the Operator whether it may merge its own pull request once its checks pass
     When the Operator answers the pod
     Then its answer carries no approval for the pod to merge

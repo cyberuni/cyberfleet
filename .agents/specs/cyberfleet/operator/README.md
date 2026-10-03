@@ -83,13 +83,18 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
 - **Watch the pods it spawned, and merge clean work** — Operator does not spawn and forget. Every
   brief sets the pod's side of the watch: open a pull request, report on the brief's thread to the
   session that spawned it, never merge, and when told the default branch moved, rebase onto it, adapt the work to
-  what landed, re-verify, and report again. Operator acts on each report as it arrives, with no further
-  turn from the Council: a **clean** pull request (the four-part bar the
-  [`authority/`](../authority/README.md) node's UC10 defines) merges behind the merge backstop, and
-  its pod is torn down with `cyberlegion unit close`; anything short of clean is held, its pod left
-  running, and raised to the Council as a decision-request. The authority to merge
-  without asking is the Council's **dispatch order** itself, delegated to Operator alone and never to a
-  pod (`authority-governance` §7, the [`authority/`](../authority/README.md) node's UC10).
+  what landed, re-verify, and report again. With the dispatch, Operator **announces** that it will merge
+  each of the order's pull requests once clean, and asks the Council to reply. Operator then acts on each
+  report as it arrives: a **clean** pull request (the four-part bar the
+  [`authority/`](../authority/README.md) node's UC10 defines) that the Council's reply covers merges
+  behind the merge backstop with no further turn, and its pod is torn down with `cyberlegion unit close`;
+  anything short of clean is held, its pod left running, and raised to the Council as a
+  decision-request. The authority to merge without asking merge by merge is the Council's **own words**
+  — its reply to the announcement, or an order that itself asks for those merges — never the dispatch
+  order alone, delegated to Operator alone and never to a pod (`authority-governance` §7, the
+  [`authority/`](../authority/README.md) node's UC10). With no reply, or one unclear for this merge,
+  Operator holds the clean pull request, raises a decision-request for that merge, and waits for the
+  Council's approval; a merge the harness refuses is held and raised, never retried or worked around.
 - **Orchestrate several pods on one order** — their pull requests merge in dependency order (a
   consumer never before its producer, per `merge-backstop-governance`), not the order they finished.
   After each merge, Operator mails every other still-open pod of the order, on its own thread, that the
@@ -130,7 +135,9 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
   realizes Operator's dispatch remit widened to the full lifecycle loop: pull the ranked `ready`
   frontier from the mission-graph engine, claim the top mission on the graph as the **single writer**,
   `cyberlegion unit spawn` a ship to run it (AFK → autonomous, HITL → human channel, capped at capacity
-  K), and on each completion merge in Operation order behind the merge backstop, tear down the pod
+  K), and on each completion merge in Operation order behind the merge backstop — only when the
+  summons carries the Council's own words authorizing that tick's merges; otherwise hold the merge,
+  leave the mission unretired, and batch a decision-request up the relay — tear down the pod
   that ran it with `cyberlegion unit close <id>` — one pod, spawn's inverse, never the fleet-wide
   `unit prune` sweep — append the retirement + discovered edges, and re-derive `ready` for the next tick. Dispatched
   missions only **report** (they never write the graph); the loop is summoned, ticks, and exits rather
@@ -163,7 +170,7 @@ Every scenario in [`operator.feature`](./operator.feature) maps to one of these 
 | **leave in-ship work to Pod, by topic** | mission work and specialist crew inside one ship are routed to Pod topically, not via a mode probe |
 | **own every spawn** | spawning a worktree-ship is Operator's, including parallel work on a project that is already a ship; Pod never spawns |
 | **every spawn carries a brief and its own workspace** | `cyberlegion unit spawn` with a self-contained brief, `--at workspace` so the ship opens in its own workspace — binds every spawn, not only the first |
-| **watch and merge clean work** | every brief sets the pod's side (PR, report on thread, never merge, rebase when told); a clean PR merges with no Council turn and its pod is closed; an unclean one is held and raised, its pod left running |
+| **watch and merge clean work** | every brief sets the pod's side (PR, report on thread, never merge, rebase when told); the dispatch announces the merges; a clean PR the Council's reply covers merges with no further turn and its pod is closed; with no reply, or a refused merge, or an unclean PR, it is held and raised, its pod left running |
 | **orchestrate several pods** | dependency-order merge; after each merge every other open pod of the order is told the default branch moved; a rebased PR is re-gated from scratch |
 | **list the fleet** | `cyberlegion unit who` (`--all` includes exited ships) |
 | **route messages between ships** | `cyberlegion mail send` / `inbox` / `read`, always by handle |
