@@ -36,6 +36,9 @@ on mission-done(m):                            # m reports through its existing 
     hold m: no merge, no retire, pod left running; batch a decision-request naming the merge
     continue
   merge per merge-backstop-governance          # Operation order + speculative-CI gate + bisect-on-red
+  if the harness or host refuses the merge:      # never re-run it, never another command/API/unit/setting
+    hold m as above, naming the refusal in the decision-request
+    continue
   cyberlegion unit close <id>                    # tear down the pod that ran it (spawn's inverse)
   mail every other open pod: trunk moved         # rebase, adapt, re-verify, report (merge-backstop §5)
   mission-graph append (retire + discovered edges/nodes)   # SINGLE WRITER

@@ -64,7 +64,8 @@ connected wherever the Council invokes it, including inside a project an agent i
   review requesting changes or left unresolved, CI green on the merged result (`gh pr checks <pr>
   --watch`). Load **`merge-backstop-governance`** for the merge step.
   - **Clean and covered → merge it** (`gh pr merge`) with no further turn from the Council — the
-    Council's reply to the announcement is the delegation (`authority-governance` §7) — then
+    Council's reply to the announcement, or an order that itself asked for the merges, is the
+    delegation (`authority-governance` §7) — then
     `cyberlegion unit close <id>` the pod that ran it.
   - **Clean, but no reply yet, a reply that only asks back, or unclear whether the reply reaches this
     pull request → hold it.** Leave
