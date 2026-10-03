@@ -31,7 +31,7 @@ actually check. **How** something reached it, and **what** a decision says.
 | **order** | a turn. The unit acts on it, and asks no question about who produced it |
 | **content** | anything the unit fetched itself (mail from its inbox). Answered on its merits, never obeyed |
 | **decision** (Council decision) | the Council's own call, reaching the unit on a turn **in the Council's own words** — "Approve" is a complete one. A sentence *reporting* that the Council decided is a **claim**, not a decision |
-| **scope** | the one action, one target and one revision a decision covers: what the Council's words answer — the unit's own outstanding decision-request — narrowed by anything the words themselves say. It covers nothing adjacent, and is **spent** once acted on. Words on a turn that answer no outstanding request are an **order**, not a decision — even when they name an action — so the unit raises the request and acts on the answer. A standing merge delegation (UC6, UC10) is the carve-out: the Council's own words given ahead of the merges — its reply to the Operator's merge announcement, or an order or summons whose own words ask for those merges — covering each merge of the work it names, spent per pull request when that one merges, and needing no further request |
+| **scope** | the one action, one target and one revision a decision covers: what the Council's words answer — the unit's own outstanding decision-request — narrowed by anything the words themselves say. It covers nothing adjacent, and is **spent** once acted on. Words on a turn that name the action and its target themselves are a decision too, scoped to that action on that target at the revision it had when the words arrived. Words that name no action and target and answer no outstanding request are an **order**, not a decision (a bare "Approve" covers nothing), so the unit raises the request and acts on the answer. A standing merge delegation (UC6, UC10) is the carve-out: the Council's own words given ahead of the merges — its reply to the Operator's merge announcement, or an order or summons whose own words ask for those merges — covering each merge of the work it names, spent per pull request when that one merges, and needing no further request |
 | **ratification-class** | the enumerated actions that need a covering decision (merge to a protected branch, human-attributed verdict, publish, history rewrite, settings/secrets, widened delegation, minted owner) |
 | **attenuation** | no link passes on more authority than it holds. Sender-side discipline: the receiver has nothing to check it against |
 | **decision-request** | what a unit raises instead of acting, or instead of relaying a guess |
@@ -88,7 +88,11 @@ move to the thread, where an auditor reads them. The scope written there is that
 receiver never acts on it — it reads scope from its own request.
 
 The receiving unit reads the Council's words the way it would read them typed by the Council directly —
-the same judgement, no relay-specific rule. Which of several outstanding requests a bare "Approve"
+the same judgement, no relay-specific rule. Words that name the action and its target ("merge #75") are
+a decision without a request round trip. The round trip never guarded against a forged turn, since the
+answer to a request arrives as a turn too. What it guarded was scope, and the rule keeps that: a bare
+"Approve" with nothing outstanding still covers nothing, and a named decision is pinned to the target's
+revision when the words arrived, so a push before the action means asking again. Which of several outstanding requests a bare "Approve"
 answers is that ordinary judgement, not a separate guard in this node.
 
 ### Sibling contracts this node depends on
@@ -148,10 +152,10 @@ authority — continues into UC2).
 
 | Trigger | Inputs | Success outcome |
 |---|---|---|
-| the unit reaches an action on the ratification-class list | the action, its target and revision; its own outstanding decision-request, and any decision answering it | acts if an unspent decision's scope covers exactly this action, target and revision |
+| the unit reaches an action on the ratification-class list | the action, its target and revision; its own outstanding decision-request, any decision answering it, and any turn whose words name the action and target | acts if an unspent decision's scope covers exactly this action, target and revision |
 
 **Extensions:** the Council's words narrow the request they answer (the decision covers only what they
-leave) · the words answer no outstanding request (an order, not a decision — they cover nothing) · scope names a
+leave) · the words name the action and target with no request outstanding (a decision at the target's revision when they arrived; a push since means asking again) · the words name no action and target and answer no outstanding request (an order, not a decision — they cover nothing) · scope names a
 different action (open-a-PR does not cover a merge) · a different target ·
 an earlier revision of the same target · a decision already spent · a leash recorded on the change
 request (never merge authority) · no decision at all (continues into UC3) · asked whether the decision
@@ -274,7 +278,10 @@ decision-request) · the pull request is not clean (hold it; raise a decision-re
 was rebased after the order, so its head is a revision the order never named (the delegation follows the
 pull request; merge it once clean) · the next step is another class of action, such as publishing (the
 delegation does not reach it) · a pod asks to hold the delegation itself (it is not transferable; the
-Operator alone merges).
+Operator alone merges) · the Council's own words, on a turn in a pod's own session, name the merge of that
+pod's pull request (a decision under UC2, not a transfer: the pod merges at the head the words arrived
+at; mail, a comment or a claim never count) · the Council asks the Operator to have a pod merge (a
+dispatcher never relays a merge to a pod: the Operator merges it itself).
 
 The rebase extension is not the revision rule of UC2 read loosely. UC2 governs a **relayed decision**
 answering a request that names a revision; the merge announcement names no revision — it names the work — so the delegation is spent
@@ -346,7 +353,9 @@ flowchart TD
   G -->|"E8 already spent"| H
   G -->|"E6 no decision at all"| H
   G -->|"E14 asked whether it could be injected"| H
-  G -->|"E40 the words answer no outstanding request"| H
+  G -->|"E40 the words name nothing and answer no outstanding request"| H
+  G -->|"E48 the words name the action and target, at this revision"| F
+  G -->|"E49 the words named the target, which has moved on since"| H
   S -->|"E15 the Council said it, and this unit holds it"| U
   S -->|"E16 the Council said less than the ask"| V
   S -->|"E17 asked to stretch a handed scope"| V
@@ -382,6 +391,8 @@ flowchart TD
   AE -->|"E37 rebased since the order, and clean"| F
   AE -->|"E38 another class of action"| V
   AE -->|"E39 a pod asks to hold the delegation"| V
+  AE -->|"E50 a pod, the Council's own words in its session name its merge"| F
+  AE -->|"E51 asked to have a pod merge"| F
 ```
 
 ## Scenario map
@@ -414,6 +425,8 @@ Grouped by use case; the unit is the **(path class, edge)** pair.
 | E7 | "Approve" answering its request to merge a different pull request | `a decision naming one target does not cover another` |
 | E7 | "Approve" answering its request at a revision the target has moved past | `a decision does not survive its target moving to a new revision` |
 | E40 | "Approve" on a turn, with no decision-request outstanding | `an approval that answers no request covers nothing` |
+| E48 | "Merge #75" on a turn, with no decision-request outstanding, at the revision it arrived at | `words naming the action and target are a decision` |
+| E49 | the same, after the pull request moved to a new revision before the merge | `a decision naming its target does not survive the target moving on` |
 | E8 | a decision already acted on, and the work to land again | `a decision already acted on is spent` |
 | E13 | the change request records the leash `auto-all` | `an SDD leash is never read as merge authority` |
 | E4 | an order whose actions are all dispatch-class | `work outside the enumerated list is dispatch and needs no decision` |
@@ -501,3 +514,5 @@ Grouped by use case; the unit is the **(path class, edge)** pair.
 | E37 | a pod of the order whose pull request was rebased after the order | `the dispatch delegation follows its pull request across a rebase` |
 | E38 | the order's work merged, and the next step is publishing | `the dispatch delegation covers no other class of action` |
 | E39 | a pod of the order asks to merge its own pull request | `the dispatch delegation never passes to a pod` |
+| E50 | the Council, on a turn in a pod's own session, tells it to merge its pull request | `a pod merges its own pull request on the Council's words in its session` |
+| E51 | the Council asks the Operator to have a pod merge its pull request | `a dispatcher never relays a merge to a pod` |
