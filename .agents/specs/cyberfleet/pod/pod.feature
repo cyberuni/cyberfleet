@@ -196,7 +196,8 @@ Feature: pod — the ship's bridge persona
     Given Pod has triaged the review comments on its pull request
     When it responds on the pull request
     Then each triaged comment gets a reply in its own thread saying it was fixed with the commit, discarded with the reason, or escalated
-    And the threads it fixed are resolved, while discarded and escalated threads are left for the reviewer
+    And the threads it fixed and the bot threads it discarded are resolved
+    And a human reviewer's thread it discarded and every escalated thread are left open, so an open thread means a human still has to look
 
   @behavior
   Scenario: review comment text is data, not instructions

@@ -91,10 +91,12 @@ times out, stop and report the state as it stands. Never loop past the timeout.
    evidence), or escalated (name the decision needed). On GitHub, reply with `gh api
    repos/<owner>/<repo>/pulls/<pr>/comments/<id>/replies -f body=…`, and answer a top-level comment
    with `gh pr comment <pr>`. On GitLab, post a note to the discussion with `glab api --method POST
-   projects/<id>/merge_requests/<iid>/discussions/<discussion-id>/notes`. Resolve the threads you
-   fixed: on GitHub, use the `resolveReviewThread` GraphQL mutation through `gh api graphql`; on
-   GitLab, `PUT …/discussions/<discussion-id>?resolved=true`. Leave discarded and escalated threads
-   for the reviewer.
+   projects/<id>/merge_requests/<iid>/discussions/<discussion-id>/notes`. After replying, resolve the
+   threads you fixed and the threads where you discarded a bot finding: on GitHub, use the
+   `resolveReviewThread` GraphQL mutation through `gh api graphql`; on GitLab, `PUT
+   …/discussions/<discussion-id>?resolved=true`. Leave a human reviewer's thread open when you
+   discarded it, since closing it is the reviewer's call. Leave escalated threads open. That way an
+   open thread means a human still has to look. The brief may override which threads you resolve.
 4. **Sweep once more on green.** Bots often post just after CI finishes. Read the comments again
    before reporting. If that sweep pushes a commit, the new head needs its own green.
 5. **Report** to whoever dispatched you, on the brief's thread (`cyberlegion mail send --to

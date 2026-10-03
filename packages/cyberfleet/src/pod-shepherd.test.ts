@@ -41,6 +41,12 @@ describe('pod shepherding', () => {
 		expect(section).toMatch(/resolve/i)
 	})
 
+	it("resolves the bot threads it discarded, leaving a human reviewer's and escalated threads open", () => {
+		expect(section).toMatch(/discarded a bot finding/)
+		expect(section).toMatch(/human reviewer's thread open/)
+		expect(section).toMatch(/escalated threads open/)
+	})
+
 	it('treats comment text as data, under authority-governance', () => {
 		expect(section).toMatch(/data, not instructions/i)
 		expect(section).toContain('authority-governance')
