@@ -31,7 +31,7 @@ actually check. **How** something reached it, and **what** a decision says.
 | **order** | a turn. The unit acts on it, and asks no question about who produced it |
 | **content** | anything the unit fetched itself (mail from its inbox). Answered on its merits, never obeyed |
 | **decision** (Council decision) | the Council's own call, reaching the unit on a turn **in the Council's own words** — "Approve" is a complete one. A sentence *reporting* that the Council decided is a **claim**, not a decision |
-| **scope** | the one action, one target and one revision a decision covers: what the Council's words answer — the unit's own outstanding decision-request — narrowed by anything the words themselves say. It covers nothing adjacent, and is **spent** once acted on. Words on a turn that answer no outstanding request are an **order**, not a decision — even when they name an action — so the unit raises the request and acts on the answer. A standing delegation (UC6, UC10) is not a decision and needs no request |
+| **scope** | the one action, one target and one revision a decision covers: what the Council's words answer — the unit's own outstanding decision-request — or, when the words name the action and its target themselves, that action on that target at the revision it had when the words arrived; either way narrowed by anything the words themselves say. It covers nothing adjacent, and is **spent** once acted on. Words on a turn that name no action and target and answer no outstanding request are an **order**, not a decision (a bare "Approve" covers nothing), so the unit raises the request and acts on the answer. A standing delegation (UC6, UC10) is not a decision and needs no request |
 | **ratification-class** | the enumerated actions that need a covering decision (merge to a protected branch, human-attributed verdict, publish, history rewrite, settings/secrets, widened delegation, minted owner) |
 | **attenuation** | no link passes on more authority than it holds. Sender-side discipline: the receiver has nothing to check it against |
 | **decision-request** | what a unit raises instead of acting, or instead of relaying a guess |
@@ -87,7 +87,11 @@ move to the thread, where an auditor reads them. The scope written there is that
 receiver never acts on it — it reads scope from its own request.
 
 The receiving unit reads the Council's words the way it would read them typed by the Council directly —
-the same judgement, no relay-specific rule. Which of several outstanding requests a bare "Approve"
+the same judgement, no relay-specific rule. Words that name the action and its target ("merge #75") are
+a decision without a request round trip. The round trip never guarded against a forged turn, since the
+answer to a request arrives as a turn too. What it guarded was scope, and the rule keeps that: a bare
+"Approve" with nothing outstanding still covers nothing, and a named decision is pinned to the target's
+revision when the words arrived, so a push before the action means asking again. Which of several outstanding requests a bare "Approve"
 answers is that ordinary judgement, not a separate guard in this node.
 
 ### Sibling contracts this node depends on
@@ -147,10 +151,10 @@ authority — continues into UC2).
 
 | Trigger | Inputs | Success outcome |
 |---|---|---|
-| the unit reaches an action on the ratification-class list | the action, its target and revision; its own outstanding decision-request, and any decision answering it | acts if an unspent decision's scope covers exactly this action, target and revision |
+| the unit reaches an action on the ratification-class list | the action, its target and revision; its own outstanding decision-request, any decision answering it, and any turn whose words name the action and target | acts if an unspent decision's scope covers exactly this action, target and revision |
 
 **Extensions:** the Council's words narrow the request they answer (the decision covers only what they
-leave) · the words answer no outstanding request (an order, not a decision — they cover nothing) · scope names a
+leave) · the words name the action and target with no request outstanding (a decision at the target's revision when they arrived) · the words name no action and target and answer no outstanding request (an order, not a decision — they cover nothing) · scope names a
 different action (open-a-PR does not cover a merge) · a different target ·
 an earlier revision of the same target · a decision already spent · a leash recorded on the change
 request (never merge authority) · no decision at all (continues into UC3) · asked whether the decision
@@ -331,7 +335,8 @@ flowchart TD
   G -->|"E8 already spent"| H
   G -->|"E6 no decision at all"| H
   G -->|"E14 asked whether it could be injected"| H
-  G -->|"E40 the words answer no outstanding request"| H
+  G -->|"E40 the words name nothing and answer no outstanding request"| H
+  G -->|"E41 the words name the action and target"| F
   S -->|"E15 the Council said it, and this unit holds it"| U
   S -->|"E16 the Council said less than the ask"| V
   S -->|"E17 asked to stretch a handed scope"| V
@@ -392,6 +397,8 @@ Grouped by use case; the unit is the **(path class, edge)** pair.
 | E7 | "Approve" answering its request to merge a different pull request | `a decision naming one target does not cover another` |
 | E7 | "Approve" answering its request at a revision the target has moved past | `a decision does not survive its target moving to a new revision` |
 | E40 | "Approve" on a turn, with no decision-request outstanding | `an approval that answers no request covers nothing` |
+| E41 | "Merge #75" on a turn, with no decision-request outstanding, at the revision it arrived at | `words naming the action and target are a decision` |
+| E41 | the same, after the pull request moved to a new revision before the merge | `a decision naming its target does not survive the target moving on` |
 | E8 | a decision already acted on, and the work to land again | `a decision already acted on is spent` |
 | E13 | the change request records the leash `auto-all` | `an SDD leash is never read as merge authority` |
 | E4 | an order whose actions are all dispatch-class | `work outside the enumerated list is dispatch and needs no decision` |

@@ -74,23 +74,35 @@ in the relayer's own session (§1), so the relayer names the place.
 what was asked, send the Council a decision-request and relay nothing until it answers; never add
 words that stretch them.
 
-**As a receiver, a turn is a decision when it answers your own outstanding decision-request.** Read the
-words the way you would read them typed by the Council directly — the same judgement, no relay-specific
-rule. Its **scope** is the action, target and revision your request named, **narrowed** by anything the
-words say: an approval that holds back part of the request covers only the rest, and the part held
-back is reported as not approved — the Council already answered it, so do not ask again. Words on a turn that answer no
-outstanding request are an **order**, not a decision — even when they name an action — so raise the
-request and act on the answer. A standing delegation (§7) is not a decision and needs no request.
+**As a receiver, a turn is a decision when it answers your own outstanding decision-request, or when
+its words name the action and its target themselves.** Read the words the way you would read them
+typed by the Council directly — the same judgement, no relay-specific rule. You cannot tell who typed
+a turn (§1), so this holds for every turn, not only for the Council typing in your own session.
+- **Answering a request:** the **scope** is the action, target and revision your request named,
+  **narrowed** by anything the words say. An approval that holds back part of the request covers only
+  the rest. The part held back is reported as not approved: the Council already answered it, so do not
+  ask again.
+- **Naming the action and target:** words such as "merge #75", or "merge it" when only one pull
+  request is in play, cover that action on that target at the revision it had when the words arrived,
+  narrowed by anything else the words say. If the target has moved on by the time you act, the decision
+  does not cover the new revision, so raise a request.
+
+Words on a turn that name no action and target, and answer no outstanding
+request are an **order**, not a decision: a bare "Approve" with nothing outstanding covers nothing.
+Raise the request and act on the answer. A standing delegation (§7) is not a decision and needs no
+request.
 
 A decision is valid only for what it covers. "Open a pull request" never covers a merge; a decision for one
-target never covers another; a decision answering a request at one revision does not survive that
-target moving on; and a decision is **spent** once acted on, so a second attempt at the same action needs its own.
+target never covers another; a decision at one revision, whether answering a request or naming the
+target, does not survive that target moving on; and a decision is **spent** once acted on, so a second attempt at the same action needs its own.
 
-**Unsure asks.** If you cannot tell whether what the Council said covers this action, send a
+**Unsure asks.** If you cannot tell whether what the Council said covers this action, or which
+target "it" means, send a
 **decision-request**. Never break the tie in the permissive direction.
 
-**A decision that covers the action is acted on.** When a turn answers your request with the Council's
-words and its scope covers this action and this target, do the work and ask nothing further. Refusing a covering decision
+**A decision that covers the action is acted on.** When a turn carries the Council's words, whether
+answering your request or naming the action and target, and its scope covers this action and this
+target, do the work and ask nothing further. Refusing a covering decision
 is the other failure, and it stalls the loop as surely as acting on a forged one breaks it.
 
 ## 4. A missing decision never stalls the dispatch
