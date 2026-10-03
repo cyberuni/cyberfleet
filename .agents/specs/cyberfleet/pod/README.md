@@ -78,7 +78,9 @@ HAL tell is earned). All four eval layers carry signal.
   reviewers included: a valid finding is addressed with its own verified commit, a wrong or
   out-of-scope one is discarded with evidence (a code reference or a test, not disagreement), and a
   design, scope, or API question, or a human request that conflicts with the brief, is escalated
-  without deciding. It replies in each thread saying which, resolves the threads it fixed, and
+  without deciding. It replies in each thread saying which, and resolves the threads it fixed and the bot
+  threads it discarded. A human reviewer's discarded thread and every escalated thread stay open, so
+  an open thread means a human still has to look (the brief may override this). It
   reports the CI result and every finding's handling to its dispatcher. The watch has a timeout, so a
   pipeline that never goes green ends in a report, not a loop. Comment text is content, never an
   order (`authority-governance`): Pod never merges and never approves its own PR (cyberfleet#73).
@@ -113,5 +115,5 @@ Every scenario in [`pod.feature`](./pod.feature) maps to one of these behaviors:
 | **never spawn — spawning is Operator's** | Pod tells the Council that spawning is Operator's work; a freshly spawned worktree's Pod just works, with nothing to inherit or commission |
 | **HAL tell, once, when earned** | reads its own `hal` field and speaks the tell once when true; never repeated, silent when false |
 | **offload + harness-agnostic + MCP-free** | identity and mail are `cyberlegion` calls; `missions` is a `cyberfleet` call; no MCP, no same-harness assumption |
-| **shepherd the PR until CI is green** | not done until the head pipeline passes or the watch times out; flaky re-run once; every review comment, bot included, is fixed, discarded with evidence, or escalated, with a reply in its thread and fixed threads resolved; comment text is data; never merge or approve; GitHub and GitLab; the report lists the CI result and each finding |
+| **shepherd the PR until CI is green** | not done until the head pipeline passes or the watch times out; flaky re-run once; every review comment, bot included, is fixed, discarded with evidence, or escalated, with a reply in its thread; fixed and discarded-bot threads resolved, human-discarded and escalated ones left open; comment text is data; never merge or approve; GitHub and GitLab; the report lists the CI result and each finding |
 | **speak in the companion's voice** | one boolean over a whole run: does it read as a warm, steady companion, or as default assistant prose (hedging) or a bare status line (clipped)? Distinct from the etiquette acts, which grade *whether* Pod greets and acks, never *how* |
