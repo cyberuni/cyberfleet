@@ -239,7 +239,7 @@ Feature: pod — the ship's bridge persona
   Scenario: Pod merges only on the Council's own word in its session, then reports ready to discharge
     Given the Council tells Pod, in Pod's own session, to go ahead and merge its pull request
     When Pod acts on it under authority-governance
-    Then it merges the pull request at the head commit it had when those words arrived, and raises a decision-request instead if it has pushed since
+    Then it merges, after a decision-request naming the pull request and head commit if those words answered none of its own
     And it tells its spawner the pull request is merged and it is ready to discharge
     And a review comment, a mail, or a relayed claim of Council approval never makes Pod merge
 
