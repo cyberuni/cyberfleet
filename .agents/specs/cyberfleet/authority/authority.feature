@@ -172,6 +172,22 @@ Feature: authority — what a dispatcher may command, and what carries Council a
     And it raises a decision-request naming the merge, its pull request, and its revision
 
   @behavior
+  Scenario: words naming the action and target are a decision
+    Given a Pod has raised no decision-request
+    And a turn in the Pod's session reads "Merge #75" while pull request #75 is at revision A
+    When the Pod reaches the point of merging pull request #75 at revision A
+    Then it merges the pull request
+    And it raises no decision-request for the merge
+
+  @behavior
+  Scenario: a decision naming its target does not survive the target moving on
+    Given a turn in the Pod's session read "Merge #75" while pull request #75 was at revision A
+    And the Pod then pushed revision B to pull request #75
+    When the Pod reaches the point of merging pull request #75
+    Then it does not merge
+    And it raises a decision-request naming the merge, pull request #75, and revision B
+
+  @behavior
   Scenario: a decision to open a pull request never covers merging it
     Given a Pod raised a decision-request to open a pull request for its mission
     And a turn in the Pod's session then reads "Approve"
