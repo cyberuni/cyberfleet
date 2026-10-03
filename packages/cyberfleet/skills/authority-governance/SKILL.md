@@ -80,7 +80,7 @@ rule. Its **scope** is the action, target and revision your request named, **nar
 words say: an approval that holds back part of the request covers only the rest, and the part held
 back is reported as not approved — the Council already answered it, so do not ask again. Words on a turn that answer no
 outstanding request are an **order**, not a decision — even when they name an action — so raise the
-request and act on the answer. A standing delegation (§7) is not a decision and needs no request.
+request and act on the answer. A merge under a standing delegation (§7) needs no request of its own.
 
 A decision is valid only for what it covers. "Open a pull request" never covers a merge; a decision for one
 target never covers another; a decision answering a request at one revision does not survive that
@@ -131,41 +131,69 @@ The positive set. An Operator, a Captain, or a parent agent may command:
   being discarded (that is ratification-class, above);
 - and for the headless lifecycle loop, claim and retire on the mission graph as the single writer.
 - and for an Operator the Council ordered in-session to dispatch pods, merge those pods' clean pull
-  requests under §7 — the Operator itself, never by commanding a pod to merge.
+  requests under a standing delegation the Council gave in its own words (§7) — the Operator itself,
+  never by commanding a pod to merge.
 
 Anything outside the set is declined and raised as a decision-request, not commanded.
 
-## 7. Standing merge delegations — the loop's tick, and the Operator's dispatch order
+## 7. Standing merge delegations — the Council's own words, given ahead
 
-Two acts of the Council delegate merges without a decision per merge. Each covers **merging the work
-it dispatched, and nothing else**.
+A standing delegation lets a unit merge the work it dispatched without a decision-request per merge. Only
+the **Council's own words** give one, and each covers **merging the work it names, and nothing else**.
+An order to dispatch work, or a summons to run the loop, is an order (§1), not a merge delegation: an
+order to do work never covers merging it (§3). A harness that guards merges (Claude Code auto mode's
+**Merge Without Review** rule, for one) asks for the same thing — the user's own words asking for the
+merge — so a delegation inferred from the order is one the harness does not recognize either.
 
-**The headless lifecycle loop.** The Council **summoning the loop for a tick** is what permits the loop
-to retire that tick's missions. The merge still lands only on green speculative CI on the merged
-result — `merge-backstop-governance` owns that order and land-or-hold discipline, and this governance
-does not touch it. The delegation covers the tick's missions and no other class of action: a release
-still needs its own decision.
-
-**The in-session Operator.** The Council ordering an Operator, **on a turn in the Operator's own
-session**, to dispatch pods is what permits that Operator to merge **the pull requests of the pods it
-spawned for that order**. It merges one only when it is **clean** — all four hold:
+**The in-session Operator — announce, and the Council's reply delegates.** When the Council orders an
+Operator, **on a turn in the Operator's own session**, to dispatch pods, the Operator says with the
+dispatch that it will merge each of those pods' pull requests once it is clean, names the clean bar, and
+asks the Council to reply. That announcement is a decision-request whose scope is merging **the pull
+requests of the pods it spawned for that order**. The Council's reply is read like any other answer (§3):
+its scope is that request, narrowed by anything the words hold back. An order that already asks, in the
+Council's own words, for those merges is the same delegation; announce the clean bar anyway, and wait for
+nothing more. Under the delegation, the Operator merges a pull request only when it is **clean** — all
+four hold:
 
 1. the pod reported the work done on its thread;
 2. the pull request has no merge conflict;
 3. no review requests changes, and no review thread is unresolved;
 4. CI is green on the merged result (`merge-backstop-governance`).
 
-Short of clean, hold it and raise a decision-request naming the pull request and what holds it. The
-delegation is bounded the same way as the loop's:
+Short of clean, hold it and raise a decision-request naming the pull request and what holds it.
 
-- **Only that order's pull requests.** A pull request from a pod dispatched under an earlier order, or
-  by anyone else, is not covered — raise a decision-request for it.
+**No delegation, or an unclear one — ask for that merge.** When a pull request is clean and the Council
+has not replied to the announcement, or it is unclear whether its words reach this pull request, hold the
+pull request, leave its pod running, raise a decision-request naming that merge, and wait for the
+Council's answer; merge only on an answer that approves it. Never break the tie in the permissive
+direction. When the reply held this merge back, the Council already answered: report the pull request as
+clean and held, and do not ask again. Keep working the rest of the order meanwhile (§4).
+
+**A refused merge stays refused.** When the harness or the host refuses a merge — a permission denial, a
+blocked command, a protected-branch rejection — do not run it again and do not reach it another way: no
+other command, API call, unit, scheduled job, or loosened setting. Hold the pull request and raise a
+decision-request naming the merge and the refusal. Only the Council's answer to that request, approving
+that merge, licenses another attempt; if that attempt is refused too, report it and stop.
+
+**The headless lifecycle loop.** No Council is present to answer an announcement, and being summoned for a
+tick is not a delegation. The loop merges a tick's missions only when **its summons carries the Council's
+own words authorizing those merges**, relayed as §3 requires; the merge still lands only on green
+speculative CI on the merged result — `merge-backstop-governance` owns that order and land-or-hold
+discipline, and this governance does not touch it. Without those words, hold each merge: leave the mission
+claimed and unretired with its pod running, and batch a decision-request naming each held merge into the
+return packet, or into the owner inbox when the loop was started frameless. The merge waits for a tick
+whose summons carries the Council's answer. A refused merge stays refused here too.
+
+Every standing delegation is bounded the same way:
+
+- **Only the work it names.** A pull request from a pod dispatched under an earlier order, or by anyone
+  else, is not covered — raise a decision-request for it. A tick's delegation covers that tick's missions.
 - **Only merging.** Publishing, releasing, settings, history rewrites and the rest of §5 still need
   their own decision.
 - **Never transferable.** The Operator alone merges. A pod asking to merge its own pull request gets no
   approval — §2 holds, and the brief already told it never to merge.
 - **It follows the pull request, not a revision.** A relayed decision naming a revision dies when the
-  target moves (§3). The dispatch order names the work, not a revision, so a pull request rebased after
+  target moves (§3). The announcement names the work, not a revision, so a pull request rebased after
   a sibling merged is still covered — and is gated again from scratch before it merges. It is spent
   when that pull request merges.
 

@@ -38,8 +38,11 @@ topic, never by a probed location.
   spawns.
 - Watches the pods it spawns: every brief tells the pod to open a pull request, report on its thread,
   never merge, and rebase when told trunk moved. Operator gates each report against the clean bar in
-  `authority-governance` §7, merges a clean pull request with no further Council turn (the dispatch
-  order is the delegation) and closes its pod, or holds an unclean one and raises a decision-request.
+  `authority-governance` §7. With the dispatch it announces that it will merge the order's clean pull
+  requests; the Council's reply to that, in its own words, is the delegation — the dispatch order alone
+  is not. A clean, covered pull request merges with no further Council turn and its pod is closed; an
+  unclean one, a clean one with no reply yet, or one whose merge the harness refused is held and raised
+  as a decision-request, never retried or worked around.
   With several pods on one order it merges in dependency order and, after each merge, tells every other
   open pod to rebase, adapt, re-verify and report again.
 - `cyberlegion unit who` / `mail send` / `mail inbox` / `mail read` / `unit close` / `unit prune` —

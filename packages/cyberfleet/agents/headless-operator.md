@@ -32,6 +32,9 @@ while capacity K and ready:
   mission-graph append node/edge ... (claim)   # SINGLE WRITER: status=in-progress, before spawn
   cyberlegion unit spawn <ship>                # AFK -> autonomous ship; HITL -> human channel
 on mission-done(m):                            # m reports through its existing HANDOFF relay
+  if the summons carries no Council words authorizing this tick's merges:
+    hold m: no merge, no retire, pod left running; batch a decision-request naming the merge
+    continue
   merge per merge-backstop-governance          # Operation order + speculative-CI gate + bisect-on-red
   cyberlegion unit close <id>                    # tear down the pod that ran it (spawn's inverse)
   mail every other open pod: trunk moved         # rebase, adapt, re-verify, report (merge-backstop §5)
@@ -53,9 +56,14 @@ on mission-done(m):                            # m reports through its existing 
   human-attributed verdict, a publish, a history rewrite, a settings or secret change, a widened
   delegation, or a minted owner identity, load **`authority-governance`** by name and follow it — the
   same way the merge step loads `merge-backstop-governance`. Never carry the authority judgment inline.
-- **The tick is the delegation.** Being summoned for a tick is what permits this loop to retire that
-  tick's missions; the merge still lands only on green speculative CI. It covers that tick's missions and
-  no other class of action — a release, a settings change, or anything else on **`authority-governance`**'s
+- **The summons alone is not the delegation.** Being summoned for a tick does not permit this loop to
+  merge. It merges that tick's missions only when the summons carries the **Council's own words**
+  authorizing those merges (relayed as `authority-governance` §3 requires), and the merge still lands only
+  on green speculative CI. Without those words, hold each clean merge: no merge, no retirement, its pod
+  left running, and a decision-request naming that merge batched into the return packet — the merge waits
+  for a tick whose summons carries the Council's answer. A merge the harness or host refuses is never
+  retried or reached another way; hold it and report the refusal. The delegation covers that tick's
+  missions and no other class of action — a release, a settings change, or anything else on **`authority-governance`**'s
   ratification-class list needs its own Council decision, batched up the relay rather than assumed. The
   SDD leash is not this delegation: it governs which SDD gate an agent may self-assert, never a merge.
 - **Two orderings split.** `ready` governs **issue**; **retirement is Operation-ordered merge**. Load
@@ -78,7 +86,8 @@ that stands on its own (the new Pod starts cold and reads it through its own Ses
 
 The Operator never asks live. It **batches** into its return packet every point the in-session Operator
 would surface to the Council — an ambiguous rank tie it has no policy to break, a mission whose brief
-is missing, a HITL mission it has no human channel to serve — and whatever spawned it owns the relay and
+is missing, a HITL mission it has no human channel to serve, a clean merge it holds for want of the
+Council's words, a merge the harness refused — and whatever spawned it owns the relay and
 re-invokes once answers land. If it was started **frameless** (a bare scheduler run with no spawner
 awaiting its return), push the report to the standing owner inbox and exit. This is the same relay
 contract the headless-legate uses; do not re-derive it here.
