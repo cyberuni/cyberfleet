@@ -1,5 +1,14 @@
 # cyberfleet
 
+## 0.4.1
+
+### Patch Changes
+
+- 8ebab46: `bin/cyberfleet.mjs` now fails with a clear message when `dist/cli.mjs` is missing, naming the file and the same-version `npx -y cyberfleet@<version>` fallback, instead of a raw `ERR_MODULE_NOT_FOUND`.
+- ab147e0: The plugin installed from the marketplace now runs its CLI: `dist/cli.mjs` is committed, so `node <plugin dir>/bin/cyberfleet.mjs --help` works from a source install with no build step.
+- d561f9e: Ask for the Council's own words before merging a pod's pull request, so the merge survives Claude Code auto mode's "Merge Without Review" rule. The Operator now announces with each dispatch that it will merge the order's clean pull requests, and the Council's reply is the delegation — the dispatch order alone no longer is. Without that reply, a clean pull request is held and its merge raised as a decision-request; a merge the harness refuses is held and reported, never retried or worked around. The headless loop merges only when its summons carries the Council's words authorizing that tick's merges, and otherwise holds each merge and reports it up its relay.
+- 06e65cb: Name how the Operator, Pod, Crimp, and headless-operator resolve the `cyberlegion` CLI when it is not on `PATH`: the installed plugin's current `installPath`, then `npx -y cyberlegion@<pin>` from the new bundled `.plugin/pins.json`. A CLI older than the pin is skipped, nothing resolving fails with an install hint, and the CLI is re-resolved after a plugin reload instead of running a remembered versioned cache path.
+
 ## 0.4.0
 
 ### Minor Changes
