@@ -180,11 +180,18 @@ Feature: pod — the ship's bridge persona
     Then it pushes no fourth fix and reports that check as failing, needing a human decision
 
   @behavior
-  Scenario: a flaky or infra-looking failure is re-run once, a failure the change caused is fixed
-    Given the head pipeline of Pod's pull request has a failing job
-    When the failure looks flaky or infra-related
-    Then Pod re-runs it once and treats a second failure as real
-    And when the failure is caused by the change, Pod fixes it, verifies locally, and pushes, following the new head commit
+  Scenario: a flaky or infra-looking failure is re-run once
+    Given a job on Pod's head commit failed on a lost runner, in a test that touches nothing the change edited
+    When Pod diagnoses the failure
+    Then it re-runs that job once
+    And when the re-run fails again, it treats the failure as real
+
+  @behavior
+  Scenario: a failure the change caused is fixed and pushed
+    Given a test fails on Pod's head commit because of a line the change edited
+    When Pod diagnoses the failure
+    Then it commits a fix, verifies it locally, and pushes it
+    And it watches the pipeline on the new head commit
 
   @behavior
   Scenario: a failure the change did not cause is left for a human
