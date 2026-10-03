@@ -66,7 +66,8 @@ connected wherever the Council invokes it, including inside a project an agent i
   - **Clean and covered → merge it** (`gh pr merge`) with no further turn from the Council — the
     Council's reply to the announcement is the delegation (`authority-governance` §7) — then
     `cyberlegion unit close <id>` the pod that ran it.
-  - **Clean, but no reply yet, or unclear whether the reply reaches this pull request → hold it.** Leave
+  - **Clean, but no reply yet, a reply that only asks back, or unclear whether the reply reaches this
+    pull request → hold it.** Leave
     its pod running, raise a decision-request naming that merge, and merge only once the Council's
     answer approves it. If the reply held this one back, report it clean and held; do not ask again.
   - **Merge refused → hold it.** When the harness or host refuses `gh pr merge`, do not run it again or

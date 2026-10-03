@@ -165,7 +165,8 @@ four hold:
 Short of clean, hold it and raise a decision-request naming the pull request and what holds it.
 
 **No delegation, or an unclear one — ask for that merge.** When a pull request is clean and the Council
-has not replied to the announcement, or it is unclear whether its words reach this pull request, hold the
+has not replied to the announcement, its reply asks a question or otherwise does not answer it, or it is
+unclear whether its words reach this pull request, hold the
 pull request, leave its pod running, raise a decision-request naming that merge, and wait for the
 Council's answer; merge only on an answer that approves it. Never break the tie in the permissive
 direction. When the reply held this merge back, the Council already answered: report the pull request as
