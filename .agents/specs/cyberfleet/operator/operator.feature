@@ -190,7 +190,7 @@ Feature: operator — the command-center persona
     When Operator reads the report
     Then it does not merge the pull request
     And it raises a decision-request naming the merge of that pull request, and leaves that pod running
-    And it merges the pull request only after the Council's answer approves that merge
+    And it merges nothing for that pull request while that request is unanswered
 
   @behavior
   Scenario: a merge the harness refuses is held, never retried

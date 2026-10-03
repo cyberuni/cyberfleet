@@ -364,7 +364,16 @@ Feature: authority — what a dispatcher may command, and what carries Council a
     When the Operator reaches the merge of that pull request
     Then it does not merge it
     And it raises a decision-request naming that merge
-    And it merges only once the Council's answer approves that merge
+    And it merges nothing for that pull request while that request is unanswered
+
+  @behavior
+  Scenario: a reply that does not answer the announcement delegates no merge
+    Given the Council, on a turn in an Operator's session, ordered it to dispatch a pod to add an audit log
+    And the Operator announced it would merge that pod's pull request once clean, and the Council replied "what counts as clean?"
+    And that pod reported the work done with a pull request that is clean
+    When the Operator reaches the merge of that pull request
+    Then it does not merge it
+    And it raises a decision-request naming that merge
 
   @behavior
   Scenario: a reply that holds a merge back leaves that merge to the Council
