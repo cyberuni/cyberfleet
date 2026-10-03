@@ -67,6 +67,16 @@ describe('pod shepherding', () => {
 		expect(section).toContain('glab ')
 	})
 
+	it('tells its spawner it is ready to discharge once the work is done', () => {
+		expect(section).toMatch(/ready to discharge/)
+		expect(section).toMatch(/spawner/)
+	})
+
+	it("merges only on the Council's own order in this session, then reports ready to discharge", () => {
+		expect(section).toMatch(/Council itself tells you, in this session, to merge/)
+		expect(section).toMatch(/never counts as that order/)
+	})
+
 	it('reports the CI result and how each finding was handled', () => {
 		expect(section).toMatch(/report/i)
 		expect(section).toMatch(/human decision/i)
