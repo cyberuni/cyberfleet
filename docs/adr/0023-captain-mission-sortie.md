@@ -8,14 +8,14 @@ Amendment's point 5. Implements the topology of
 [#25](https://github.com/cyberuni/cyberfleet/issues/25).
 
 Builds on four cross-package decisions recorded at
-[cyber-arcology.github.io/decisions](https://cyber-arcology.github.io/decisions/):
-[0001](https://cyber-arcology.github.io/decisions/0001-runtime-depends-on-communication/) (the
+[cyber-civitas.github.io/decisions](https://cyber-civitas.github.io/decisions/):
+[0001](https://cyber-civitas.github.io/decisions/0001-runtime-depends-on-communication/) (the
 runtime depends on communication, never the reverse),
-[0002](https://cyber-arcology.github.io/decisions/0002-claims-and-leases/) (claims in cynapse,
+[0002](https://cyber-civitas.github.io/decisions/0002-claims-and-leases/) (claims in cynapse,
 leases and presence in the runtime),
-[0003](https://cyber-arcology.github.io/decisions/0003-worktrees-through-the-runtime/) (worktrees
+[0003](https://cyber-civitas.github.io/decisions/0003-worktrees-through-the-runtime/) (worktrees
 through the runtime's adapter), and
-[0004](https://cyber-arcology.github.io/decisions/0004-opaque-service-keys/) (opaque service keys,
+[0004](https://cyber-civitas.github.io/decisions/0004-opaque-service-keys/) (opaque service keys,
 project addressing in cynapse).
 
 ## Context
@@ -194,5 +194,5 @@ Steps 2 to 4 wait on cynapse's keying release (Open dependencies).
   — the fenced service lease each Captain holds.
 - cynapse ADR-0010 to ADR-0012 — subjects across stores, store only what has no other home, and
   channels keyed by subject.
-- [cyber-arcology decisions](https://cyber-arcology.github.io/decisions/) — the cross-package rules
+- [cyber-civitas decisions](https://cyber-civitas.github.io/decisions/) — the cross-package rules
   cited above.
