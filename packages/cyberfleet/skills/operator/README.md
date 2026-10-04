@@ -39,8 +39,8 @@ topic, never by a probed location.
 - Watches the pods it spawns: every brief tells the pod to open a pull request and shepherd it (with
   the per-turn timeout and the threads to resolve), report on its thread, never merge, and rebase when
   told trunk moved. A pod still merges on the Council's answer to its own in-session merge offer
-  (`authority-governance` §7), which the brief does not grant and the Operator never answers. Operator gates each report against the clean bar in
-  `authority-governance` §7. With the dispatch it announces that it will merge the order's clean pull
+  (`authority-governance` §7), which the brief does not grant and the Operator never answers.
+  Operator gates each report against the clean bar in `authority-governance` §7. With the dispatch it announces that it will merge the order's clean pull
   requests; the Council's reply to that, in its own words, is the delegation — the dispatch order alone
   is not. A clean, covered pull request merges with no further Council turn and its pod is closed; an
   unclean one, a clean one with no reply yet, or one whose merge the harness refused is held and raised

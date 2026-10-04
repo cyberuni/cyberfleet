@@ -71,9 +71,9 @@ times out, stop and report the state as it stands. Never loop past the timeout.
 
 1. **Watch CI.** Run `gh pr checks <pr> --watch` on GitHub, or `glab ci status --live` on the MR's
    branch on GitLab. On a failure, read the failing job's log before acting:
-   - If the log points at the CI infrastructure rather than at the code (a job that never started,
-     a download that could not complete, a service the job depends on being unavailable), re-run it
-     once: `gh run rerun <run-id> --failed`, or `glab ci retry <job-id>`. If it fails again, do not
+   - If the failure looks flaky (it passes on another run without any change) or the log points at
+     the CI infrastructure rather than at the code (a job that never started, a download that could
+     not complete, a service the job depends on being unavailable), re-run it once: `gh run rerun <run-id> --failed`, or `glab ci retry <job-id>`. If it fails again, do not
      re-run it a second time: treat it as real and list it in the report.
    - If the change caused it, fix it, verify locally with the repo's own commands, commit, and push.
      A new push moves the head commit, and the watch follows the new head.
