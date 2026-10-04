@@ -29,7 +29,8 @@ The **Operator** is the dispatcher of the fleet. It's where you survey what's ou
   just "Approve", or your sentence nearly verbatim — with nothing added, and Operator records your
   words, who relayed them, and what they cover on the work's thread. Operator can pass on no more
   authority than it holds, so it cannot tell a ship that a merge is approved. The merge authority your
-  reply gives it stays with Operator; a ship never merges its own work.
+  reply gives it stays with Operator; a ship never merges its own work on that authority. A ship's Pod
+  merges only when you answer, in its own session, the merge offer it made itself.
 
 ## Related
 

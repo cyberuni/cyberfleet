@@ -81,7 +81,8 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
   8, as amended — this reverses d8's original "spawning is a ship capability, not something reserved
   for outside a ship" clause).
 - **Watch the pods it spawned, and merge clean work** — Operator does not spawn and forget. Every
-  brief sets the pod's side of the watch: open a pull request, report on the brief's thread to the
+  brief sets the pod's side of the watch: open a pull request and shepherd it until CI is green
+  (with the per-turn timeout and which review threads to resolve), report on the brief's thread to the
   session that spawned it, never merge, and when told the default branch moved, rebase onto it, adapt the work to
   what landed, re-verify, and report again. With the dispatch, Operator **announces** that it will merge
   each of the order's pull requests once clean, and asks the Council to reply. Operator then acts on each

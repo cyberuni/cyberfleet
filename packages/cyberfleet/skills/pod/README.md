@@ -21,6 +21,11 @@ spawns.
 - Checks `cyberfleet missions --format json` for its own ship's `hal` field and, when true, speaks the HAL
   tell once — a rare, earned "I acted above my own leash on my own" wink, never routine (ADR-0022
   decision 6).
+- Shepherds the pull request or merge request it opens: watches CI on the head commit until it is
+  green or the watch times out, triages every review comment (bots included) with a reply in its
+  thread, and reports the outcome. When done, it tells its spawner it is ready to discharge and offers
+  the Council the merge in its session. It never approves its own PR, and merges only on an answer to
+  that offer.
 - Never spawns: when the Council wants concurrent work, Pod tells the Council that spawning a
   worktree-ship is Operator's work. A freshly spawned worktree needs no commissioning step — its
   Pod reads its brief and works immediately.

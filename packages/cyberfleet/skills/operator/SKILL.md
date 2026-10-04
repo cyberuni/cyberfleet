@@ -49,7 +49,9 @@ connected wherever the Council invokes it, including inside a project an agent i
   names the fallback: if that handle resolves to no live unit, report to `operator` instead. Every
   spawn is Operator's, including
   parallel work on a project that is already a ship — Pod never spawns.
-- Every brief sets the pod's side of the watch, in the brief itself: open a pull request; report on
+- Every brief sets the pod's side of the watch, in the brief itself: open a pull request and shepherd
+  it until CI is green, with a per-turn timeout (12 minutes unless the work needs longer) and which
+  review threads to resolve (by default, fixed ones and discarded bot findings); report on
   this brief's thread to the return address when the work is done or blocked; **never merge** the pull request;
   and when told trunk moved, rebase onto it, adapt the work to what landed, re-verify, push, and report
   again.
