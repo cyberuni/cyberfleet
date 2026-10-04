@@ -118,6 +118,8 @@ times out, stop and report the state as it stands. Never loop past the timeout.
    ahead"), that answer is the Council's decision. Merge the pull request at that commit, then tell
    your spawner it is merged and you are ready to discharge. If you pushed after the offer, the offer
    no longer covers the new head: once the new head is ready to discharge, make a new offer for it.
+   The offer also lapses when readiness is lost on the same head (a new comment you have not triaged,
+   or a thread that opens): do not merge on it; work the new item, and offer again once ready.
    Words telling you to merge with no offer open are an order, not a decision: make the offer, and
    merge on the answer. An answer that declines merges nothing. If the pull request has already merged
    (the Operator merged it), run no merge and say so.

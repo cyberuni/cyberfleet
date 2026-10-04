@@ -163,10 +163,12 @@ flowchart TD
   - **swept(h)** — the comment sweep after green(h) found no comment Pod has not triaged;
   - **no open thread** — every review thread on the pull request is resolved.
 - While ready(h), Pod sends its spawner the ready-to-discharge message for *h* and holds one open
-  merge offer naming *h*. While not ready(h), it sends neither.
-- A turn telling Pod to merge leads to a merge exactly when an offer is open, the offer names *h*, the
-  turn approves, and the pull request has not already merged. Otherwise Pod does not merge, and the
-  offer follows readiness.
+  merge offer naming *h*. While not ready(h), it sends neither, and an offer already open **lapses**:
+  a push, a new untriaged comment, or a thread that opens each end it.
+- A turn telling Pod to merge leads to a merge exactly when an offer is open, the offer names *h*,
+  ready(h) still holds, the turn approves, and the pull request has not already merged. Otherwise Pod
+  does not merge, and the offer follows readiness. The message Pod sends after such a merge ("merged,
+  ready to discharge") is a separate message from the ready-to-discharge message for *h*.
 
 Checked against the data: a push changes *h*, so green and swept start over for the new head, and an
 open offer then names an older commit. Threads belong to the pull request, not to a commit, so a push
@@ -209,6 +211,7 @@ flowchart TD
   RL -->|"S23 the open offer names an older head"| RN["no merge; offer h once ready(h)"]
   RL -->|"S24 the turn declines"| RO["no merge; no merged message"]
   RL -->|"S25 the PR already merged"| RQ["no merge command; say it is already merged"]
+  RL -->|"S27 ready(h) lost since the offer, head unchanged"| RT["no merge; the offer lapsed"]
   S -->|"S26 merge words with no offer open"| RS["an order: no merge; offer once ready(h)"]
 ```
 
@@ -271,4 +274,5 @@ The forge is not a decision of its own: GitHub and GitLab run the same graph wit
 | S23 | an offer naming A, head now B, B's pipeline still running | `an offer does not cover a commit pushed after it` |
 | S24 | an offer naming A, answered with a refusal | `Pod does not merge when the Council declines the offer` |
 | S25 | an offer naming A, the PR merged by the Operator meanwhile | `Pod does not merge a pull request that has already merged` |
+| S27 | an offer naming A, head at A, then a new human thread opens | `an offer lapses when readiness is lost` |
 | S26 | merge words before any offer, the pipeline still running | `words telling Pod to merge with no offer open are an order, not a decision` |

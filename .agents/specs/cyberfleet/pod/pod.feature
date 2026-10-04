@@ -365,6 +365,16 @@ Feature: pod — the ship's bridge persona
     And its session output says the pull request is already merged
 
   @behavior
+  Scenario: an offer lapses when readiness is lost
+    Given Pod's merge offer names head commit A
+    And the pull request's head is still commit A
+    And a human reviewer then opened a new review thread on the pull request
+    And a turn in Pod's session then reads "go ahead and merge it"
+    When Pod acts on that turn
+    Then it does not merge
+    And its session output names the open thread
+
+  @behavior
   Scenario: words telling Pod to merge with no offer open are an order, not a decision
     Given the pipeline on Pod's head commit is still running
     And every review thread on the pull request is resolved
