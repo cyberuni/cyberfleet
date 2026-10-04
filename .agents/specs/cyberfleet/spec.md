@@ -1,5 +1,5 @@
 ---
-status: draft
+status: approved
 project-path: packages/cyberfleet
 approval:
   spec:
@@ -7,24 +7,13 @@ approval:
     by: unional
     cause: clearance
     why:
-      floor: clearance — rewrites frozen authority and operator scenarios so a dispatch order or a loop summons alone no longer delegates merging (summoning-the-loop and dispatch-order delegation scenarios rewritten; several Givens now require the Council's reply to the merge announcement). Narrowing ratified in-session by unional.
-      blast: medium — moves the standing merge delegation to the Council's own words across the in-session Operator and the headless loop; authority and operator nodes; the Pod persona untouched.
-      novelty: medium — the Operator announces the merges at dispatch and the Council's reply is the delegation; a missing, unanswering or unclear reply holds the merge behind a decision-request; a refused merge is never retried or worked around.
-      confidence: high — three cold spec-judge rounds converging to ALIGNED on oracle, builder and architect; three blockers found and folded (unclear reply, key-term contradiction, headless refusal). check-suite and align-spec could not run (gherkin-cli import, cyberuni/cyber-sdd#57); suites parsed and the scenario map checked 1:1 by hand.
-      note: conformance warn carried, not fixed — the operator node still lacks What, Control Flow and Scenario map sections.
+      floor: clearance — rewrites one frozen operator scenario ("every brief sets the pod's side of the watch") with an added And naming the shepherding knobs; a strengthening, not a narrowing. Pod and authority suite edits are add-only. Ratified in-session by unional, together with accepting the merge offer as a departure from issue #73's never-merge.
+      blast: medium — the Pod persona gains PR shepherding, a ready-to-discharge message and a merge offer in its own session; the Operator brief carries the shepherding knobs; authority-governance §7 gains a pod exception that is not a transfer; §3 unchanged.
+      novelty: medium — the merge offer is a decision-request the Pod raises itself, so the Council's answer is a decision under the standing §3; readiness and the merge are stated as a closed-form rule.
+      confidence: high — five cold spec-judge rounds; rounds 4 and 5 ALIGNED on oracle, builder and architect with the mutation sweep landing each rule condition on a distinct scenario. check-suite could not run (cyberuni/cyber-sdd#57); maps checked 1:1 by script.
+      note: conformance warn carried — the operator node lacks What, Control Flow and Scenario map, and the pod node lacks a What heading; both pre-existing on main.
       leash: auto-none — derived at run start. Ratified in-session by unional holding the user channel.
-      cr: github-74-merge-authorization
-  impl:
-    verdict: approve
-    by: unional
-    cause: dimension
-    why:
-      floor: none — every change since the spec folds is implementation-side markdown.
-      blast: medium — authority-governance §3, §6 and §7 and its README, the Operator skill and README, headless-operator, and the Operator docs page. No CLI or mechanism change.
-      novelty: low — instructions over mechanisms that already ship (gh, cyberlegion mail and unit close, the mission graph).
-      confidence: high — two cold impl-judge runs, both IMPLEMENTATION_PASS true with file and line evidence, no absorption, no conflict with merge-backstop-governance or the standing authority, operator and pod scenarios; pnpm verify green first-hand.
-      leash: auto-none — derived at run start. Ratified in-session by unional holding the user channel.
-      cr: github-74-merge-authorization
+      cr: github-73-pod-shepherds-pr
 ---
 
 # cyberfleet — the fleet layer over cyberlegion

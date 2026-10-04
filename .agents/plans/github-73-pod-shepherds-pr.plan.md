@@ -17,7 +17,7 @@ todos:
   - content: "Rounds 4-5 ALIGNED; fold the offer-lapse rule and the round-5 notes"
     status: completed
   - content: "Spec gate (Clearance — operator brief scenario rewrite): Council ratification in-session"
-    status: pending
+    status: completed
   - content: "Cold impl-judge pass; pnpm verify; push; shepherd PR #75 to green"
     status: pending
   - content: "Impl gate: Council ratification in-session; report on the brief's thread"
@@ -44,4 +44,4 @@ Source: [cyberfleet#73](https://github.com/cyberuni/cyberfleet/issues/73). PR #7
 
 ## NEXT
 
-Spec gate: rounds 4-5 ALIGNED. Awaiting the Council's ratification in-session (Clearance for the operator brief scenario rewrite, plus the Council's acceptance of the merge offer as a departure from issue #73's never-merge).
+Spec gate ratified by unional in-session. Rebase onto main, run the cold impl-judge, then the impl gate.
