@@ -19,7 +19,7 @@ describe('pod shepherding', () => {
 
 	it('watches CI on the head commit and re-runs a flaky failure once', () => {
 		expect(section).toMatch(/head commit/)
-		expect(section).toMatch(/re-run.*once/i)
+		expect(section).toMatch(/re-run it\s+once/i)
 	})
 
 	it('puts a timeout on the watch and reports on it', () => {
@@ -77,6 +77,16 @@ describe('pod shepherding', () => {
 		expect(section).toMatch(/decision-request/)
 		expect(section).toMatch(/no longer covers the new head/)
 		expect(section).toMatch(/never answers the offer/)
+	})
+
+	it('lets an open offer lapse when readiness is lost, and says what lapsed it', () => {
+		expect(section).toMatch(/lapses when readiness is lost/)
+		expect(section).toMatch(/say in this session which thread or comment lapsed/)
+	})
+
+	it('runs no merge on a declined offer or an already-merged pull request', () => {
+		expect(section).toMatch(/declines merges nothing/)
+		expect(section).toMatch(/already merged/)
 	})
 
 	it('reports the CI result and how each finding was handled', () => {

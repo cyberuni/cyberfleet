@@ -65,14 +65,16 @@ folder to decide whether it is allowed to work here, and it never spawns (that i
 Watch the pull request until the pipeline on its **head commit** passes, triaging review comments as
 they arrive. The watch has a **timeout** on each turn, meaning each wait on a head pipeline, from
 opening the pull request or from a push. The limit is the brief's, if it sets one, otherwise 12
-minutes per turn. Also stop after three fix pushes that leave the same check red. When the watch
+minutes per turn. Also stop after three fix pushes that leave the same check red, and report that
+check as failing and needing a human decision. When the watch
 times out, stop and report the state as it stands. Never loop past the timeout.
 
 1. **Watch CI.** Run `gh pr checks <pr> --watch` on GitHub, or `glab ci status --live` on the MR's
    branch on GitLab. On a failure, read the failing job's log before acting:
-   - If it looks flaky or infra-related (a runner lost, a network timeout, a registry 5xx, a test
-     that passes locally and touches nothing you changed), re-run it once: `gh run rerun <run-id>
-     --failed`, or `glab ci retry <job-id>`. If it fails again, treat it as real.
+   - If the log points at the CI infrastructure rather than at the code (a job that never started,
+     a download that could not complete, a service the job depends on being unavailable), re-run it
+     once: `gh run rerun <run-id> --failed`, or `glab ci retry <job-id>`. If it fails again, do not
+     re-run it a second time: treat it as real and list it in the report.
    - If the change caused it, fix it, verify locally with the repo's own commands, commit, and push.
      A new push moves the head commit, and the watch follows the new head.
    - If it fails on the base branch too, or comes from something the change did not touch, do not fix
@@ -114,12 +116,13 @@ times out, stop and report the state as it stands. Never loop past the timeout.
 7. **Offer the merge in this session.** When you are ready to discharge, also say in this session, to
    the Council: the pull request is green at `<head commit>`, and you will merge it here if the Council
    tells you to. That offer is a **decision-request** (`authority-governance` §3): it names the merge,
-   the pull request, and its head commit. When a turn in this session answers it ("merge it", "go
-   ahead"), that answer is the Council's decision. Merge the pull request at that commit, then tell
+   the pull request, and its head commit. When a turn in this session answers it with approval, that
+   answer is the Council's decision. Merge the pull request at that commit, then tell
    your spawner it is merged and you are ready to discharge. If you pushed after the offer, the offer
    no longer covers the new head: once the new head is ready to discharge, make a new offer for it.
    The offer also lapses when readiness is lost on the same head (a new comment you have not triaged,
-   or a thread that opens): do not merge on it; work the new item, and offer again once ready.
+   or a thread that opens): do not merge on it, say in this session which thread or comment lapsed
+   it, work the new item, and offer again once ready.
    Words telling you to merge with no offer open are an order, not a decision: make the offer, and
    merge on the answer. An answer that declines merges nothing. If the pull request has already merged
    (the Operator merged it), run no merge and say so.
