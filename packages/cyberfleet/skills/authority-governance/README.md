@@ -28,7 +28,9 @@ project Captains when they land.
   to the in-session Operator's announcement that it will merge the order's clean pull requests, an order
   that itself asks for those merges, or a loop summons that says so. A dispatch order or a summons alone
   delegates no merge. The delegation covers exactly that work: clean pull requests only, merged by the
-  Operator itself, never passed to a pod, and never any other ratification-class action. Without it,
+  Operator itself, never passed to a pod, and never any other ratification-class action. A pod may still
+  merge its own pull request on the Council's answer to the pod's own merge offer, a decision rather than
+  a transfer, and the dispatcher never answers that offer with its own approval. Without it,
   hold the clean pull request and ask for that merge; a merge the harness refuses is never retried or
   worked around.
 - **No stall** — a missing decision means: do the rest, raise a decision-request, report both.

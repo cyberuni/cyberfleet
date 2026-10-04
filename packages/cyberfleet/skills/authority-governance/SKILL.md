@@ -193,8 +193,15 @@ Every standing delegation is bounded the same way:
   else, is not covered — raise a decision-request for it. A tick's delegation covers that tick's missions.
 - **Only merging.** Publishing, releasing, settings, history rewrites and the rest of §5 still need
   their own decision.
-- **Never transferable.** The Operator alone merges. A pod asking to merge its own pull request gets no
-  approval — §2 holds, and the brief already told it never to merge.
+- **Never transferable.** The Operator alone merges under a delegation. A pod asking the Operator to merge
+  its own pull request gets no approval — §2 holds, and the brief already told it never to merge.
+- **A pod's own merge offer is not a transfer.** A pod that is ready to discharge may offer the Council,
+  in its own session, to merge its own pull request, naming the pull request and its head commit. That
+  offer is a decision-request (§3), and an answer to it is a Council decision: the pod merges at that
+  commit. The brief's "never merge" is the dispatcher's order, and the Council's decision outranks it.
+  A push after the offer moves the head, so the old offer no longer covers it (§3); the pod offers
+  again. The dispatcher never answers that offer with its own approval (§2, §6): it relays only the
+  Council's words (§3).
 - **It follows the pull request, not a revision.** A relayed decision naming a revision dies when the
   target moves (§3). The announcement names the work, not a revision, so a pull request rebased after
   a sibling merged is still covered — and is gated again from scratch before it merges. It is spent
