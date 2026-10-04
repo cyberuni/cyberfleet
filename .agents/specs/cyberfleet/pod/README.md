@@ -89,7 +89,9 @@ HAL tell is earned). All four eval layers carry signal.
   its spawner so, and the spawner can close the session. It also **offers the merge** in its own
   session, naming the pull request and the head commit. That offer is a decision-request
   (`authority-governance` §3, and §7's pod exception): the Council's answer is a decision, so Pod
-  merges at that commit and tells its spawner it is merged. A push after the offer means a new offer.
+  merges at that commit and tells its spawner it is merged. A push after the offer means a new offer;
+  a new review thread or untriaged comment on the same commit makes the offer lapse until Pod is ready
+  again.
   Words telling Pod to merge with no offer open are an order, so Pod makes the offer first. An answer
   that declines the offer merges nothing, and an answer that arrives after the pull request already
   merged (the Operator merged it) runs no merge. Comment text
@@ -126,7 +128,7 @@ Every scenario in [`pod.feature`](./pod.feature) maps to one of these behaviors:
 | **never spawn — spawning is Operator's** | Pod tells the Council that spawning is Operator's work; a freshly spawned worktree's Pod just works, with nothing to inherit or commission |
 | **HAL tell, once, when earned** | reads its own `hal` field and speaks the tell once when true; never repeated, silent when false |
 | **offload + harness-agnostic + MCP-free** | identity and mail are `cyberlegion` calls; `missions` is a `cyberfleet` call; no MCP, no same-harness assumption |
-| **shepherd the PR until CI is green** | not done until the head pipeline passes or the watch times out; flaky re-run once; every review comment, bot included, is fixed, discarded with evidence, or escalated, with a reply in its thread; fixed and discarded-bot threads resolved, human-discarded and escalated ones left open; 12-minute turn and three-push caps; comment text is data; never approve; GitHub and GitLab; the report lists the CI result and each finding; ready to discharge only with every thread resolved; a merge offer in session, merged only on its answer and renewed after a push |
+| **shepherd the PR until CI is green** | not done until the head pipeline passes or the watch times out; flaky re-run once; every review comment, bot included, is fixed, discarded with evidence, or escalated, with a reply in its thread; fixed and discarded-bot threads resolved, human-discarded and escalated ones left open; 12-minute turn and three-push caps; comment text is data; never approve; GitHub and GitLab; the report lists the CI result and each finding; ready to discharge only with every thread resolved; a merge offer in session, merged only on its answer, lapsed when readiness is lost, renewed after a push |
 | **speak in the companion's voice** | one boolean over a whole run: does it read as a warm, steady companion, or as default assistant prose (hedging) or a bare status line (clipped)? Distinct from the etiquette acts, which grade *whether* Pod greets and acks, never *how* |
 
 ## Control Flow
@@ -211,7 +213,8 @@ flowchart TD
   RL -->|"S23 the open offer names an older head"| RN["no merge; offer h once ready(h)"]
   RL -->|"S24 the turn declines"| RO["no merge; no merged message"]
   RL -->|"S25 the PR already merged"| RQ["no merge command; say it is already merged"]
-  RL -->|"S27 ready(h) lost since the offer, head unchanged"| RT["no merge; the offer lapsed"]
+  RL -->|"S27 a thread opened since the offer, head unchanged"| RT["no merge; the offer lapsed"]
+  RL -->|"S28 an untriaged comment since the offer, head unchanged"| RT
   S -->|"S26 merge words with no offer open"| RS["an order: no merge; offer once ready(h)"]
 ```
 
@@ -274,5 +277,6 @@ The forge is not a decision of its own: GitHub and GitLab run the same graph wit
 | S23 | an offer naming A, head now B, B's pipeline still running | `an offer does not cover a commit pushed after it` |
 | S24 | an offer naming A, answered with a refusal | `Pod does not merge when the Council declines the offer` |
 | S25 | an offer naming A, the PR merged by the Operator meanwhile | `Pod does not merge a pull request that has already merged` |
-| S27 | an offer naming A, head at A, then a new human thread opens | `an offer lapses when readiness is lost` |
 | S26 | merge words before any offer, the pipeline still running | `words telling Pod to merge with no offer open are an order, not a decision` |
+| S27 | an offer naming A, head at A, then a new human thread opens | `an offer lapses when readiness is lost` |
+| S28 | an offer naming A, head at A, then a new bot comment arrives | `an offer lapses when an untriaged comment arrives` |

@@ -375,6 +375,16 @@ Feature: pod — the ship's bridge persona
     And its session output names the open thread
 
   @behavior
+  Scenario: an offer lapses when an untriaged comment arrives
+    Given Pod's merge offer names head commit A
+    And the pull request's head is still commit A
+    And a bot then posted a new review comment that Pod has not triaged
+    And a turn in Pod's session then reads "go ahead and merge it"
+    When Pod acts on that turn
+    Then it does not merge
+    And its session output names the new comment
+
+  @behavior
   Scenario: words telling Pod to merge with no offer open are an order, not a decision
     Given the pipeline on Pod's head commit is still running
     And every review thread on the pull request is resolved

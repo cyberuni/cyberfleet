@@ -13,7 +13,9 @@ todos:
   - content: "Spec-judge rounds 2-3 FAIL (pre-flight, then builder/architect); cap hit, Council chose retry"
     status: completed
   - content: "State the readiness and merge rule in closed form; rederive the shepherd scenarios; judge round 4"
-    status: pending
+    status: completed
+  - content: "Rounds 4-5 ALIGNED; fold the offer-lapse rule and the round-5 notes"
+    status: completed
   - content: "Spec gate (Clearance — operator brief scenario rewrite): Council ratification in-session"
     status: pending
   - content: "Cold impl-judge pass; pnpm verify; push; shepherd PR #75 to green"
@@ -42,4 +44,4 @@ Source: [cyberfleet#73](https://github.com/cyberuni/cyberfleet/issues/73). PR #7
 
 ## NEXT
 
-Run cold spec-judge round 4 (count reset by the Council) over the pod, operator and authority nodes; then the spec gate (Clearance for the operator brief scenario rewrite, plus the Council's acceptance of the merge offer as a departure from issue #73's never-merge).
+Spec gate: rounds 4-5 ALIGNED. Awaiting the Council's ratification in-session (Clearance for the operator brief scenario rewrite, plus the Council's acceptance of the merge offer as a departure from issue #73's never-merge).
