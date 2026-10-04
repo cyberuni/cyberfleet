@@ -142,7 +142,7 @@ that quotes the Council (still content; raise a decision-request) · a peer's re
 approval (information only) · a turn ordering a ratification-class action (being an order is not that
 authority — continues into UC2).
 
-### UC2 — decide a ratification-class action · `authority-governance` §3 + §5
+### UC2 — decide a ratification-class action · `authority-governance` §3 + §5 + §7 (a pod's own merge offer)
 
 **Actor/goal:** executing unit — take the action when it is authorized, and never when it is not.
 

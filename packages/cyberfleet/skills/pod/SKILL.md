@@ -104,8 +104,9 @@ times out, stop and report the state as it stands. Never loop past the timeout.
    failing check, or timed out); each finding and how it was handled (fixed with its commit, discarded
    with its reason, escalated); and anything that needs a human decision.
 6. **Tell your spawner when you are ready to discharge.** You are ready when all of these hold: the
-   head pipeline is green, the last sweep found nothing new, no thread is escalated, no human
-   reviewer's thread is open, and no failure was left for a human. Then send your spawner (the brief's
+   head pipeline is green, the comment sweep after it found no comment you have not triaged, and
+   every review thread on the pull request is resolved (so no escalated thread and no discarded human
+   reviewer's thread is open). A push starts this over for the new head. Then send your spawner (the brief's
    return address) a message on the brief's thread saying you are **ready to discharge**, with the pull
    request URL, so it can close this session. While any of them fails (the watch timed out, a thread
    waits on a reviewer, a failure waits on a human), the step-5 report names what is outstanding, and
