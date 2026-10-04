@@ -18,10 +18,12 @@ todos:
     status: completed
   - content: "Spec gate (Clearance — operator brief scenario rewrite): Council ratification in-session"
     status: completed
-  - content: "Cold impl-judge pass; pnpm verify; push; shepherd PR #75 to green"
-    status: pending
-  - content: "Impl gate: Council ratification in-session; report on the brief's thread"
-    status: pending
+  - content: "Cold impl-judge pass (second run, after one fold); pnpm verify"
+    status: completed
+  - content: "Impl gate: Council ratification in-session; three backlog follow-ups recorded in the ledger"
+    status: completed
+  - content: "Push; shepherd PR #75 to green; report on the brief's thread"
+    status: completed
 ---
 
 # CR: github-73-pod-shepherds-pr — the Pod shepherds its PR to green
@@ -36,12 +38,14 @@ Source: [cyberfleet#73](https://github.com/cyberuni/cyberfleet/issues/73). PR #7
   or escalate (design, scope, API, conflicting human request). It replies in each thread, resolves the
   fixed threads and the discarded bot threads, and leaves the rest open.
 - It reports the CI result and each finding, then tells its spawner it is ready to discharge once the
-  work is done or a Council-ordered merge has landed.
+  work is done, and again after a merge on its own offer.
 - The Operator brief carries the knobs: shepherd, the per-turn timeout, and which threads to resolve.
 - When ready to discharge, the Pod offers the Council, in its own session, to merge its PR at the head
   commit. The offer is a decision-request; the answer is a decision under the standing §3, and §7 gains
-  the pod exception (not a transfer). A push after the offer means a new offer. §3 is unchanged.
+  the pod exception (not a transfer). The offer lapses when readiness is lost; a push means a new
+  offer once the new head is ready. §3 is unchanged.
 
 ## NEXT
 
-Spec gate ratified by unional in-session. Rebase onto main, run the cold impl-judge, then the impl gate.
+Landed: spec and impl gates ratified by unional in-session; the spec is `implemented`. Merging PR #75
+is the Council's call. Three backlog follow-ups are recorded in the ledger. Nothing left to resume.

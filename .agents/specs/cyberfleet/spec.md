@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 project-path: packages/cyberfleet
 approval:
   spec:
@@ -12,6 +12,17 @@ approval:
       novelty: medium — the merge offer is a decision-request the Pod raises itself, so the Council's answer is a decision under the standing §3; readiness and the merge are stated as a closed-form rule.
       confidence: high — five cold spec-judge rounds; rounds 4 and 5 ALIGNED on oracle, builder and architect with the mutation sweep landing each rule condition on a distinct scenario. check-suite could not run (cyberuni/cyber-sdd#57); maps checked 1:1 by script.
       note: conformance warn carried — the operator node lacks What, Control Flow and Scenario map, and the pod node lacks a What heading; both pre-existing on main.
+      leash: auto-none — derived at run start. Ratified in-session by unional holding the user channel.
+      cr: github-73-pod-shepherds-pr
+  impl:
+    verdict: approve
+    by: unional
+    cause: dimension
+    why:
+      floor: none — every change after the spec gate is implementation-side markdown and pinning tests.
+      blast: medium — the Pod skill's shepherding section and merge offer, the Operator brief bullet and README, authority-governance §7 and its README, the Pod and Operator docs pages, the changeset. No CLI or mechanism change.
+      novelty: low — instructions over mechanisms that already ship (gh, glab, cyberlegion mail).
+      confidence: high — two cold impl-judge runs; the second IMPLEMENTATION_PASS true on all 32 new and rewritten scenarios with file and line evidence, no absorption, no standing scenario contradicted; pnpm verify green first-hand and the pinning tests green uncached. One post-pass fold restored the flaky wording the judge flagged.
       leash: auto-none — derived at run start. Ratified in-session by unional holding the user channel.
       cr: github-73-pod-shepherds-pr
 ---
