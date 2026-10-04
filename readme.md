@@ -9,7 +9,7 @@ Code, Cursor, and Codex, all on one fleet. The fleet layer over
 ships, missions, and the Council view, derived from SDD state — and depends up on cyberlegion for
 every mechanism verb (register, mail, spawn, prune).
 
-Part of [cyber-arcology](https://cyber-arcology.github.io), a self-contained system for running AI coding agents. This package is its fleet layer: it composes the runtime, the communication channels, and the process layer, and nothing depends on it.
+Part of [cyber-civitas](https://cyber-civitas.github.io), a self-contained system for running AI coding agents. This package is its fleet layer: it composes the runtime, the communication channels, and the process layer, and nothing depends on it.
 
 ## Why
 

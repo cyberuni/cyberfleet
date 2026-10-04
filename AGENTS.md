@@ -55,9 +55,9 @@ challenged on specifics, and that is the process working.
 
 ## System context
 
-This repo is one package of [cyber-arcology](https://cyber-arcology.github.io), the system its sibling packages compose into. The [layer architecture](https://cyber-arcology.github.io/architecture/layers/) and the [cross-package decisions](https://cyber-arcology.github.io/decisions/) are recorded there; a decision inside this repo cites them rather than restating them.
+This repo is one package of [cyber-civitas](https://cyber-civitas.github.io), the system its sibling packages compose into. The [layer architecture](https://cyber-civitas.github.io/architecture/layers/) and the [cross-package decisions](https://cyber-civitas.github.io/decisions/) are recorded there; a decision inside this repo cites them rather than restating them.
 
-- It consumes all four cross-package decisions: the runtime depends on communication and never the reverse ([0001](https://cyber-arcology.github.io/decisions/0001-runtime-depends-on-communication/)); coordination claims live in cynapse while leases and presence live in the runtime ([0002](https://cyber-arcology.github.io/decisions/0002-claims-and-leases/)); worktrees are reached only through the runtime's workspace adapter, never cyber-mux directly ([0003](https://cyber-arcology.github.io/decisions/0003-worktrees-through-the-runtime/)); and the project address cyberfleet passes to a runtime service is cynapse's, used as an opaque key ([0004](https://cyber-arcology.github.io/decisions/0004-opaque-service-keys/)).
+- It consumes all four cross-package decisions: the runtime depends on communication and never the reverse ([0001](https://cyber-civitas.github.io/decisions/0001-runtime-depends-on-communication/)); coordination claims live in cynapse while leases and presence live in the runtime ([0002](https://cyber-civitas.github.io/decisions/0002-claims-and-leases/)); worktrees are reached only through the runtime's workspace adapter, never cyber-mux directly ([0003](https://cyber-civitas.github.io/decisions/0003-worktrees-through-the-runtime/)); and the project address cyberfleet passes to a runtime service is cynapse's, used as an opaque key ([0004](https://cyber-civitas.github.io/decisions/0004-opaque-service-keys/)).
 
 ## What This Repo Is
 
