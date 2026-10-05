@@ -1,5 +1,5 @@
 ---
-'cyberfleet': major
+'cyberfleet': patch
 ---
 
 Update runtime dependencies.
