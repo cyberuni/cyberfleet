@@ -7,24 +7,24 @@ approval:
     by: unional
     cause: clearance
     why:
-      floor: clearance — rewrites one frozen operator scenario ("every brief sets the pod's side of the watch") with an added And naming the shepherding knobs; a strengthening, not a narrowing. Pod and authority suite edits are add-only. Ratified in-session by unional, together with accepting the merge offer as a departure from issue #73's never-merge.
-      blast: medium — the Pod persona gains PR shepherding, a ready-to-discharge message and a merge offer in its own session; the Operator brief carries the shepherding knobs; authority-governance §7 gains a pod exception that is not a transfer; §3 unchanged.
-      novelty: medium — the merge offer is a decision-request the Pod raises itself, so the Council's answer is a decision under the standing §3; readiness and the merge are stated as a closed-form rule.
-      confidence: high — five cold spec-judge rounds; rounds 4 and 5 ALIGNED on oracle, builder and architect with the mutation sweep landing each rule condition on a distinct scenario. check-suite could not run (cyberuni/cyber-sdd#57); maps checked 1:1 by script.
-      note: conformance warn carried — the operator node lacks What, Control Flow and Scenario map, and the pod node lacks a What heading; both pre-existing on main.
+      floor: clearance — rewrites the frozen operator claim scenarios; the unconditional claim is inverted so a session claims the standing operator only when unit claim operator --show reports no presence, and the standing mailbox is narrowed to the claim holder. Re-open and gate ratified in-session by unional.
+      blast: medium — the Operator skill's connect rule and mailbox ownership, its README, the package readme and the docs page. No CLI or mechanism change.
+      novelty: low — reads an existing cyberlegion verb (unit claim --show) before claiming; --home and spawn-on-delivery are cyberlegion's (cyberlegion#155).
+      confidence: high — two cold spec-judge rounds; round 1 stopped at preflight on undeclared actor bars, round 2 ALIGNED on oracle, builder and architect, with its should-fix findings folded before freeze. check-suite could not run (cyberuni/cyber-sdd#57); form checked by hand.
+      note: conformance warn carried — the operator node lacks What, Control Flow and Scenario map; pre-existing on main.
       leash: auto-none — derived at run start. Ratified in-session by unional holding the user channel.
-      cr: github-73-pod-shepherds-pr
+      cr: operator-captain-claim
   impl:
     verdict: approve
     by: unional
     cause: dimension
     why:
-      floor: none — every change after the spec gate is implementation-side markdown and pinning tests.
-      blast: medium — the Pod skill's shepherding section and merge offer, the Operator brief bullet and README, authority-governance §7 and its README, the Pod and Operator docs pages, the changeset. No CLI or mechanism change.
-      novelty: low — instructions over mechanisms that already ship (gh, glab, cyberlegion mail).
-      confidence: high — two cold impl-judge runs; the second IMPLEMENTATION_PASS true on all 32 new and rewritten scenarios with file and line evidence, no absorption, no standing scenario contradicted; pnpm verify green first-hand and the pinning tests green uncached. One post-pass fold restored the flaky wording the judge flagged.
+      floor: none — every change after the spec gate is implementation-side markdown and a pinning test.
+      blast: medium — the Operator skill's connect rule and mailbox ownership, its README, the package readme, the Operator docs page, the changeset. No CLI or mechanism change; no cyberlegion pin moved.
+      novelty: low — instructions over cyberlegion verbs that already ship (unit claim --show, unit claim, mail --owner).
+      confidence: high — one cold impl-judge run, IMPLEMENTATION_PASS true on all nine touched scenarios with file and line evidence, no absorption, no standing scenario contradicted; its three non-blocking findings folded. pnpm verify green first-hand.
       leash: auto-none — derived at run start. Ratified in-session by unional holding the user channel.
-      cr: github-73-pod-shepherds-pr
+      cr: operator-captain-claim
 ---
 
 # cyberfleet — the fleet layer over cyberlegion

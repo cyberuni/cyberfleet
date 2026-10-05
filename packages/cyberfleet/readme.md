@@ -75,12 +75,16 @@ new peer session, or a parallel worktree-ship on a project already in flight), l
 there, routes messages between ships, and sweeps away the dead ones. It's where you survey the fleet
 and decide what sails next.
 
-Operator sits at a **bunker seat**: a single dispatch desk that outlives any one session. Seating it
-claims that desk — last claim wins — and behind the desk is a durable **mailbox** at the address
-every brief names, so reports from ships that finished while nobody was watching are still waiting
-when you sit back down. Operator leads with what's in that mailbox, and acks a report only once it's
-been acted on. With no Council on the line at all, the same seat runs unattended as a lifecycle
-loop: pull the ready missions, spawn a ship per mission, merge and retire each one as it lands.
+Operator sits at a **bunker seat**: a single dispatch desk that outlives any one session, held by
+one long-lived captain session working from its home (`~/code`, say). A session takes the desk only
+when it's empty — a claim holds until another session claims or the holder exits — so opening
+Operator in a project to dispatch a ship never pulls the desk away from the captain. Behind the desk
+is a durable **mailbox** at the address every brief names as its fallback, so reports from ships that
+finished while nobody was watching are still waiting. The captain leads with what's in that mailbox,
+and acks a report only once it's been acted on. Register the desk with a home and, once a
+`cyberlegion` release carries it, mail arriving with nobody at the desk spawns a captain there.
+With no Council on the line at all, the same seat runs unattended as a lifecycle loop: pull the
+ready missions, spawn a ship per mission, merge and retire each one as it lands.
 
 ### Crimp
 

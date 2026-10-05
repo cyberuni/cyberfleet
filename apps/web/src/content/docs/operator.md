@@ -24,6 +24,12 @@ The **Operator** is the dispatcher of the fleet. It's where you survey what's ou
   or works around it. Anything short of clean waits for you.
 - Orchestrates several ships on one order: merges their work in dependency order, and after each
   merge tells the ships still open to rebase, adapt to what landed, and re-verify.
+- Keeps one captain at the command center. The standing `operator` is a single long-lived session
+  working from its home (`~/code`, say). A session you open Operator in takes that claim only when
+  nobody holds it, so dispatching from inside a project never pulls the command center away from the
+  captain, and only the captain reads and clears the command center's mailbox. Register the
+  `operator` owner with a home (`--home`) so that, once your `cyberlegion` release supports it, mail
+  arriving with no captain spawns one there.
 - Routes messages between ships and sweeps away the dead ones.
 - Relays what the Council decided, never an approval of its own: the ship receives your own words —
   just "Approve", or your sentence nearly verbatim — with nothing added, and Operator records your

@@ -18,22 +18,24 @@ topic, never by a probed location.
 
 ## What it does
 
-- `cyberlegion unit register` + `unit claim operator` — how a session connects. The standing
-  `operator` owner is a singleton that outlives any session: this session registers under **its own**
-  handle (never as `operator`) and then takes the claim, always — even when another session already
-  holds it — so the doorbell reaches whoever is connected. Two different failures, handled
-  differently: **no multiplexer**, so no presence can be bound and the claim cannot be taken — report
-  it unclaimed and carry on dispatching (fail-soft); **no standing `operator` owner in the hub at
-  all** — report it and route the Council to `init-cyberlegion`, which owns minting a durable owner
-  on a human yes, never minted here (fail-loud).
-- `cyberlegion mail inbox --owner operator` — reads what the command center took while nobody was
-  connected, and leads with it: reports from pods whose spawning session is gone, and frameless
-  headless reports. That mailbox is Operator's to drain: ack a report once acted on, leave an
-  unacted one unread.
+- `cyberlegion unit register` + `unit claim operator --show` — how a session connects. The standing
+  `operator` owner is one long-lived session, the command center's captain, working from the owner's
+  home: this session registers under **its own** handle (never as `operator`), then reads the claim
+  and takes it (`unit claim operator`) **only when no presence is bound**. A claim is made once and
+  holds until another session claims or the holder exits, so a project session dispatching a pod
+  leaves a live captain's claim alone. Two different failures, handled differently: **no
+  multiplexer**, so no presence can be bound and an empty claim cannot be taken — report it unclaimed
+  and carry on dispatching (fail-soft); **no standing `operator` owner in the hub at all** — report it
+  and route the Council to `init-cyberlegion`, which owns minting a durable owner on a human yes,
+  never minted here, and say to register it with `--home` so a captain respawns there (fail-loud).
+- `cyberlegion mail inbox --owner operator` — the claim holder reads what the command center took
+  while nobody was connected, and leads with it: reports from pods whose spawning session is gone,
+  and frameless headless reports. That mailbox is the holder's to drain: ack a report once acted on,
+  leave an unacted one unread. A session that does not hold the claim leaves it alone.
 - `cyberlegion unit spawn` — spawns every ship: the fleet's first, a new peer session, or a
   parallel worktree-ship on a project that is already a ship, with a self-contained brief the new
   Pod reads cold, whose return address is this session's own handle — the session that spawned the
-  pod and watches it, not whichever session last claimed `operator`. The brief names `operator` only
+  pod and watches it, not the captain holding the claim on `operator`. The brief names `operator` only
   as the fallback when that handle resolves to no live unit. All spawning is Operator's; Pod never
   spawns.
 - Watches the pods it spawns: every brief tells the pod to open a pull request and shepherd it (with
