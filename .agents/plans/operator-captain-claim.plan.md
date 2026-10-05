@@ -9,9 +9,9 @@ todos:
   - content: "Spec gate: cold spec-judge; Council ratification"
     status: completed
   - content: "Impl: operator SKILL.md + README, package readme, docs page; pinning tests if any"
-    status: pending
+    status: completed
   - content: "Impl gate: cold impl-judge; pnpm verify; changeset; PR (never merge); report to op-cyberlegion"
-    status: pending
+    status: completed
 ---
 
 # CR: operator-captain-claim — the standing operator is the command center's captain
@@ -41,4 +41,5 @@ from the long-lived captain session working from `~/code`.
 
 ## NEXT
 
-Spec gate passed (ratified by unional). Implement against the frozen suite, then the impl gate.
+Landed: spec and impl gates ratified by unional; PR open, not merged. Follow-up recorded in the
+ledger: raise the cyberlegion pin once a release includes cyberlegion#155.

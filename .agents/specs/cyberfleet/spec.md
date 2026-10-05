@@ -1,5 +1,5 @@
 ---
-status: approved
+status: implemented
 project-path: packages/cyberfleet
 approval:
   spec:
@@ -12,6 +12,17 @@ approval:
       novelty: low — reads an existing cyberlegion verb (unit claim --show) before claiming; --home and spawn-on-delivery are cyberlegion's (cyberlegion#155).
       confidence: high — two cold spec-judge rounds; round 1 stopped at preflight on undeclared actor bars, round 2 ALIGNED on oracle, builder and architect, with its should-fix findings folded before freeze. check-suite could not run (cyberuni/cyber-sdd#57); form checked by hand.
       note: conformance warn carried — the operator node lacks What, Control Flow and Scenario map; pre-existing on main.
+      leash: auto-none — derived at run start. Ratified in-session by unional holding the user channel.
+      cr: operator-captain-claim
+  impl:
+    verdict: approve
+    by: unional
+    cause: dimension
+    why:
+      floor: none — every change after the spec gate is implementation-side markdown and a pinning test.
+      blast: medium — the Operator skill's connect rule and mailbox ownership, its README, the package readme, the Operator docs page, the changeset. No CLI or mechanism change; no cyberlegion pin moved.
+      novelty: low — instructions over cyberlegion verbs that already ship (unit claim --show, unit claim, mail --owner).
+      confidence: high — one cold impl-judge run, IMPLEMENTATION_PASS true on all nine touched scenarios with file and line evidence, no absorption, no standing scenario contradicted; its three non-blocking findings folded. pnpm verify green first-hand.
       leash: auto-none — derived at run start. Ratified in-session by unional holding the user channel.
       cr: operator-captain-claim
 ---
