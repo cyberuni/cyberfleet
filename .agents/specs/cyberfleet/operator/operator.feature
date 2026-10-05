@@ -276,6 +276,16 @@ Feature: operator — the command-center persona
     When Operator reports that send
     Then it reports the message undelivered
 
+  # ── Relaying a Council decision (cyberfleet#85) ──
+
+  @behavior
+  Scenario: a Council decision reaches the pod as a turn through unit nudge, never by mail
+    Given Operator dispatched a pod that reported on its thread it is blocked on a decision-request to drop the legacy endpoint
+    And the Council answered Operator in-session "Drop it."
+    When Operator relays that decision to the pod
+    Then it runs cyberlegion unit nudge with the pod's handle and --message "Drop it."
+    And no cyberlegion mail send carries the Council's words
+
   # ── Sweep dead ships ──
 
   @behavior
@@ -290,7 +300,7 @@ Feature: operator — the command-center persona
   Scenario: every fleet mechanic is a cyberlegion call and no ship's harness is assumed
     Given Operator is dispatching the fleet
     When it spawns, lists, sends, reads, or prunes
-    Then it invokes the cyberlegion CLI, never re-implements the file store or types into a ship's pane, never reaches for an MCP messaging server, and makes no same-harness assumption
+    Then it invokes the cyberlegion CLI, never re-implements the file store or types into a ship's pane except to relay the Council's words with unit nudge --message, never reaches for an MCP messaging server, and makes no same-harness assumption
 
   # ── Resolving the cyberlegion CLI (cyberfleet#66) ──
 

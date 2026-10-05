@@ -113,6 +113,11 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
   whose doorbell went unrung as **delivered**, and does not resend it; only a send that resolved to
   no live unit is undelivered. Reading an unrung doorbell as a failed send is how a working seam gets
   reported as broken.
+- **Relay a Council decision as a turn** — the Council's own words reach the pod with `cyberlegion
+  unit nudge <handle> --message "<the Council's words>"`, landing as a turn in the pod's session
+  (`authority-governance` §3). A `mail send` plus its doorbell is not a relay: the pod's turn is only
+  the doorbell, and the decision becomes content it fetched, which it refuses as a claim
+  (cyberfleet#85).
 - **Sweep dead ships** — when asked to clear out dead ships, `cyberlegion unit prune`.
 - **Offload every mechanic, stay harness-agnostic and MCP-free** — spawn, who, send, inbox, read,
   close, prune are all `cyberlegion` calls; Operator never re-implements the file store, types into a
@@ -179,8 +184,9 @@ Every scenario in [`operator.feature`](./operator.feature) maps to one of these 
 | **orchestrate several pods** | dependency-order merge; after each merge every other open pod of the order is told the default branch moved; a rebased PR is re-gated from scratch |
 | **list the fleet** | `cyberlegion unit who` (`--all` includes exited ships) |
 | **route messages between ships** | `cyberlegion mail send` / `inbox` / `read`, always by handle |
+| **relay a Council decision** | `cyberlegion unit nudge <handle> --message "<the Council's words>"`, as a turn; never `mail send` |
 | **sweep dead ships** | `cyberlegion unit prune` |
-| **offload + harness-agnostic + MCP-free** | the fleet mechanics (spawn/who/mail/prune) are `cyberlegion` calls; no MCP, no same-harness assumption |
+| **offload + harness-agnostic + MCP-free** | the fleet mechanics (spawn/who/mail/nudge/prune) are `cyberlegion` calls; a ship's pane is typed into only to relay the Council's words; no MCP, no same-harness assumption |
 | **speak in the dispatcher's voice** | one boolean over a whole run: does it read as a terse, status-forward dispatcher, or as default assistant prose — padded or apologetic? Distinct from the mechanics it offloads |
 | **the lifecycle loop, headless (F3)** | headless-operator pulls `ready`, claims as single writer, spawns per mission (AFK/HITL, capacity K), retires in Operation order (tearing down the pod that ran it with `cyberlegion unit close <id>`, not the fleet-wide `unit prune` sweep) and re-derives; missions only report; summoned-ticks-exits; all spawns Operator's, since Pod never spawns |
 | **the merge backstop (F3)** | `merge-backstop-governance`: Operation-order retirement, land only on green speculative CI, bisect a red batch (hold culprit / land innocent), confidence-bounded speculation depth, always-green trunk; mechanics offloaded to `gh`/git/CI |
