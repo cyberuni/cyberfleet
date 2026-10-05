@@ -16,19 +16,25 @@ jobs:
     runs-on: ubuntu-latest
     if: github.actor == 'renovate[bot]'
     steps:
-      # Renovate labels the PR with the update type it computed, so the bump level
-      # is read rather than re-derived. No label means the update touched no runtime
-      # dependency and needs no release.
+      # Renovate labels the PR `changeset:*` when it touches a runtime dependency. No
+      # label means no runtime dependency changed and no release is needed.
+      #
+      # The label's level is the dependency's own update type, not cyberfleet's: every
+      # runtime dependency is inlined into dist/cli.mjs, so its major is invisible to
+      # cyberfleet users. The release is always a patch; a dependency update that does
+      # break users gets a hand-written changeset instead.
       - name: Read bump level from the PR labels
         id: level
         env:
           LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
-          level=$(jq -r '.[]' <<<"$LABELS" | grep -m1 '^changeset:' | cut -d: -f2 || true)
-          echo "level=$level" >> "$GITHUB_OUTPUT"
-          if [ -z "$level" ]; then
+          level=''
+          if jq -r '.[]' <<<"$LABELS" | grep -q '^changeset:'; then
+            level=patch
+          else
             echo "no changeset:* label; runtime dependencies untouched"
           fi
+          echo "level=$level" >> "$GITHUB_OUTPUT"
 
       # A push made with GITHUB_TOKEN does not re-trigger `pull_request`, so the
       # required checks would never re-run and the PR would stall in the merge queue.
