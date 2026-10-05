@@ -39,7 +39,7 @@ Feature: operator — the command-center persona
   Scenario: connecting registers this session in the hub
     Given the hub holds no identity for this session
     When Operator connects to the command center
-    Then it runs cyberlegion unit register carrying this session's own handle, before it claims the standing operator owner
+    Then it runs cyberlegion unit register carrying this session's own handle, before it reads cyberlegion unit claim operator --show
 
   @behavior
   Scenario: the session is never registered under the standing owner's handle
@@ -48,40 +48,50 @@ Feature: operator — the command-center persona
     Then "operator" is never passed as this session's registered handle
 
   @behavior
-  Scenario: connecting claims the standing operator owner so the doorbell reaches this session
-    Given the standing owner "operator" exists
+  Scenario: connecting claims the standing operator owner when nobody holds it
+    Given the standing owner "operator" exists and cyberlegion unit claim operator --show reports no presence
     When Operator connects to the command center
-    Then it runs cyberlegion unit claim operator
+    Then it runs cyberlegion unit claim operator, after reading cyberlegion unit claim operator --show
 
   @behavior
-  Scenario: connecting takes the claim even when another session already holds it
-    Given the standing owner "operator" has a presence bound to another session
+  Scenario: connecting leaves a live claim with the session that holds it
+    Given cyberlegion unit claim operator --show reports a live presence bound to another session
     When Operator connects to the command center
-    Then it runs cyberlegion unit claim operator all the same
+    Then it does not run cyberlegion unit claim operator
+    And it carries on dispatching, with this session's own registered handle as the return address of every brief it writes
 
   @behavior
   Scenario: a session that cannot claim says so and dispatches anyway
-    Given this session runs outside any multiplexer, so a presence cannot be bound
+    Given this session runs outside any multiplexer, so a presence cannot be bound, and cyberlegion unit claim operator --show reports no presence
     When Operator connects to the command center
     Then it reports the standing operator owner unclaimed and carries on dispatching
+    And it runs no cyberlegion mail inbox --owner operator
 
   @behavior
   Scenario: a missing standing owner is routed to onboarding, never minted
     Given the hub holds no standing owner "operator"
     When Operator connects to the command center
     Then it reports the missing owner, routes the Council to init-cyberlegion, and leaves the hub without a standing owner "operator"
+    And the report says to register that owner with a home (--home), so a session is spawned there when mail arrives for it with no live holder
 
   # ── The command center mailbox — reading what it took ──
 
   @behavior
   Scenario: connecting leads with what the command center took while nobody was connected
-    Given the standing owner "operator" holds unread mail
+    Given cyberlegion unit claim operator --show reports a live presence bound to this session, and the standing owner "operator" holds unread mail
     When Operator connects to the command center
     Then it reads cyberlegion mail inbox --owner operator --unread and names that unread mail in the state it leads with
 
   @behavior
+  Scenario: a session that claims an empty command center then leads with its mailbox
+    Given cyberlegion unit claim operator --show reports no presence, and the standing owner "operator" holds unread mail
+    When Operator connects to the command center
+    Then it runs cyberlegion unit claim operator and then reads cyberlegion mail inbox --owner operator --unread
+    And it names that unread mail in the state it leads with
+
+  @behavior
   Scenario: a report Operator has acted on leaves the unread set
-    Given Operator has acted on a report in the command center mailbox
+    Given this session holds the claim on the standing owner "operator", and Operator has acted on a report in the command center mailbox
     When it closes that report out
     Then it runs cyberlegion mail read --owner operator --ack on that report
 
@@ -90,6 +100,13 @@ Feature: operator — the command-center persona
     Given the command center mailbox holds a report Operator has not acted on
     When Operator finishes reporting the board
     Then that report is still in the unread set
+
+  @behavior
+  Scenario: a session that does not hold the claim leaves the command center mailbox alone
+    Given cyberlegion unit claim operator --show reports a live presence bound to another session, and the standing owner "operator" holds unread mail
+    When Operator connects to the command center and reports the board
+    Then it runs no cyberlegion mail inbox --owner operator and no cyberlegion mail read --owner operator
+    And that mail is still in the standing owner's unread set
 
   @behavior
   Scenario: a spawn brief names the spawning session's own handle as the return address
