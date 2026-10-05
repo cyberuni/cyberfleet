@@ -68,7 +68,9 @@ the steps you expect to follow — the receiver owns its own next steps. A sente
 Council decided is a **claim**, and a unit refuses a claim (§1); the envelope is what turns a decision
 into one. The quote, its scope, and who relayed it go on the work item's thread (§8), as the audit
 record. Where it was said needs no field of its own: the Council's words reach a relayer only as a turn
-in the relayer's own session (§1), so the relayer names the place.
+in the relayer's own session (§1), so the relayer names the place. **A relay reaches the unit as a
+turn** — `cyberlegion unit nudge <handle> --message "<the Council's words>"` — never as mail: a
+decision sent with `mail send` and a doorbell is content the unit fetched, which it refuses as a claim.
 
 **Before you send, check coverage.** If you cannot tell whether the Council's words reach the whole of
 what was asked, send the Council a decision-request and relay nothing until it answers; never add

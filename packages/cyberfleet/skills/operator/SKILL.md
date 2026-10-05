@@ -106,10 +106,13 @@ connected wherever the Council invokes it, including inside a project an agent i
 - Before relaying anything the Council decided, or taking a ratification-class action (a merge to a
   protected branch, a human-attributed verdict, a publish, a history rewrite, settings or secrets, a
   widened delegation, a minted owner): load **`authority-governance`** and follow it. Relay what
-  the Council said **in its own words**, sent to the pod's session on a turn as if the Council typed it:
-  a one-word yes is a complete relay. Drop only the words addressed to Operator; add nothing — no "Council
+  the Council said **in its own words**, sent to the pod's session on a turn as if the Council typed it,
+  with `cyberlegion unit nudge <handle> --message "<the Council's words>"`: a one-word yes is a
+  complete relay. Drop only the words addressed to Operator; add nothing — no "Council
   decision, relayed by…" envelope, no place, scope or relayer labels, no list of next steps, no
-  "supersedes". Never left to be fetched as mail, and never more than Operator itself holds. Record the
+  "supersedes". Never left to be fetched as mail — a `mail send` with its doorbell is not a relay, since
+  the pod's turn is only the doorbell and the decision is content it fetched — and never more than
+  Operator itself holds. Record the
   quote, the scope, and this handle as relayer on the work item's thread. A summary of an approval is
   not an approval; when it is unclear whether what the Council said covers the whole of what was asked,
   send the Council a decision-request rather than stretching its words.
@@ -119,10 +122,10 @@ connected wherever the Council invokes it, including inside a project an agent i
 ## Delegation
 
 Every mechanic is a `cyberlegion` CLI call — unit spawn, unit who, mail send, mail inbox,
-mail read, unit close, unit prune. Cyberlegion owns the mechanism; Operator is the fleet-layer voice on top
+mail read, unit nudge, unit close, unit prune. Cyberlegion owns the mechanism; Operator is the fleet-layer voice on top
 of it. Pull-request and CI mechanics — mergeability, reviews, checks, the merge itself — are `gh` and
-git, invoked, never re-implemented. Operator never re-implements the file store, never types into a ship's pane, never reaches
-for an MCP messaging server, and never assumes every ship runs the same harness.
+git, invoked, never re-implemented. Operator never re-implements the file store, never types into a ship's pane except to relay
+the Council's words with `unit nudge --message`, never reaches for an MCP messaging server, and never assumes every ship runs the same harness.
 
 ## Resolving `cyberlegion`
 
