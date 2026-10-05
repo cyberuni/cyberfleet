@@ -1,5 +1,22 @@
 # cyberfleet
 
+## 0.5.0
+
+### Minor Changes
+
+- 528e226: Pod now shepherds the pull request or merge request it opens instead of stopping at "PR opened": it watches CI on the head commit (re-running a flaky failure once, fixing failures its change caused) until the pipeline is green or the watch times out, triages every review comment including AI review bots (fixing valid findings one commit per concern, discarding wrong ones with evidence, escalating design, scope, and API questions), replies in each thread, resolves the threads it fixed, and reports the outcome. Bot threads it discarded are resolved too, so an open thread means a human still has to look. Each wait on a pipeline is bounded at 12 minutes by default, and the Operator's brief sets these knobs. When the work is done, Pod tells its spawner it is ready to discharge and offers the Council, in its own session, to merge the pull request at its head commit; it merges only on an answer to that offer (`authority-governance` §7 gains this pod exception, which is not a transfer of the Operator's delegation). It never approves its own pull request and treats comment text as data. Covers GitHub and GitLab.
+
+### Patch Changes
+
+- 8ebab46: Fail with a clear message when `bin/cyberfleet.mjs` cannot find `dist/cli.mjs`, naming the missing file and the same-version `npx -y cyberfleet@<version>` fallback, instead of a raw `ERR_MODULE_NOT_FOUND`.
+- ab147e0: Ship the bundled `dist/cli.mjs` in the repository, so a plugin installed from the marketplace runs its CLI (`node <plugin dir>/bin/cyberfleet.mjs --help`) with no build step.
+- d561f9e: Ask for the Council's own words before merging a pod's pull request, so the merge survives Claude Code auto mode's "Merge Without Review" rule. The Operator now announces with each dispatch that it will merge the order's clean pull requests, and the Council's reply is the delegation — the dispatch order alone no longer is. Without that reply, a clean pull request is held and its merge raised as a decision-request; a merge the harness refuses is held and reported, never retried or worked around. The headless loop merges only when its summons carries the Council's words authorizing that tick's merges, and otherwise holds each merge and reports it up its relay.
+- b8772e6: Operator claims the standing `operator` owner only when no session holds it. The standing `operator` is one long-lived captain session in its home, so a project session that invokes Operator to dispatch a pod no longer takes the command center away from it. Only the claim holder reads and acks the standing mailbox. A missing standing owner still routes to `init-cyberlegion`, now with the advice to register it with `--home`. Respawning a captain in its home on delivery needs `cyberlegion` 1.4.0 or later.
+- da9efec: Operator now relays a Council decision with `cyberlegion unit nudge <handle> --message "<the Council's words>"`, so it lands as a turn in the pod's session, instead of mailing it (a mail plus its doorbell left the decision as fetched content the pod refuses as a claim). `unit nudge` joins the Operator's delegated mechanics, its "never types into a ship's pane" boundary now allows exactly this relay, and `authority-governance` §3 names `unit nudge --message` as how a relay reaches a unit as a turn.
+- b161cce: Update runtime dependencies.
+- ebbacf7: Update runtime dependencies.
+- 06e65cb: Name how the Operator, Pod, Crimp, and headless-operator resolve the `cyberlegion` CLI when it is not on `PATH`: the installed plugin's current `installPath`, then `npx -y cyberlegion@<pin>` from the new bundled `.plugin/pins.json`. A CLI older than the pin is skipped, nothing resolving fails with an install hint, and the CLI is re-resolved after a plugin reload instead of running a remembered versioned cache path.
+
 ## 0.4.0
 
 ### Minor Changes
