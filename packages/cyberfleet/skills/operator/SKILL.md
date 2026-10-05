@@ -23,21 +23,32 @@ connected wherever the Council invokes it, including inside a project an agent i
 
 - When Operator connects to the command center: `cyberlegion unit register` this session under
   **its own** handle (never `--handle operator`: an identity keyed on the pane inherits whatever
-  last died there and mints a new holder of the handle in every new pane), then `cyberlegion unit
-  claim operator` to take the claim on the standing `operator` owner, always — even when another
-  session already holds it, since last claim wins and the doorbell rings whoever holds it. Register
-  before claiming; the claim needs an identity in this session. Then read the standing mailbox, which
-  holds what had no live session to go to (a pod whose spawner is gone, a frameless headless report):
+  last died there and mints a new holder of the handle in every new pane). Then read the claim:
+  `cyberlegion unit claim operator --show`. The standing `operator` is one long-lived session, the
+  command center's captain, working from the owner's home; a claim is made once and holds until
+  another session claims or the holder exits. So run `cyberlegion unit claim operator` **only when
+  `--show` reports no presence** (`presence: none` — an exited holder reads as none). When it names
+  this session's own registered id, this session already holds the claim: claim nothing and go on to
+  the mailbox. When it names any other live presence, do not claim: a project session that invokes
+  Operator to dispatch a pod would steal the command center from its home. Dispatch as usual, with
+  this session's own handle as the return address. Register before claiming; the claim needs an
+  identity in this session.
+- **The standing mailbox belongs to the claim holder.** Only when this session holds the claim, read
+  what had no live session to go to (a pod whose spawner is gone, a frameless headless report):
   `cyberlegion mail inbox --owner operator --unread`, and lead with what the command center took while
-  nobody was connected. `cyberlegion mail read <msg-id> --owner
-  operator --ack` a report once acted on — never sweep the unread set to tidy the board.
-- **No multiplexer, so no presence can be bound and the claim cannot be taken:** report the standing
-  `operator` owner unclaimed and carry on dispatching. This is fail-soft — an unclaimed owner costs
-  the doorbell, not the dispatch.
-- **No standing `operator` owner in the hub at all:** that is a different failure and it is
-  fail-loud. Report the missing owner and route the Council to `init-cyberlegion` — minting a
-  durable owner is its call, on a human yes, never a side effect here. Leave the hub without a
-  standing `operator`.
+  nobody was connected. `cyberlegion mail read <msg-id> --owner operator --ack` a report once acted
+  on — never sweep the unread set to tidy the board. A session that does not hold the claim neither
+  reads nor acks the standing mailbox; that board is the captain's.
+- **No multiplexer, so no presence can be bound and an empty claim cannot be taken:** report the
+  standing `operator` owner unclaimed and carry on dispatching. This is fail-soft — an unclaimed owner
+  costs the doorbell, not the dispatch.
+- **No standing `operator` owner in the hub at all** (`--show` fails on the unknown handle): that is a
+  different failure and it is fail-loud. Report the missing owner and route the Council to
+  `init-cyberlegion` — minting a durable owner is its call, on a human yes, never a side effect here.
+  Say the owner should be registered with a home (`cyberlegion unit register --standing --handle
+  operator --home <dir> --harness <harness>`), so that when mail arrives with no live holder,
+  cyberlegion spawns a session in that home and binds it. `--home` and spawn-on-delivery need a
+  `cyberlegion` release that includes cyberlegion#155. Leave the hub without a standing `operator`.
 - When the Council wants Operator to spawn any ship at all — the fleet's first, a new peer session,
   or a parallel worktree-ship on a project that is already a ship: `cyberlegion unit spawn --harness
   <claude|cursor|codex> --handle <name> --task "<self-contained brief>" --at workspace` — the brief
@@ -45,10 +56,9 @@ connected wherever the Council invokes it, including inside a project an agent i
   hook, and `--at workspace` opens the ship in its own herdr workspace rather than a pane crowding a
   neighbor's. The brief's return address is **this session's own registered handle** — the session
   that holds the order and watches the pod — never its id and never `operator`: the claim on
-  `operator` moves to whichever session connected last, which never saw this brief. The brief also
-  names the fallback: if that handle resolves to no live unit, report to `operator` instead. Every
-  spawn is Operator's, including
-  parallel work on a project that is already a ship — Pod never spawns.
+  `operator` is the captain's, which never saw this brief. The brief also names the fallback: if
+  that handle resolves to no live unit, report to `operator` instead. Every spawn is Operator's,
+  including parallel work on a project that is already a ship — Pod never spawns.
 - Every brief sets the pod's side of the watch, in the brief itself: open a pull request and shepherd
   it until CI is green, with a per-turn timeout (12 minutes unless the work needs longer) and which
   review threads to resolve (by default, fixed ones and discarded bot findings); report on
