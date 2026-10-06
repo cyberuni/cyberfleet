@@ -8,13 +8,14 @@ already working in — nothing about the working folder can disconnect it.
 
 ## When to use
 
-- You need to spawn a ship — the fleet's first, a new peer session, or a parallel worktree-ship on
-  a project that is already a ship.
+- You want work put on a project — its first Pod or parallel work. Operator hands it to that
+  project's Captain, starting the Captain when it is not running.
 - Listing the fleet, or checking who needs the Council's hands.
-- Routing messages between running ships.
+- Routing messages between running sessions.
 
-Not for running a mission or hailing crew inside one specific ship — that is `pod`, routed to by
-topic, never by a probed location.
+Not for running a mission or hailing crew inside one specific Pod — that is `pod`, routed to by
+topic, never by a probed location. Not for spawning, merging, or retiring a project's Pods — that is
+the project's `captain`.
 
 ## What it does
 
@@ -32,27 +33,16 @@ topic, never by a probed location.
   while nobody was connected, and leads with it: reports from pods whose spawning session is gone,
   and frameless headless reports. That mailbox is the holder's to drain: ack a report once acted on,
   leave an unacted one unread. A session that does not hold the claim leaves it alone.
-- `cyberlegion unit spawn` — spawns every ship: the fleet's first, a new peer session, or a
-  parallel worktree-ship on a project that is already a ship, with a self-contained brief the new
-  Pod reads cold, whose return address is this session's own handle — the session that spawned the
-  pod and watches it, not the captain holding the claim on `operator`. The brief names `operator` only
-  as the fallback when that handle resolves to no live unit. All spawning is Operator's; Pod never
-  spawns.
-- Watches the pods it spawns: every brief tells the pod to open a pull request and shepherd it (with
-  the per-turn timeout and the threads to resolve), report on its thread, never merge, and rebase when
-  told trunk moved. A pod still merges on the Council's answer to its own in-session merge offer
-  (`authority-governance` §7), which the brief does not grant and the Operator never answers.
-  Operator gates each report against the clean bar in `authority-governance` §7. With the dispatch it announces that it will merge the order's clean pull
-  requests; the Council's reply to that, in its own words, is the delegation — the dispatch order alone
-  is not. A clean, covered pull request merges with no further Council turn and its pod is closed; an
-  unclean one, a clean one with no reply yet, or one whose merge the harness refused is held and raised
-  as a decision-request, never retried or worked around.
-  With several pods on one order it merges in dependency order and, after each merge, tells every other
-  open pod to rebase, adapt, re-verify and report again.
-- `cyberlegion unit who` / `mail send` / `mail inbox` / `mail read` / `unit close` / `unit prune` —
-  lists, messages, tears down one finished pod, and sweeps the fleet.
+- `cyberfleet captain` + `cyberlegion service start … captain --cwd <home>` — puts work on a
+  project through its Captain. Operator spawns no Pods: it reads the project's Captain, starts it in
+  the project's default checkout when it is not healthy (concurrent starts launch once), or hands the
+  order to the healthy owner with `unit nudge --message`. Calling Operator never forces a generation,
+  hands off the lease, or binds or adopts a Pod, so the Captain keeps its lease and its Pods. The
+  Captain writes the Pods' briefs, announces and gates the merges, and retires each Pod once.
+- `cyberlegion unit who` / `mail send` / `mail inbox` / `mail read` / `unit prune` — lists,
+  messages, and sweeps the fleet.
 - Routes in-ship mission and crew work to `pod`, by topic — never by probing this working
   directory.
 
-Every mechanic is a `cyberlegion` CLI call — harness-agnostic, MCP-free. Cyberlegion is the
+Every mechanic is a `cyberlegion` or `cyberfleet` CLI call — harness-agnostic, MCP-free. Cyberlegion is the
 mechanism; Operator is the fleet-layer persona on top of it.

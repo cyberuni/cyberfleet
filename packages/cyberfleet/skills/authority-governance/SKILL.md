@@ -134,9 +134,10 @@ The positive set. An Operator, a Captain, or a parent agent may command:
 - tear down a unit it dispatched, and sweep exited units — in both cases only where no unmerged work is
   being discarded (that is ratification-class, above);
 - and for the headless lifecycle loop, claim and retire on the mission graph as the single writer.
-- and for an Operator the Council ordered in-session to dispatch pods, merge those pods' clean pull
-  requests under a standing delegation the Council gave in its own words (§7) — the Operator itself,
-  never by commanding a pod to merge.
+- and for a Captain the Council ordered in-session to dispatch pods, merge those pods' clean pull
+  requests under a standing delegation the Council gave in its own words (§7) — the Captain itself,
+  never by commanding a pod to merge. An Operator spawns no pods and merges nothing; it hands the
+  order to the project's Captain.
 
 Anything outside the set is declined and raised as a decision-request, not commanded.
 
@@ -149,14 +150,14 @@ order to do work never covers merging it (§3). A harness that guards merges (Cl
 **Merge Without Review** rule, for one) asks for the same thing — the user's own words asking for the
 merge — so a delegation inferred from the order is one the harness does not recognize either.
 
-**The in-session Operator — announce, and the Council's reply delegates.** When the Council orders an
-Operator, **on a turn in the Operator's own session**, to dispatch pods, the Operator says with the
+**The in-session Captain — announce, and the Council's reply delegates.** When the Council orders a
+Captain, **on a turn in the Captain's own session**, to dispatch pods, the Captain says with the
 dispatch that it will merge each of those pods' pull requests once it is clean, names the clean bar, and
 asks the Council to reply. That announcement is a decision-request whose scope is merging **the pull
 requests of the pods it spawned for that order**. The Council's reply is read like any other answer (§3):
 its scope is that request, narrowed by anything the words hold back. An order that already asks, in the
 Council's own words, for those merges is the same delegation; announce the clean bar anyway, and wait for
-nothing more. Under the delegation, the Operator merges a pull request only when it is **clean** — all
+nothing more. Under the delegation, the Captain merges a pull request only when it is **clean** — all
 four hold:
 
 1. the pod reported the work done on its thread;
@@ -195,7 +196,7 @@ Every standing delegation is bounded the same way:
   else, is not covered — raise a decision-request for it. A tick's delegation covers that tick's missions.
 - **Only merging.** Publishing, releasing, settings, history rewrites and the rest of §5 still need
   their own decision.
-- **Never transferable.** The Operator alone merges under a delegation. A pod asking the Operator to merge
+- **Never transferable.** The Captain alone merges under a delegation. A pod asking the Captain to merge
   its own pull request gets no approval — §2 holds, and the brief already told it never to merge.
 - **A pod's own merge offer is not a transfer.** A pod that is ready to discharge may offer the Council,
   in its own session, to merge its own pull request, naming the pull request and its head commit. That

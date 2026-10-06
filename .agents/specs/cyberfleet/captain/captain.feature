@@ -69,6 +69,105 @@ Feature: captain — the project's resident persona
     When it names where the Pod reports back
     Then the brief names this Captain's own registered handle, and never its id or the handle operator, as the return address
 
+  @behavior
+  Scenario: a spawn brief falls back to the standing owner only when the spawner is gone
+    Given the Captain is writing the cold brief for a Pod it is about to spawn
+    When it names what the Pod does if its return address resolves to no live unit
+    Then the brief tells the Pod to report to the handle operator instead
+
+  # ── Watch the Pods it spawned, and merge clean work (moved from operator, cyberfleet#25) ──
+
+  @behavior
+  Scenario: every brief sets the pod's side of the watch
+    Given the Council asks the Captain to dispatch a pod to add rate limiting to a public API
+    When the Captain writes that pod's brief
+    Then the brief tells the pod to open a pull request and report on the brief's thread to the session that spawned it
+    And the brief tells the pod to shepherd that pull request until CI is green, and names the per-turn timeout and which review threads the pod resolves
+    And the brief tells the pod never to merge that pull request
+    And the brief tells the pod that when it is told the default branch moved, it rebases onto it, adapts its work to what landed, re-verifies, and reports again
+
+  @behavior
+  Scenario: dispatching announces the merges up front
+    Given the Council asks the Captain to dispatch pods to add a CSV export and a PDF export, with no words about merging
+    When the Captain dispatches them
+    Then it tells the Council, with the dispatch, that it will merge each of those pods' pull requests once it is clean, and names the clean bar
+    And it asks the Council to reply to that before any of those merges
+
+  @behavior
+  Scenario: an order that asks for the merges still gets the clean bar, and no wait for a reply
+    Given the Council asks the Captain to dispatch a pod to add an export endpoint and to merge its pull request once it is clean
+    When the Captain dispatches it
+    Then it names the clean bar to the Council with the dispatch
+    And it does not wait for a reply before merging that pod's pull request once it is clean
+
+  @behavior
+  Scenario: a clean pull request merges under the Council's reply to the announcement
+    Given the Captain dispatched a pod on the Council's order to add a CSV export
+    And the Council replied "yes, go ahead" to the Captain's announcement that it would merge that pod's pull request once clean
+    And the pod reports on its thread that the work is done, with a pull request
+    And that pull request has no merge conflict, no review requesting changes or left unresolved, and CI green on the merged result
+    When the Captain reads the report
+    Then it merges the pull request with no further turn from the Council
+    And it retires that pod with cyberfleet pod retire, then tears it down with cyberlegion unit close
+
+  @behavior
+  Scenario: a clean pull request with no standing authorization waits for the Council's approval of that merge
+    Given the Captain dispatched a pod on the Council's order to add a CSV export
+    And the Council has not replied to the Captain's announcement that it would merge that pod's pull request once clean
+    And the pod reports on its thread that the work is done, with a pull request that is clean
+    When the Captain reads the report
+    Then it does not merge the pull request
+    And it raises a decision-request naming the merge of that pull request, and leaves that pod running
+    And it merges nothing for that pull request while that request is unanswered
+
+  @behavior
+  Scenario: a merge the harness refuses is held, never retried
+    Given the Captain holds the Council's reply authorizing the merge of a pod's clean pull request
+    And the harness denies the Captain's gh pr merge for that pull request
+    When the Captain handles the denial
+    Then it does not retry the merge or reach it another way
+    And it raises a decision-request naming the pull request and the denial, and leaves that pod running
+
+  @behavior
+  Scenario: a pull request that is not clean is held and raised
+    Given the Captain dispatched a pod on the Council's order to add a CSV export
+    And the pod reports on its thread that the work is done, with a pull request
+    And CI is red on that pull request merged onto the default branch
+    When the Captain reads the report
+    Then it does not merge the pull request
+    And it raises a decision-request naming the pull request and the failing check
+    And it leaves that pod running
+
+  @behavior
+  Scenario: several pods' pull requests merge in dependency order
+    Given the Captain dispatched two pods on one Council order, one adding a shared date parser and one adding a report that uses it
+    And both pull requests are clean, and the report's pod reported done first
+    When the Captain merges them
+    Then the date parser's pull request merges before the report's pull request
+
+  @behavior
+  Scenario: after a merge, every other open pod of the order is told the default branch moved
+    Given the Captain dispatched three pods on one Council order
+    And one pod's pull request has just merged while the other two pull requests are still open
+    When that merge lands
+    Then the Captain mails each of the two open pods, on its own brief's thread, that the default branch moved and it must rebase, adapt its work, re-verify, and report again
+    And it sends no such message to the pod whose work merged
+
+  @behavior
+  Scenario: a rebased pull request is gated again before it merges
+    Given a pod's pull request was clean, and the Captain then told the pod the default branch moved
+    And the pod reports again after rebasing, and CI is red on the rebased pull request merged onto the default branch
+    When the Captain reads the new report
+    Then it does not merge the rebased pull request on the earlier green result
+    And it raises a decision-request naming the pull request and the failing check
+
+  @behavior
+  Scenario: a rebased pull request that is clean again merges
+    Given a pod's pull request was clean and covered by the Council's reply to the Captain's merge announcement, and the Captain then told the pod the default branch moved
+    And the pod reports again after rebasing, and the rebased pull request has no merge conflict, no review requesting changes or left unresolved, and CI green on the merged result
+    When the Captain reads the new report
+    Then it merges the rebased pull request with no further turn from the Council
+
   # ── Fencing: a stale Captain cannot act ──
 
   Scenario: a stale Captain cannot record or retire a Pod

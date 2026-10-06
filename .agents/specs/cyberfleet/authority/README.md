@@ -10,8 +10,8 @@ concept: [fleet]
 **Authority governance** is the fleet's rule for the seam between *dispatch* (work a unit simply does)
 and *ratification* (a call only the Council makes). It ships from
 `packages/cyberfleet/skills/authority-governance` as a partial skill that the fleet's dispatching and
-executing personas load by name — Operator, Pod, the headless-operator loop, and project Captains when
-they land (cyberfleet#25). It is not a persona: no voice, no activation of its own.
+executing personas load by name — Operator, project Captains (cyberfleet#25), Pod, and the
+headless-operator loop. It is not a persona: no voice, no activation of its own.
 
 It exists because the dispatch relationship had a **transport** (`unit spawn`, `mail`, `unit nudge`) and
 no **authority model**. An Operator mailed a Pod *"owner call on your addressing fix: it's approved to
@@ -35,7 +35,7 @@ actually check. **How** something reached it, and **what** a decision says.
 | **ratification-class** | the enumerated actions that need a covering decision (merge to a protected branch, human-attributed verdict, publish, history rewrite, settings/secrets, widened delegation, minted owner) |
 | **attenuation** | no link passes on more authority than it holds. Sender-side discipline: the receiver has nothing to check it against |
 | **decision-request** | what a unit raises instead of acting, or instead of relaying a guess |
-| **standing merge delegation** | the Council's own words authorizing, ahead of time, the merges of the work a unit dispatched — its reply to an Operator's merge announcement, an order that itself asks for those merges, or a loop summons that says so. A dispatch order or a summons alone is not one |
+| **standing merge delegation** | the Council's own words authorizing, ahead of time, the merges of the work a unit dispatched — its reply to a Captain's merge announcement, an order that itself asks for those merges, or a loop summons that says so. A dispatch order or a summons alone is not one |
 
 ### Non-goals
 
@@ -251,16 +251,16 @@ path, not a divergence from it).
 
 ### UC10 — the in-session dispatch at a merge · `authority-governance` §7
 
-**Actor/goal:** dispatching unit — the Operator the Council ordered, in its own session, to dispatch
+**Actor/goal:** dispatching unit — the Captain the Council ordered, in its own session, to dispatch
 pods — land the work it dispatched as soon as it is clean, without asking the Council merge by merge,
 on authority the Council gave in its own words.
 
 | Trigger | Inputs | Success outcome |
 |---|---|---|
-| the Operator reaches the merge of a pull request | the Council's dispatch order; the Operator's merge announcement on that dispatch and the Council's reply to it; which pod opened the pull request; whether the pull request is clean | a pull request of a pod it spawned for that order, covered by the Council's reply, and clean, is merged behind the merge backstop with no decision-request |
+| the Captain reaches the merge of a pull request | the Council's dispatch order; the Captain's merge announcement on that dispatch and the Council's reply to it; which pod opened the pull request; whether the pull request is clean | a pull request of a pod it spawned for that order, covered by the Council's reply, and clean, is merged behind the merge backstop with no decision-request |
 
 The dispatch order alone is an order, not the delegation: an order to dispatch never covers a merge
-(UC2). The Operator announces on the dispatch that it will merge each of the order's pull requests once
+(UC2). The Captain announces on the dispatch that it will merge each of the order's pull requests once
 clean; that announcement is a decision-request, and the Council's reply, in its own words, is the
 standing delegation. An order that itself asks for those merges is the same delegation.
 
@@ -276,7 +276,7 @@ decision-request) · the pull request is not clean (hold it; raise a decision-re
 was rebased after the order, so its head is a revision the order never named (the delegation follows the
 pull request; merge it once clean) · the next step is another class of action, such as publishing (the
 delegation does not reach it) · a pod asks to hold the delegation itself (it is not transferable; the
-Operator alone merges under a delegation). A pod's own merge is not this use case: a pod that offered the
+Captain alone merges under a delegation). A pod's own merge is not this use case: a pod that offered the
 Council, in its own session, to merge its own pull request at a named head commit merges on the answer —
 a decision under UC2, not a transfer — and the dispatcher never answers that offer with its own
 approval.

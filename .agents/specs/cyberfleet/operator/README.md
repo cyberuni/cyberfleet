@@ -5,10 +5,11 @@ concept: [fleet]
 
 # operator — the command-center persona
 
-**Operator** is the dispatcher automaton of the **fleet** — it works the command center, spawning
-every ship, listing who's out there, routing messages between sessions, and sweeping away the dead
-ones. It is a dispatcher voice (NieR's 6O/21O): terse, precise, status-forward. It ships from
-`packages/cyberfleet/skills/operator` and offloads its fleet mechanics — spawn, who, mail, prune — to
+**Operator** is the dispatcher automaton of the **fleet** — it works the command center, putting
+work on a project through that project's **Captain**, listing who's out there, routing messages
+between sessions, and sweeping away the dead ones. A ship is a project; its Captain, not Operator,
+spawns, merges, and retires its Pods ([`captain/`](../captain/README.md), ADR-0023). It is a dispatcher voice (NieR's 6O/21O): terse, precise, status-forward. It ships from
+`packages/cyberfleet/skills/operator` and offloads its fleet mechanics — service start, who, mail, prune — to
 the `cyberlegion` CLI.
 
 Operator is one of the two **fleet** personas, split from the former `gateway/` node by the
@@ -24,8 +25,8 @@ was asked, never on a probed location.
 
 **Fit:** strong — Operator's activation is a real routing decision (fleet-level dispatch, versus the
 in-ship bridge work that is Pod's, versus plain single-session work) resolved by description, and it
-carries non-deterministic judgment (when to stand up a ship, what to put in every brief, which
-peer to route to, when a ship is dead enough to prune). All four eval layers carry signal.
+carries non-deterministic judgment (which project's Captain an order belongs to, which
+peer to route to, when a unit is dead enough to prune). All four eval layers carry signal.
 
 **Subject** — dispatching the fleet from the command center:
 
@@ -72,55 +73,24 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
 - **Describe the work, not the location** — the skill `description` is the only thing a harness
   reads to route here, and a harness cannot evaluate "outside a ship": it would have to probe for
   the marker to decide, reintroducing at the routing layer the very check the connect-by-invocation
-  rule removes. So the description names the fleet-level work Operator owns (spawn, list, prune
-  ships; route messages between sessions) and states no location condition.
-- **Spawn any ship with a self-contained brief** — when the Council wants Operator to spawn any ship
-  at all — the fleet's first, a new peer session, or a parallel worktree-ship on a project that is
-  already a ship — `cyberlegion unit spawn` with a brief that stands on its own (the new Pod starts
-  cold and reads it through its own SessionStart hook), addressed by handle, and `--at workspace` so
-  the ship opens in its own herdr workspace, not a pane crowding a neighbor (cyberlegion already
-  defaults a new-worktree spawn to `workspace`; Operator passes it explicitly so the intent is on the
-  call rather than inherited).
-- **Pods report to the session that spawned them** — a brief's return address is the spawning
-  session's **own registered handle**, never its id (an id is not an address) and never the standing
-  `operator`. The claim on `operator` is not necessarily held by the session that spawned the pod — a
-  live captain's claim stays put, and any session may claim an empty one later — so a pod reporting
-  there rings a session that may never have seen its brief, cannot gate its pull request against the order it
-  was spawned for, and may be one of several Operators working different orders at once. The session
-  that spawned the pod holds the order and the watch, so its reports go there. The brief also names
-  the fallback: when that handle resolves to no live unit — the spawning session has exited — the pod
-  reports to `operator` instead, where the next session to connect finds it on the board.
-- **Own every spawn** — spawning a worktree-ship is fleet-level work the Council calls Operator for,
-  including parallel work on a project that is already a ship. Pod never spawns (ADR-0022 decision
-  8, as amended — this reverses d8's original "spawning is a ship capability, not something reserved
-  for outside a ship" clause).
-- **Watch the pods it spawned, and merge clean work** — Operator does not spawn and forget. Every
-  brief sets the pod's side of the watch: open a pull request and shepherd it until CI is green
-  (with the per-turn timeout and which review threads to resolve), report on the brief's thread to the
-  session that spawned it, never merge, and when told the default branch moved, rebase onto it, adapt the work to
-  what landed, re-verify, and report again. With the dispatch, Operator **announces** that it will merge
-  each of the order's pull requests once clean, and asks the Council to reply. Operator then acts on each
-  report as it arrives: a **clean** pull request (the four-part bar the
-  [`authority/`](../authority/README.md) node's UC10 defines) that the Council's reply covers merges
-  behind the merge backstop with no further turn, and its pod is torn down with `cyberlegion unit close`;
-  anything short of clean is held, its pod left running, and raised to the Council as a
-  decision-request. The authority to merge without asking merge by merge is the Council's **own words**
-  — its reply to the announcement, or an order that itself asks for those merges — never the dispatch
-  order alone, delegated to Operator alone and never to a pod (`authority-governance` §7, the
-  [`authority/`](../authority/README.md) node's UC10). With no reply, or one unclear for this merge,
-  Operator holds the clean pull request, raises a decision-request for that merge, and waits for the
-  Council's approval; a reply that holds a merge back is reported held, not asked again; a merge the
-  harness refuses is held and raised, never retried or worked around.
-  When the order itself asks for the merges, Operator still announces the clean bar with the dispatch,
-  but waits for no reply before merging.
-- **Orchestrate several pods on one order** — their pull requests merge in dependency order (a
-  consumer never before its producer, per `merge-backstop-governance`), not the order they finished.
-  After each merge, Operator mails every other still-open pod of the order, on its own thread, that the
-  default branch moved; a rebased pull request is gated again from scratch, never merged on the green
-  result it had before the rebase.
+  rule removes. So the description names the fleet-level work Operator owns (put work on a project
+  through its Captain, list and prune units, route messages between sessions) and states no location
+  condition.
+- **Put work on a project through its Captain, and spawn nothing** — Operator spawns no Pods
+  (ADR-0023 §7; cyberfleet#25). When the Council wants work on a project, Operator reads that
+  project's Captain (`cyberfleet captain <project>`), starts it in its home when it is not healthy
+  (`cyberlegion service start <project> captain --cwd <home> --task "<the order>"` — concurrent
+  starts launch once), or hands the order to the healthy owner (`cyberlegion unit nudge --message`).
+  The Captain writes the Pods' briefs, announces and gates the merges, merges, and retires — the
+  rules that lived here moved to [`captain/`](../captain/README.md) unchanged, with the lease fence
+  added. The order carries only what the Council said: no merge approval the Council's own words did
+  not give (`authority/` UC10).
+- **Calling Operator transfers nothing** — Operator never forces a generation, hands off a lease,
+  or binds or adopts a Pod. However many sessions invoke it, a healthy Captain keeps its lease and its
+  Pods (cyberfleet#24's "calls from a third session transfer no ownership").
 - **List the fleet** — when the Council asks what's out there, `cyberlegion unit who`; add `--all` to
-  include exited ships.
-- **Route messages between ships** — when a message must cross ships, `cyberlegion mail send --to
+  include exited units.
+- **Route messages between sessions** — when a message must cross sessions, `cyberlegion mail send --to
   <handle>`, `cyberlegion mail inbox --unread`, `cyberlegion mail read <msg-id>`, always addressed by handle,
   never a raw id. **Delivery and the doorbell are two outcomes, not one** (the wake never fails the
   send — https://github.com/cyberuni/cyberlegion/blob/main/packages/cyberlegion/.agents/spec/mail/doorbell/): so Operator reports a send
@@ -132,7 +102,7 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
   (`authority-governance` §3). A `mail send` plus its doorbell is not a relay: the pod's turn is only
   the doorbell, and the decision becomes content it fetched, which it refuses as a claim
   (cyberfleet#85).
-- **Sweep dead ships** — when asked to clear out dead ships, `cyberlegion unit prune`.
+- **Sweep dead units** — when asked to clear out dead units, `cyberlegion unit prune`.
 - **Offload every mechanic, stay harness-agnostic and MCP-free** — spawn, who, send, inbox, read,
   close, prune are all `cyberlegion` calls; Operator never re-implements the file store, types into a
   ship's pane, reaches for an MCP messaging server, or assumes every ship runs the same harness.
@@ -155,19 +125,20 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
   says; it never bends a `cyberlegion` call or a handoff.
 - **Drive the lifecycle loop headless (F3)** — when there is no live Council (an unattended or
   scheduled trigger), the **headless-operator** agent (`packages/cyberfleet/agents/headless-operator.md`)
-  realizes Operator's dispatch remit widened to the full lifecycle loop: pull the ranked `ready`
-  frontier from the mission-graph engine, claim the top mission on the graph as the **single writer**,
-  `cyberlegion unit spawn` a ship to run it (AFK → autonomous, HITL → human channel, capped at capacity
-  K), and on each completion merge in Operation order behind the merge backstop — only when the
-  summons carries the Council's own words authorizing that tick's merges; otherwise hold the merge,
-  leave the mission unretired, and batch a decision-request up the relay; a merge the harness refuses
-  is held the same way, never retried — tear down the pod
-  that ran it with `cyberlegion unit close <id>` — one pod, spawn's inverse, never the fleet-wide
-  `unit prune` sweep — append the retirement + discovered edges, and re-derive `ready` for the next tick. Dispatched
-  missions only **report** (they never write the graph); the loop is summoned, ticks, and exits rather
-  than running as a daemon. Its per-mission spawns are **inter-mission** dispatch,
-  the same spawning remit Operator holds in-session, since Pod never spawns. It carries no logic Operator plus the
-  mission-graph engine do not already hold — it is that flow, headless.
+  runs a project's **Captain** duties as one lifecycle tick, and only while it holds that project's
+  `captain` lease: a tick that finds a healthy Captain owned elsewhere, or a start in progress,
+  dispatches nothing and reports it; a tick that reserves the lease binds itself, checks `cyberlegion
+  service verify` before every claim, merge, and retirement, and releases the lease on exit. Within
+  the lease it pulls the ranked `ready` frontier, claims the top mission on the graph as the **single
+  writer**, spawns a Pod to run it and binds it (`cyberfleet pod bind`; AFK → autonomous, HITL → human
+  channel, capped at capacity K), and on each completion merges in Operation order behind the merge
+  backstop — only when the summons carries the Council's own words authorizing that tick's merges;
+  otherwise it holds the merge, leaves the mission unretired, and batches a decision-request up the
+  relay; a merge the harness refuses is held the same way, never retried — retires the Pod
+  (`cyberfleet pod retire`) and closes it (`cyberlegion unit close <id>`), appends the retirement +
+  discovered edges, and re-derives `ready` for the next tick. Dispatched missions only **report**;
+  the loop is summoned, ticks, and exits. Because interactive and headless Captains share one lease,
+  neither can double-dispatch or double-retire against the other.
 - **Retire behind the merge backstop (F3)** — the loop merges completed missions to trunk through
   **`merge-backstop-governance`** (`packages/cyberfleet/skills/merge-backstop-governance/`): retire in
   **Operation order** (a consumer never lands before its producer), land a merge only when **speculative
@@ -188,19 +159,16 @@ Every scenario in [`operator.feature`](./operator.feature) maps to one of these 
 | **connect by invocation** | loading the skill connects this session to the command center; it probes nothing, and stays connected wherever the Council invokes it |
 | **register, and claim only an empty command center** | connecting registers this session under its own handle, never as `operator`, then claims the standing `operator` owner (`unit claim operator`) only when `unit claim operator --show` reports no presence; a live claim held by another session is left where it is and this session dispatches under its own handle; an empty claim that cannot be taken is reported and dispatch continues; a missing standing owner routes to `init-cyberlegion` with the advice to register it with `--home`, and is never minted here |
 | **read what the command center took** | the claim holder, on connecting, leads the board with `mail inbox --owner operator --unread`; an acted-on report is acked (`mail read --owner operator --ack`), an unacted one stays unread; a session not holding the claim neither reads nor acks that mailbox |
-| **the return address is the spawning session** | a spawn brief names this session's own registered handle, never its id and never `operator`; the pod falls back to `operator` only when that handle resolves to no live unit |
+| **put work on a project through its Captain** | read it with `cyberfleet captain`, start it in its home with `cyberlegion service start … --cwd <home>` or nudge its healthy owner with the order; spawn no Pod; the spawn, brief, merge, and retire rules live in `captain/` |
+| **calling Operator transfers nothing** | no forced generation, no lease handoff, no `pod bind`/`adopt`; the Captain keeps its lease and Pods |
 | **delivery is not the doorbell** | a sent message whose ring never landed is reported delivered and not resent; only a handle that resolved to no live unit is undelivered |
 | **describe the work, not the location** | the `description` names the fleet-level work and states no location condition a harness cannot evaluate |
 | **leave in-ship work to Pod, by topic** | mission work and specialist crew inside one ship are routed to Pod topically, not via a mode probe |
-| **own every spawn** | spawning a worktree-ship is Operator's, including parallel work on a project that is already a ship; Pod never spawns |
-| **every spawn carries a brief and its own workspace** | `cyberlegion unit spawn` with a self-contained brief, `--at workspace` so the ship opens in its own workspace — binds every spawn, not only the first |
-| **watch and merge clean work** | every brief sets the pod's side (PR, report on thread, never merge, rebase when told); the dispatch announces the merges; a clean PR the Council's reply covers merges with no further turn and its pod is closed; with no reply, or a refused merge, or an unclean PR, it is held and raised, its pod left running |
-| **orchestrate several pods** | dependency-order merge; after each merge every other open pod of the order is told the default branch moved; a rebased PR is re-gated from scratch |
-| **list the fleet** | `cyberlegion unit who` (`--all` includes exited ships) |
-| **route messages between ships** | `cyberlegion mail send` / `inbox` / `read`, always by handle |
+| **list the fleet** | `cyberlegion unit who` (`--all` includes exited units) |
+| **route messages between sessions** | `cyberlegion mail send` / `inbox` / `read`, always by handle |
 | **relay a Council decision** | `cyberlegion unit nudge <handle> --message "<the Council's words>"`, as a turn; never `mail send` |
-| **sweep dead ships** | `cyberlegion unit prune` |
+| **sweep dead units** | `cyberlegion unit prune` |
 | **offload + harness-agnostic + MCP-free** | the fleet mechanics (spawn/who/mail/nudge/prune) are `cyberlegion` calls; a ship's pane is typed into only to relay the Council's words; no MCP, no same-harness assumption |
 | **speak in the dispatcher's voice** | one boolean over a whole run: does it read as a terse, status-forward dispatcher, or as default assistant prose — padded or apologetic? Distinct from the mechanics it offloads |
-| **the lifecycle loop, headless (F3)** | headless-operator pulls `ready`, claims as single writer, spawns per mission (AFK/HITL, capacity K), retires in Operation order (tearing down the pod that ran it with `cyberlegion unit close <id>`, not the fleet-wide `unit prune` sweep) and re-derives; missions only report; summoned-ticks-exits; all spawns Operator's, since Pod never spawns |
+| **the lifecycle loop, headless (F3)** | headless-operator runs a project's Captain duties as one tick, only while it holds the `captain` lease; pulls `ready`, claims as single writer, spawns and binds a Pod per mission (AFK/HITL, capacity K), retires in Operation order behind `service verify`, re-derives; never a daemon |
 | **the merge backstop (F3)** | `merge-backstop-governance`: Operation-order retirement, land only on green speculative CI, bisect a red batch (hold culprit / land innocent), confidence-bounded speculation depth, always-green trunk; mechanics offloaded to `gh`/git/CI |

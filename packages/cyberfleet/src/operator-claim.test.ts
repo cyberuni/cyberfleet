@@ -36,3 +36,22 @@ describe('operator claim', () => {
 		expect(decisions).toMatch(/init-cyberlegion[\s\S]*--home/)
 	})
 })
+
+// Operator spawns no Pods: a project's Captain spawns and owns them (cyberfleet#25, ADR-0023).
+describe('operator hands project work to its Captain', () => {
+	it('contacts or starts the Captain instead of spawning a Pod', () => {
+		expect(decisions).toMatch(/Operator spawns no Pods/)
+		expect(decisions).toMatch(/cyberfleet captain <project>/)
+		expect(decisions).toMatch(/cyberlegion service start <project>\s+captain --cwd <home>/)
+		expect(decisions).not.toMatch(/cyberlegion unit spawn/)
+	})
+
+	it('takes over nothing by being called', () => {
+		expect(decisions).toMatch(/Never `--force-generation`, never `service handoff`/)
+		expect(decisions).toMatch(/`cyberfleet pod bind` or `pod adopt`/)
+	})
+
+	it('leaves the merge watch to the Captain', () => {
+		expect(decisions).not.toMatch(/gh pr merge/)
+	})
+})

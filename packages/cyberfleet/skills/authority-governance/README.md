@@ -1,8 +1,8 @@
 # authority-governance
 
 Partial Skill: invoke by name only — the fleet's dispatch-versus-ratification seam. Not
-user-invocable — loaded by the **Operator** and **Pod** personas, the `headless-operator` agent, and
-project Captains when they land.
+user-invocable — loaded by the **Operator**, **Captain**, and **Pod** personas and the
+`headless-operator` agent.
 
 ## When it loads
 
@@ -25,10 +25,10 @@ project Captains when they land.
   is complete); a report *that* the Council decided is a claim. Its scope is the receiver's own outstanding
   decision-request, narrowed by the words; it is valid for nothing else.
 - **Standing merge delegations** — only the Council's own words delegate merges ahead of time: its reply
-  to the in-session Operator's announcement that it will merge the order's clean pull requests, an order
+  to the in-session Captain's announcement that it will merge the order's clean pull requests, an order
   that itself asks for those merges, or a loop summons that says so. A dispatch order or a summons alone
   delegates no merge. The delegation covers exactly that work: clean pull requests only, merged by the
-  Operator itself, never passed to a pod, and never any other ratification-class action. A pod may still
+  Captain itself, never passed to a pod, and never any other ratification-class action. A pod may still
   merge its own pull request on the Council's answer to the pod's own merge offer, a decision rather than
   a transfer, and the dispatcher never answers that offer with its own approval. Without it,
   hold the clean pull request and ask for that merge; a merge the harness refuses is never retried or

@@ -1,11 +1,12 @@
 @frozen
 Feature: operator — the command-center persona
   Unit suite for the Operator persona skill: the dispatcher automaton the Council calls to work the
-  command center — spawning every ship, listing who's out there, routing messages
-  between ships, and sweeping away the dead ones. The command center is a singleton that outlives
+  command center — putting work on a project through that project's Captain, listing who's out
+  there, routing messages between sessions, and sweeping away the dead ones. A ship is a project;
+  its Captain, not Operator, spawns and owns its Pods (ADR-0023). The command center is a singleton that outlives
   every session: the Council reaches it by invoking this skill, and that invocation is what connects
   this session to it. The connection is asserted by invocation, never by a probe. Its fleet
-  mechanics — spawn, who, mail, prune — all offload to the cyberlegion CLI. Its in-ship counterpart
+  mechanics — service start, who, mail, prune — all offload to the cyberlegion CLI. Its in-ship counterpart
   is the Pod persona, reached by routing in-ship work to it rather than by probing where this folder
   sits. The file store, ordering, spawn, and hook mechanics live in the sibling cyberlegion CLI
   project (mail, unit, mux).
@@ -22,7 +23,7 @@ Feature: operator — the command-center persona
   @behavior
   Scenario: Operator stays connected wherever the Council invokes it
     Given the Council invokes the Operator skill from inside a project an agent is already working in
-    When the Council asks it to prune the dead ships from the fleet
+    When the Council asks it to prune the dead units from the fleet
     Then it prunes them from the command center
     And it does not hand the request to Pod, since nothing about this folder can disconnect this session from the command center
 
@@ -30,7 +31,7 @@ Feature: operator — the command-center persona
   Scenario: Operator's description names the work it does, never where the Council stands
     Given the Operator skill's description
     When a harness reads it to decide whether to route a request here
-    Then it names the fleet-level work Operator is responsible for — spawning, listing, and pruning ships, and routing messages between sessions
+    Then it names the fleet-level work Operator is responsible for — putting work on a project through its Captain, listing and pruning units, and routing messages between sessions
     And it states no location condition such as being outside a ship
 
   # ── The command center's identity — connecting ──
@@ -108,24 +109,6 @@ Feature: operator — the command-center persona
     Then it runs no cyberlegion mail inbox --owner operator and no cyberlegion mail read --owner operator
     And that mail is still in the standing owner's unread set
 
-  @behavior
-  Scenario: a spawn brief names the spawning session's own handle as the return address
-    Given Operator is writing the cold brief for a ship it is about to spawn
-    When it names where the ship reports back
-    Then the brief names this session's own registered handle as the return address, and never this session's id
-
-  @behavior
-  Scenario: a spawn brief never routes the pod's reports to whichever session holds the claim
-    Given another session may claim the standing owner "operator" after this one spawns a ship
-    When Operator names where the ship reports back
-    Then the brief does not name the handle operator as the return address
-
-  @behavior
-  Scenario: a spawn brief falls back to the standing owner only when the spawner is gone
-    Given Operator is writing the cold brief for a ship it is about to spawn
-    When it names what the ship does if its return address resolves to no live unit
-    Then the brief tells the ship to report to the handle operator instead
-
   # ── Triggering ──
 
   @trigger
@@ -152,126 +135,37 @@ Feature: operator — the command-center persona
     Then Operator does not do that work itself
     And it routes the Council to the Pod persona in that ship
 
-  # ── Spawn a ship ──
+  # ── Put work on a project — through its Captain (cyberfleet#25, ADR-0023) ──
 
   @behavior
-  Scenario: every spawn carries a self-contained brief
-    Given the Council wants Operator to spawn any ship — the fleet's first, a new peer session, or a parallel worktree-ship on a project that is already a ship
-    When Operator spawns it
-    Then it runs cyberlegion unit spawn with a brief that stands on its own, since the new Pod starts cold and reads it through its own SessionStart hook, and addresses it by handle
+  Scenario: Operator spawns no Pods; it contacts or starts the project's Captain
+    Given the Council wants work put on a project — its first Pod, or parallel work on a project that already has Pods
+    When Operator takes the order
+    Then it reads the project's Captain with cyberfleet captain <project>
+    And when that Captain is not healthy it runs cyberlegion service start <project> captain --cwd <home> with the order as the task
+    And when it is healthy it hands the order to the owner with cyberlegion unit nudge --message
+    And it runs no cyberlegion unit spawn for a Pod itself
 
   @behavior
-  Scenario: every spawned ship opens in its own workspace
-    Given the Council wants Operator to spawn any ship — the fleet's first, a new peer session, or a parallel worktree-ship on a project that is already a ship
-    When Operator runs the spawn
-    Then it passes --at workspace on the cyberlegion unit spawn call, so the new ship opens in its own herdr workspace rather than a pane crowding a neighbor's
+  Scenario: calling Operator transfers no ownership
+    Given a healthy Captain owns the project's captain service, and the Council invokes Operator from another session
+    When Operator hands that Captain an order
+    Then it runs no service acquire --force-generation, no service handoff, and no cyberfleet pod bind or adopt
+    And the Captain still owns the service and its Pods
 
   @behavior
-  Scenario: every spawn is Operator's, including parallel work on a project that is already a ship
-    Given parallel work is wanted on a project that is already an initialized ship
-    When the request is routed
-    Then Operator spawns that worktree-ship itself, since spawning is fleet-level work the Council calls Operator for, and Pod never spawns
-
-  # ── Watch the pods it spawned, and merge clean work ──
-
-  @behavior
-  Scenario: every brief sets the pod's side of the watch
-    Given the Council asks Operator to dispatch a pod to add rate limiting to a public API
-    When Operator writes that pod's brief
-    Then the brief tells the pod to open a pull request and report on the brief's thread to the session that spawned it
-    And the brief tells the pod to shepherd that pull request until CI is green, and names the per-turn timeout and which review threads the pod resolves
-    And the brief tells the pod never to merge that pull request
-    And the brief tells the pod that when it is told the default branch moved, it rebases onto it, adapts its work to what landed, re-verifies, and reports again
-
-  @behavior
-  Scenario: dispatching announces the merges up front
-    Given the Council asks Operator to dispatch pods to add a CSV export and a PDF export, with no words about merging
-    When Operator dispatches them
-    Then it tells the Council, with the dispatch, that it will merge each of those pods' pull requests once it is clean, and names the clean bar
-    And it asks the Council to reply to that before any of those merges
-
-  @behavior
-  Scenario: an order that asks for the merges still gets the clean bar, and no wait for a reply
-    Given the Council asks Operator to dispatch a pod to add an export endpoint and to merge its pull request once it is clean
-    When Operator dispatches it
-    Then it names the clean bar to the Council with the dispatch
-    And it does not wait for a reply before merging that pod's pull request once it is clean
-
-  @behavior
-  Scenario: a clean pull request merges under the Council's reply to the announcement
-    Given Operator dispatched a pod on the Council's order to add a CSV export
-    And the Council replied "yes, go ahead" to Operator's announcement that it would merge that pod's pull request once clean
-    And the pod reports on its thread that the work is done, with a pull request
-    And that pull request has no merge conflict, no review requesting changes or left unresolved, and CI green on the merged result
-    When Operator reads the report
-    Then it merges the pull request with no further turn from the Council
-    And it tears down that pod with cyberlegion unit close
-
-  @behavior
-  Scenario: a clean pull request with no standing authorization waits for the Council's approval of that merge
-    Given Operator dispatched a pod on the Council's order to add a CSV export
-    And the Council has not replied to Operator's announcement that it would merge that pod's pull request once clean
-    And the pod reports on its thread that the work is done, with a pull request that is clean
-    When Operator reads the report
-    Then it does not merge the pull request
-    And it raises a decision-request naming the merge of that pull request, and leaves that pod running
-    And it merges nothing for that pull request while that request is unanswered
-
-  @behavior
-  Scenario: a merge the harness refuses is held, never retried
-    Given Operator holds the Council's reply authorizing the merge of a pod's clean pull request
-    And the harness denies Operator's gh pr merge for that pull request
-    When Operator handles the denial
-    Then it does not retry the merge or reach it another way
-    And it raises a decision-request naming the pull request and the denial, and leaves that pod running
-
-  @behavior
-  Scenario: a pull request that is not clean is held and raised
-    Given Operator dispatched a pod on the Council's order to add a CSV export
-    And the pod reports on its thread that the work is done, with a pull request
-    And CI is red on that pull request merged onto the default branch
-    When Operator reads the report
-    Then it does not merge the pull request
-    And it raises a decision-request naming the pull request and the failing check
-    And it leaves that pod running
-
-  @behavior
-  Scenario: several pods' pull requests merge in dependency order
-    Given Operator dispatched two pods on one Council order, one adding a shared date parser and one adding a report that uses it
-    And both pull requests are clean, and the report's pod reported done first
-    When Operator merges them
-    Then the date parser's pull request merges before the report's pull request
-
-  @behavior
-  Scenario: after a merge, every other open pod of the order is told the default branch moved
-    Given Operator dispatched three pods on one Council order
-    And one pod's pull request has just merged while the other two pull requests are still open
-    When that merge lands
-    Then Operator mails each of the two open pods, on its own brief's thread, that the default branch moved and it must rebase, adapt its work, re-verify, and report again
-    And it sends no such message to the pod whose work merged
-
-  @behavior
-  Scenario: a rebased pull request is gated again before it merges
-    Given a pod's pull request was clean, and Operator then told the pod the default branch moved
-    And the pod reports again after rebasing, and CI is red on the rebased pull request merged onto the default branch
-    When Operator reads the new report
-    Then it does not merge the rebased pull request on the earlier green result
-    And it raises a decision-request naming the pull request and the failing check
-
-  @behavior
-  Scenario: a rebased pull request that is clean again merges
-    Given a pod's pull request was clean and covered by the Council's reply to Operator's merge announcement, and Operator then told the pod the default branch moved
-    And the pod reports again after rebasing, and the rebased pull request has no merge conflict, no review requesting changes or left unresolved, and CI green on the merged result
-    When Operator reads the new report
-    Then it merges the rebased pull request with no further turn from the Council
+  Scenario: an order handed to a Captain carries only what the Council said
+    Given the Council asks Operator to have project alpha add a CSV export, with no words about merging
+    When Operator hands the order to alpha's Captain
+    Then the order carries no approval to merge, and the Captain announces its merges to the Council itself
 
   # ── List the fleet ──
 
   @behavior
-  Scenario: Operator lists the fleet, optionally including exited ships
+  Scenario: Operator lists the fleet, optionally including exited units
     Given the Council asks what sessions are out there
     When Operator reports the fleet
-    Then it runs cyberlegion unit who, adding --all to include exited ships when the Council wants them
+    Then it runs cyberlegion unit who, adding --all to include exited units when the Council wants them
 
   # ── Route messages between ships ──
 
@@ -297,17 +191,17 @@ Feature: operator — the command-center persona
 
   @behavior
   Scenario: a Council decision reaches the pod as a turn through unit nudge, never by mail
-    Given Operator dispatched a pod that reported on its thread it is blocked on a decision-request to drop the legacy endpoint
+    Given a pod reported on its thread that it is blocked on a decision-request to drop the legacy endpoint
     And the Council answered Operator in-session "Drop it."
     When Operator relays that decision to the pod
     Then it runs cyberlegion unit nudge with the pod's handle and --message "Drop it."
     And no cyberlegion mail send carries the Council's words
 
-  # ── Sweep dead ships ──
+  # ── Sweep dead units ──
 
   @behavior
-  Scenario: dead ships are swept on request
-    Given the Council asks to clear out dead ships
+  Scenario: dead units are swept on request
+    Given the Council asks to clear out dead units
     When Operator sweeps them
     Then it runs cyberlegion unit prune
 
@@ -316,7 +210,7 @@ Feature: operator — the command-center persona
   @behavior
   Scenario: every fleet mechanic is a cyberlegion call and no ship's harness is assumed
     Given Operator is dispatching the fleet
-    When it spawns, lists, sends, reads, or prunes
+    When it starts a Captain, lists, sends, reads, or prunes
     Then it invokes the cyberlegion CLI, never re-implements the file store or types into a ship's pane except to relay the Council's words with unit nudge --message, never reaches for an MCP messaging server, and makes no same-harness assumption
 
   # ── Resolving the cyberlegion CLI (cyberfleet#66) ──
@@ -350,10 +244,17 @@ Feature: operator — the command-center persona
   # ── The lifecycle loop — unattended fleet dispatch (F3, headless) ──
 
   @behavior
-  Scenario: the headless realization runs Operator's dispatch flow with no live Council
+  Scenario: the headless realization runs a project's Captain duties with no live Council
     Given there is no user or Council channel to drive dispatch (an unattended or scheduled trigger)
-    When the fleet must be advanced
-    Then the headless-operator agent runs the same fleet-level dispatch Operator runs in-session, carries no logic Operator plus the mission-graph engine do not already hold, and batches anything it cannot decide up its relay rather than asking live
+    When a project must be advanced
+    Then the headless-operator agent runs the same duties the project's Captain runs in-session, carries no logic the Captain plus the mission-graph engine do not already hold, and batches anything it cannot decide up its relay rather than asking live
+
+  @behavior
+  Scenario: a tick dispatches only while it holds the project's captain lease
+    Given the headless-operator is summoned for a tick on a project
+    When cyberlegion service acquire <project> captain resolves a healthy owner that is not this tick, or a start already in progress
+    Then the tick claims, spawns, merges, and retires nothing, and reports which Captain holds the project
+    And when the acquire reserves the lease instead, the tick binds itself as the Captain, checks cyberlegion service verify before every claim, merge, and retirement, and releases the lease when it exits
 
   @behavior
   Scenario: the loop pulls the ready frontier and dispatches the top-ranked mission
@@ -365,16 +266,16 @@ Feature: operator — the command-center persona
   Scenario: a mission is claimed on the graph before it is spawned
     Given the loop has picked a mission off the ready frontier
     When it dispatches that mission
-    Then it first appends a claim to the mission graph (status in-progress) as the single writer, then runs cyberlegion unit spawn for the ship that will execute it
+    Then it first appends a claim to the mission graph (status in-progress) as the single writer, then runs cyberlegion unit spawn for the Pod that will execute it, then binds that Pod with cyberfleet pod bind at the lease's generation
 
   @behavior
   Scenario: capacity and human-availability gate what actually runs
     Given the ready frontier carries more missions than the loop's capacity K, some HITL and some AFK
     When the loop dispatches
-    Then it runs at most K at once, sends an AFK mission to an autonomous ship and a HITL mission to a human channel, and leaves the rest on the frontier for a later tick
+    Then it runs at most K at once, sends an AFK mission to an autonomous Pod and a HITL mission to a human channel, and leaves the rest on the frontier for a later tick
 
   @behavior
-  Scenario: the Operator is the sole graph writer; dispatched missions only report
+  Scenario: the lease-holding Captain is the sole graph writer; dispatched missions only report
     Given a dispatched mission finishes and reports through its existing handoff relay
     When the loop processes the completion
     Then the dispatched mission never writes the graph itself, and the headless-operator appends the retirement so claims and retirements never race
@@ -384,7 +285,7 @@ Feature: operator — the command-center persona
     Given a mission reports done at handoff (its PR created)
     And the loop's summons carries the Council's own words authorizing the merges of this tick
     When the lifecycle loop handles the completion
-    Then it merges in Operation order behind the merge backstop, tears down the pod that ran it, appends the retirement and any discovered edges or nodes as the single writer, and re-derives ready to dispatch the next mission
+    Then it merges in Operation order behind the merge backstop, retires the pod that ran it with cyberfleet pod retire and closes it, appends the retirement and any discovered edges or nodes as the single writer, and re-derives ready to dispatch the next mission
 
   @behavior
   Scenario: a tick with no merge authorization holds the merge and reports it
@@ -396,9 +297,9 @@ Feature: operator — the command-center persona
 
   @behavior
   Scenario: the loop's spawns invoke no rule of the in-ship Pod persona
-    Given the lifecycle loop dispatches whole missions from the command center
-    When it spawns a ship per mission
-    Then those spawns are Operator's own dispatch — the same spawning remit Operator holds in-session, since Pod never spawns — and no rule of the in-ship Pod persona is invoked
+    Given the lifecycle loop dispatches whole missions for the project whose captain lease it holds
+    When it spawns a Pod per mission
+    Then those spawns are the Captain's own dispatch — the same spawning remit the Captain holds in-session, since Pod never spawns — and no rule of the in-ship Pod persona is invoked
 
   @behavior
   Scenario: the loop is summoned, ticks, and exits rather than running as a daemon
@@ -453,13 +354,13 @@ Feature: operator — the command-center persona
   @quality @rubric
   Scenario: Operator dispatches the fleet offloaded, brief-complete, and in role
     Given Operator is dispatching the fleet from the command center
-    When it spawns a ship, lists the fleet, routes a message, and is asked to run a mission inside one specific ship
+    When it puts work on a project through its Captain, lists the fleet, routes a message, and is asked to run a mission inside one specific ship
     Then the judge evaluates the dispatch against the rubric
       """
       dimensions:
         - name: mechanics_offloaded_to_cyberlegion_not_reimplemented
           max: 3
-        - name: every_brief_is_self_contained_and_addressed_by_handle
+        - name: hands_project_work_to_its_captain_never_spawns_a_pod
           max: 2
         - name: routes_in_ship_mission_work_to_pod
           max: 2
@@ -473,7 +374,7 @@ Feature: operator — the command-center persona
 
   @quality
   Scenario: Operator renders the dispatcher's register, not default assistant prose
-    Given Operator spawns a ship, lists the fleet, and is asked to run a mission inside one specific ship
+    Given Operator puts work on a project through its Captain, lists the fleet, and is asked to run a mission inside one specific ship
     When the Council reads what Operator said around those mechanics
     Then it reads as a terse, status-forward dispatcher — the fleet's state is the first thing said, never a wind-up to it
     And it does not pad: it never restates the request back and never offers to help further
