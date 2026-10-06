@@ -285,4 +285,4 @@ The forge is not a decision of its own: GitHub and GitLab run the same graph wit
 | S26 | merge words before any offer, the pipeline still running | `words telling Pod to merge with no offer open are an order, not a decision` |
 | S27 | an offer naming A, head at A, then a new human thread opens | `an offer lapses when readiness is lost` |
 | S28 | an offer naming A, head at A, then a new bot comment arrives | `an offer lapses when an untriaged comment arrives` |
-| S29 | an offer naming A, head at A, the Operator mails "yes, merge it" | `a Council decision that arrives by mail does not answer the offer` |
+| S29 | an offer naming A, head at A, its Captain mails "yes, merge it" | `a Council decision that arrives by mail does not answer the offer` |
