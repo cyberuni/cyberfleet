@@ -11,6 +11,7 @@ const PLUGIN_ROOT = new URL('../', import.meta.url)
 const read = (path: string) => readFileSync(fileURLToPath(new URL(path, PLUGIN_ROOT)), 'utf8')
 
 const ENTRY_POINTS = [
+	'skills/captain/SKILL.md',
 	'skills/operator/SKILL.md',
 	'skills/pod/SKILL.md',
 	'skills/crimp/SKILL.md',
