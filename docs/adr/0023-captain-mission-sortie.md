@@ -187,6 +187,38 @@ Each step is its own change, with its own tests:
 
 Steps 2 to 4 wait on cynapse's keying release (Open dependencies).
 
+## Amendment — the ownership half goes first (2026-10-06)
+
+[#25](https://github.com/cyberuni/cyberfleet/issues/25) was split. Its mail half (report routing in
+work channels, the legacy `operator` mailbox) moved to
+[#92](https://github.com/cyberuni/cyberfleet/issues/92), which still waits on cynapse. The ownership
+half needs no channel, so steps 2, 4, and 5 above land now, cut down to ownership:
+
+1. **The Captain is cyberlegion's `captain` project service.** `cyberlegion service start <project>
+   captain --cwd <home>` contacts the healthy owner or starts exactly one, in the default checkout.
+   Contacting never takes the lease: no `--force-generation`, no `service handoff` on contact.
+2. **Pod ownership is a fenced record, not a label.** The Captain records each Pod it spawns with
+   `cyberfleet pod bind`, at the service generation it holds. `pod bind`, `pod adopt`, and
+   `pod retire` all run inside cyberlegion's `withOwnership`, so a stale Captain cannot record,
+   take over, or retire a Pod, and a Pod is retired once. The record lives in the hub, beside the
+   lease it is fenced by.
+3. **Recovery is explicit.** `cyberfleet pods` lists a Pod whose Captain session is gone as
+   `unavailable` and one whose Captain generation was replaced as `orphaned`. Only `pod adopt` by
+   the current Captain moves it. Ownership never moves by contacting a Captain.
+4. **The project key is opaque.** cyberfleet stores the key cyberlegion resolved and never parses
+   it, so a cynapse project address (decision 0004) drops in without a rewrite.
+5. **Interactive and headless share the lease.** A headless lifecycle tick dispatches only while
+   it holds the project's `captain` lease, and runs every claim, merge, and retirement behind
+   `cyberlegion service verify`. A healthy interactive Captain therefore stops a headless tick from
+   dispatching, and the reverse.
+6. **Until the mail half lands**, a Pod still reports by cyberlegion mail to the handle its brief
+   names, which is now its Captain's. Point 8 (retiring the standing `operator` owner) moves with
+   the mail half to #92.
+
+Pooled worktrees (#25's amendment) wait on
+[cyber-mux#151](https://github.com/cyberuni/cyber-mux/issues/151); each Pod still gets a fresh
+worktree from `cyberlegion unit spawn`.
+
 ## Related Decisions
 
 - [ADR-0022](0022-cyberfleet-persona.md) — the persona layer this amends.
