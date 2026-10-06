@@ -32,6 +32,17 @@ npx cyberfleet jump <peer>
 # Pause a ship's mission — a cyberfleet-level status marker only (NOT the SDD pause-mission checkpoint)
 npx cyberfleet pause <peer>
 
+# A project's Captain: home checkout, branch, health, lease generation, owner (read-only)
+npx cyberfleet captain [project]
+
+# The Pods each Captain owns — owner state (current/unavailable/orphaned/retired) and whether each is live
+npx cyberfleet pods [project]
+
+# A Captain's record of a Pod it owns, fenced by its lease generation (from `cyberfleet captain`)
+npx cyberfleet pod bind <pod> --generation <n> [--project <ref>] [--captain <ref>] [--mission <ref>]
+npx cyberfleet pod adopt <pod> --generation <n> [--project <ref>] [--captain <ref>]   # a newer Captain takes over an orphaned Pod
+npx cyberfleet pod retire <pod> --generation <n> [--project <ref>] [--captain <ref>]
+
 # SDD gate operations
 npx cyberfleet gate approve <cr> <gateName>   # Council ratification — STUBBED, not safely relayable via CLI
 ```
@@ -60,19 +71,29 @@ A harness-agnostic, MCP-free way to direct a fleet of AI-agents across your proj
 You're the **Council** — the human. You give directions and make decisions; the fleet is
 autonomous and carries them out.
 
+### Captain
+
+The **Captain** is the resident automaton of a project. A **ship** is a project; its home is the
+default checkout, and your fleet is all the ships you've enlisted, across one project or many. The
+Captain is cyberlegion's `captain` project service, one per project, working from that home. It
+spawns the project's Pods into their own worktrees and records itself as each Pod's one owner,
+announces and gates merges, merges in dependency order, and retires each Pod once. Every act is
+fenced by its lease generation, so a Captain that a newer one replaced stops acting. Unavailable or
+orphaned Pods stay visible in `cyberfleet pods`; recovery is restarting the same Captain, or an
+explicit `cyberfleet pod adopt` by a newer one. See ADR-0023 in `docs/adr/`.
+
 ### Pod
 
-The **Pod** is the bridge-companion automaton of a ship. A ship is a workspace: a folder, a
-repository, or a worktree; your fleet is all the ships you've enlisted, across one project or many.
-Pod greets you, clears the inbox, runs the mission, and hails specialist crew when a concern belongs
-to one. When the work should fan out, it tells you that spawning a sister ship is the Operator's
-job, which you invoke directly — Pod never spawns.
+The **Pod** is the bridge-companion automaton on one sortie, working in its own worktree under its
+Captain. Pod greets you, clears the inbox, runs the mission, and hails specialist crew when a concern belongs
+to one. When the work should fan out, it tells you that spawning is the Captain's job, reached through
+the Operator — Pod never spawns.
 
 ### Operator
 
-The **Operator** is the dispatcher automaton of the **fleet** — it spawns every ship (your first, a
-new peer session, or a parallel worktree-ship on a project already in flight), lists who's out
-there, routes messages between ships, and sweeps away the dead ones. It's where you survey the fleet
+The **Operator** is the dispatcher automaton of the **fleet** — it spawns no Pods. It hands a
+project's work to that project's Captain (starting it in its home when it isn't healthy, or nudging
+the healthy one), lists who's out there, routes messages between ships, and sweeps away the dead ones. It's where you survey the fleet
 and decide what sails next.
 
 Operator sits at a **bunker seat**: a single dispatch desk that outlives any one session, held by
@@ -84,7 +105,7 @@ finished while nobody was watching are still waiting. The captain leads with wha
 and acks a report only once it's been acted on. Register the desk with a home and, once a
 `cyberlegion` release carries it, mail arriving with nobody at the desk spawns a captain there.
 With no Council on the line at all, the same seat runs unattended as a lifecycle loop: pull the
-ready missions, spawn a ship per mission, merge and retire each one as it lands.
+ready missions, act as the project's lease-holding Captain: spawn a Pod per mission, merge and retire each one as it lands.
 
 ### Crimp
 
@@ -114,10 +135,13 @@ Under the automatons sit two CLIs — cold, deterministic mechanism with no judg
 - `missions` — the Council view: ships × mission × gate × leash, derived from SDD state
 - `jump` — focus a ship's pane, or print its worktree path to `cd` into
 - `pause` — mark a ship's mission paused (a status marker only, not an SDD mission checkpoint)
+- `captain` — read-only view of a project's Captain: home, branch, health, lease generation, owner
+- `pods` — the Pods each Captain owns, with owner state and whether each is live
+- `pod bind|adopt|retire` — a Captain's record of Pod ownership, fenced by its generation
 - `gate approve` — deliberately stubbed: a Council ratification can't be safely relayed through a
   CLI, so it refuses and tells you to ratify in-session
 
-The plugin (this one) adds the **automaton** layer over both — Pod, Operator, and the crew are the
+The plugin (this one) adds the **automaton** layer over both — Captain, Pod, Operator, and the crew are the
 agents that reason about the situation and reach for the right command underneath, which is usually
 a `cyberlegion` one.
 

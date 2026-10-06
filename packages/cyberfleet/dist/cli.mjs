@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-import fs, { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import fs, { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { EventEmitter } from "node:events";
 import childProcess, { execFileSync } from "node:child_process";
-import path, { dirname, join, resolve } from "node:path";
+import path, { basename, dirname, isAbsolute, join, resolve, sep } from "node:path";
 import process$1 from "node:process";
 import { stripVTControlCharacters } from "node:util";
-import "node:crypto";
+import { createHash } from "node:crypto";
 import { homedir } from "node:os";
 //#region ../../node_modules/.pnpm/commander@15.0.0/node_modules/commander/lib/error.js
 /**
@@ -5691,6 +5691,29 @@ function touch(ctx) {
 	if (id) bumpLastSeen(ctx, id);
 }
 /**
+* Whether a unit's session is still there, as far as its backend can tell. "Cannot rule out alive"
+* must never become grounds to replace an owner — the same fail-closed policy `store/lock.ts` takes
+* on an ambiguous holder — so a session reads as gone only on positive evidence: its multiplexer
+* answered with a pane list and the pane is not in it. A record with no pane cannot be probed, and a
+* backend the caller cannot reach (a different server, no client, a failed query) answers with
+* nothing; both read as live. `paneExists` is not used here because it collapses "unreachable" into
+* "gone". An exited record is never live.
+*/
+function sessionLive(ctx, rec) {
+	if (rec.status === "exited" || rec.status === "stopped") return false;
+	if (!rec.pane) return true;
+	const panes = PANE_ADAPTERS[rec.pane.mux].listPanes(ctx.exec ?? realExec);
+	if (panes.length === 0) return true;
+	const id = rec.pane.id;
+	return panes.some((p) => p.id === id);
+}
+/** The per-mux session adapters `prune` consults for pane liveness — each answers with its own
+* backend primitive so a herdr pane is never probed with a tmux query, and vice versa. */
+const PANE_ADAPTERS = {
+	tmux: tmuxMuxAdapter,
+	herdr: herdrMuxAdapter
+};
+/**
 * Backend selection via cyber-mux's two-mode mux probe, normalized through the transitional
 * `$CYBERLEGION_MUX*` → `$CYBER_MUX*` env seam (`mux-env.ts`) — tmux/herdr map to their existing
 * cyber-mux adapters.
@@ -5731,6 +5754,271 @@ function toonList(name, items, fields, summary) {
 function emit(format, payload) {
 	if (format === "json") console.log(JSON.stringify(payload.json, null, 2));
 	else console.log(payload.toon);
+}
+/**
+* The canonical git common dir for `dir`, or undefined outside a repository. The common dir is the
+* one path every checkout of a repository shares — the default checkout and each linked worktree
+* all report the same `.git` — so it is what makes "same project from two worktrees" one reference.
+* Realpath'd so a symlinked path to the same repository cannot mint a second id.
+*/
+function commonDirOf(exec, dir) {
+	const out = exec("git", [
+		"-C",
+		dir,
+		"rev-parse",
+		"--path-format=absolute",
+		"--git-common-dir"
+	]);
+	if (!out) return void 0;
+	return realOrResolved(out);
+}
+/**
+* Derive a project's stable reference from its canonical common dir. Deterministic rather than
+* minted, so two worktrees registering the same project at the same instant converge on one id with
+* no lock, and two unrelated repositories that merely share a directory name never collide.
+*/
+function projectIdOf(commonDir) {
+	return `prj-${createHash("sha256").update(commonDir).digest("hex").slice(0, 16)}`;
+}
+function realOrResolved(path) {
+	try {
+		return realpathSync(path);
+	} catch {
+		return resolve(path);
+	}
+}
+/**
+* The default checkout's root, and whether that answer is authoritative. Asked from the default
+* checkout itself (its git dir IS the common dir), `--show-toplevel` is exact wherever the git dir
+* lives. Asked from a linked worktree, git has no pointer back to the default checkout when its git
+* dir was separated (`git init --separate-git-dir`) — even `git worktree list` then reports the git
+* dir — so the common dir's parent is only a guess.
+*/
+function defaultCheckoutOf(exec, dir, commonDir) {
+	const gitDir = exec("git", [
+		"-C",
+		dir,
+		"rev-parse",
+		"--path-format=absolute",
+		"--git-dir"
+	]);
+	const top = exec("git", [
+		"-C",
+		dir,
+		"rev-parse",
+		"--show-toplevel"
+	]);
+	if (gitDir && top && realOrResolved(gitDir) === commonDir) return {
+		root: realOrResolved(top),
+		exact: true
+	};
+	return {
+		root: dirname(commonDir),
+		exact: false
+	};
+}
+/**
+* Register (or idempotently refresh) the project containing `dir` — any checkout of it, default or
+* linked. Keeps the first `registeredAt`, so re-registering from a worktree is a no-op in effect.
+*/
+function registerProject(ctx, input = {}) {
+	const exec = ctx.exec ?? realExec;
+	const dir = resolve(input.dir ?? process.cwd());
+	const commonDir = commonDirOf(exec, dir);
+	if (!commonDir) throw new Error(`cannot register a project at "${dir}" — not inside a git repository`);
+	ctx.store.ensureMarker();
+	const id = projectIdOf(commonDir);
+	const existing = ctx.store.getProject(id);
+	const checkout = defaultCheckoutOf(exec, dir, commonDir);
+	const root = checkout.exact || !existing ? checkout.root : existing.root;
+	const rec = {
+		id,
+		name: basename(root),
+		root,
+		commonDir,
+		registeredAt: existing?.registeredAt ?? new Date(ctx.now?.() ?? Date.now()).toISOString()
+	};
+	ctx.store.putProject(rec);
+	return rec;
+}
+function looksLikePath(ref) {
+	return isAbsolute(ref) || ref.startsWith(".") || ref.includes(sep) || ref.includes("/");
+}
+function isDirectory(path) {
+	return existsSync(path) && statSync(path).isDirectory();
+}
+/**
+* Resolve a project from anywhere — by id, by a path inside any of its checkouts, or by name when
+* exactly one registered project carries it. A path registers its project on first use: git has
+* already confirmed it is a repository, and registering is idempotent, so there is nothing a typo
+* could mint. A name never registers — nothing can be found by a name no checkout has reported —
+* and an ambiguous name names its candidates rather than picking one.
+*/
+function resolveProject(ctx, ref) {
+	const byId = ctx.store.getProject(ref);
+	if (byId) return byId;
+	const asPath = resolve(ref);
+	if (looksLikePath(ref) && isDirectory(asPath)) return byPath(ctx, asPath);
+	const named = ctx.store.listProjects().filter((p) => p.name === ref);
+	if (named.length === 1) return named[0];
+	if (named.length > 1) throw new Error(`project name "${ref}" is ambiguous — ${named.map((p) => `${p.id} (${p.root})`).join(", ")}; pass an id or a path`);
+	if (isDirectory(asPath)) return byPath(ctx, asPath);
+	throw new Error(`no registered project "${ref}" (tried id, path, and name) — pass a path inside the repository to register it`);
+}
+function byPath(ctx, dir) {
+	const commonDir = commonDirOf(ctx.exec ?? realExec, dir);
+	if (!commonDir) throw new Error(`"${dir}" is not inside a git repository`);
+	return ctx.store.getProject(projectIdOf(commonDir)) ?? registerProject(ctx, { dir });
+}
+/** A refused ownership transition. `stale` means the caller's generation, token, or holder claim is
+* not the current one — the caller is not (or no longer) the authority it claims to be. */
+var ServiceOwnershipError = class extends Error {
+	code;
+	constructor(code, message) {
+		super(message);
+		this.code = code;
+		this.name = "ServiceOwnershipError";
+	}
+};
+const SERVICE_NAME = /^[a-z0-9][a-z0-9_-]{0,62}$/;
+function assertServiceName(name) {
+	if (!SERVICE_NAME.test(name)) throw new Error(`invalid service name "${name}" — use lowercase letters, digits, "-" or "_" (max 63)`);
+}
+function serviceEndpointId(projectId, name) {
+	return `svc-${projectId}-${name}`;
+}
+const nowMs = (ctx) => ctx.now?.() ?? Date.now();
+const iso = (ms) => new Date(ms).toISOString();
+function lockName(projectId, name) {
+	return `service-${projectId}-${name}`;
+}
+function isLive$1(ctx, unit) {
+	if (unit.status === "exited") return false;
+	return ctx.isLive ? ctx.isLive(unit) : sessionLive(ctx, unit);
+}
+function ensureEndpoint(ctx, project, name) {
+	const id = serviceEndpointId(project.id, name);
+	const existing = loadAgent(ctx.store, id);
+	if (existing) return existing;
+	ctx.store.ensureMarker();
+	const ts = iso(nowMs(ctx));
+	const rec = {
+		id,
+		handle: `${name}@${project.name}`,
+		kind: "service",
+		service: {
+			project: project.id,
+			name
+		},
+		cwd: project.root,
+		pane: null,
+		status: "active",
+		createdAt: ts,
+		lastSeen: ts
+	};
+	saveAgent(ctx.store, rec);
+	return rec;
+}
+function view(ctx, project, endpoint, lease) {
+	const base = {
+		project,
+		endpoint,
+		lease
+	};
+	if (lease.state === "vacant") return {
+		...base,
+		health: "vacant",
+		control: "none"
+	};
+	if (lease.state === "reserved") {
+		const expired = nowMs(ctx) > Date.parse(lease.reservation?.expiresAt ?? "");
+		return {
+			...base,
+			health: expired ? "expired" : "starting",
+			control: "none",
+			...expired ? { note: "the reservation expired without a bound owner; the next acquire takes over" } : {}
+		};
+	}
+	const owner = lease.holder ? loadAgent(ctx.store, lease.holder) : void 0;
+	if (!owner) return {
+		...base,
+		health: "unhealthy",
+		control: "none",
+		note: "the owner has no unit record"
+	};
+	const control = owner.pane || ctx.store.findPaneByAgentId(owner.id) ? "pane" : "none";
+	const controlNote = control === "none" ? "the owner resolves, but its session control is not recoverable from here (no multiplexer pane — e.g. a native subagent only its parent can drive)" : void 0;
+	if (!isLive$1(ctx, owner)) return {
+		...base,
+		owner,
+		health: "unhealthy",
+		control,
+		note: "the owner session is gone"
+	};
+	return {
+		...base,
+		owner,
+		health: "healthy",
+		control,
+		...controlNote ? { note: controlNote } : {}
+	};
+}
+function vacantLease(ctx, projectId, name) {
+	return {
+		project: projectId,
+		service: name,
+		endpoint: serviceEndpointId(projectId, name),
+		generation: 0,
+		state: "vacant",
+		updatedAt: iso(nowMs(ctx))
+	};
+}
+/** Load the project, service endpoint, and lease — creating the endpoint and a vacant lease when
+* `create` is set, else throwing for a service that was never started. */
+function load(ctx, projectRef, name, create) {
+	assertServiceName(name);
+	const project = resolveProject(ctx, projectRef);
+	const lease = ctx.store.getServiceLease(project.id, name);
+	const endpoint = loadAgent(ctx.store, serviceEndpointId(project.id, name));
+	if (lease && endpoint) return {
+		project,
+		endpoint,
+		lease
+	};
+	if (!create) throw new Error(`no service "${name}" in project ${project.name} (${project.id})`);
+	return {
+		project,
+		endpoint: ensureEndpoint(ctx, project, name),
+		lease: lease ?? vacantLease(ctx, project.id, name)
+	};
+}
+function stale(message) {
+	return new ServiceOwnershipError("stale", message);
+}
+/** Read a service's ownership without changing anything. Throws for a service never started. */
+function resolveService(ctx, projectRef, name) {
+	const { project, endpoint, lease } = load(ctx, projectRef, name, false);
+	return view(ctx, project, endpoint, lease);
+}
+/**
+* The fencing check: succeed only when `unit` owns the service at exactly `generation`. A runtime
+* calls this before acting as the service's authority; a stale runtime — replaced, handed off, or
+* recovered past — is refused.
+*/
+function verifyOwnership(ctx, projectRef, name, input) {
+	const { project, endpoint, lease } = load(ctx, projectRef, name, false);
+	if (lease.state !== "active" || lease.holder !== input.unit || lease.generation !== input.generation) throw stale(`"${input.unit}" at generation ${input.generation} is not the owner (now ${lease.state}${lease.holder ? ` by ${lease.holder}` : ""} at ${lease.generation})`);
+	return view(ctx, project, endpoint, lease);
+}
+/**
+* Run `fn` as the verified owner, holding the service lock so no transition can interleave between
+* the check and the act. For short critical sections only — the lock is bounded-wait for everyone
+* else — and never reentrant: `fn` must not call another service transition on the same service.
+*/
+function withOwnership(ctx, projectRef, name, input, fn) {
+	assertServiceName(name);
+	const project = resolveProject(ctx, projectRef);
+	return ctx.store.withLock(lockName(project.id, name), () => fn(verifyOwnership(ctx, project.id, name, input)));
 }
 /** A record file exists but its content didn't parse as JSON — a torn write (crash mid-`writeFileSync`,
 * pre-atomic-write code path) or on-disk tampering. Carries the file path and the original parse
@@ -6091,6 +6379,201 @@ var FileStore = class {
 		return withLock(this.root, name, fn);
 	}
 };
+//#endregion
+//#region src/captain.ts
+const CAPTAIN_SERVICE = "captain";
+/**
+* Where the project's Captain stands, read-only: no claim, no start. A project whose Captain was
+* never started reads as `vacant` at generation 0.
+*/
+function showCaptain(ctx, projectRef) {
+	const project = resolveProject(ctx, projectRef);
+	const exec = ctx.exec ?? realExec;
+	const branches = {
+		homeBranch: exec("git", [
+			"-C",
+			project.root,
+			"branch",
+			"--show-current"
+		]) || void 0,
+		defaultBranch: exec("git", [
+			"-C",
+			project.root,
+			"symbolic-ref",
+			"--short",
+			"refs/remotes/origin/HEAD"
+		])?.replace(/^origin\//, "")
+	};
+	const base = {
+		project: project.id,
+		name: project.name,
+		home: project.root,
+		...branches
+	};
+	let view;
+	try {
+		view = resolveService(ctx, project.id, CAPTAIN_SERVICE);
+	} catch {
+		return {
+			...base,
+			health: "vacant",
+			generation: 0,
+			control: "none",
+			note: "no Captain has been started"
+		};
+	}
+	return {
+		...base,
+		health: view.health,
+		generation: view.lease.generation,
+		owner: view.lease.holder,
+		ownerHandle: view.owner?.handle,
+		control: view.control,
+		note: view.note
+	};
+}
+/**
+* Record `captain` as the one owner of `pod`. The pod must run in its own worktree of this project —
+* not the Captain's home, not another project's checkout. Rebinding the same owner is a no-op; a pod
+* another Captain generation owns is refused (recover it with `adoptPod`).
+*/
+function bindPod(ctx, act) {
+	const podProject = podProjectOf(ctx, act.pod);
+	return fenced(ctx, act, (view) => {
+		if (podProject.id !== view.project.id) throw new Error(`pod "${act.pod}" runs in another project's checkout (${podProject.name}), not ${view.project.name}`);
+		if (podProject.worktree === view.project.root) throw new Error(`pod "${act.pod}" sits in the Captain's home; a pod needs its own worktree`);
+		const existing = readBinding(ctx, act.pod);
+		if (existing?.state === "retired") throw new Error(`pod "${act.pod}" is already retired`);
+		if (existing) {
+			if (existing.captain === act.captain && existing.generation === act.generation) return existing;
+			throw new Error(`pod "${act.pod}" is owned by ${existing.captain} at generation ${existing.generation}; adopt it to take it over`);
+		}
+		return writeBinding(ctx, {
+			pod: act.pod,
+			project: view.project.id,
+			captain: act.captain,
+			generation: act.generation,
+			...act.mission ? { mission: act.mission } : {},
+			state: "active",
+			boundAt: now(ctx)
+		});
+	});
+}
+/**
+* Explicit recovery: the current Captain takes over a pod whose owner is no longer the current
+* generation. Ownership never moves by a session merely contacting the Captain or reading its mail.
+*/
+function adoptPod(ctx, act) {
+	return fenced(ctx, act, (view) => {
+		const existing = activeBinding(ctx, act.pod, view);
+		if (existing.generation === act.generation && existing.captain === act.captain) throw new Error(`${act.captain} already owns pod "${act.pod}" at generation ${act.generation}`);
+		return writeBinding(ctx, {
+			...existing,
+			captain: act.captain,
+			generation: act.generation,
+			previous: [...existing.previous ?? [], {
+				captain: existing.captain,
+				generation: existing.generation
+			}]
+		});
+	});
+}
+/**
+* Retire a pod once its work is merged or abandoned — exactly once, and only by the Captain that
+* owns it now. The pod's unit is torn down separately (`cyberlegion unit close`).
+*/
+function retirePod(ctx, act) {
+	return fenced(ctx, act, (view) => {
+		const existing = activeBinding(ctx, act.pod, view);
+		if (existing.captain !== act.captain || existing.generation !== act.generation) throw new Error(`pod "${act.pod}" is owned by ${existing.captain} at generation ${existing.generation}; adopt it before retiring it`);
+		return writeBinding(ctx, {
+			...existing,
+			state: "retired",
+			retiredAt: now(ctx)
+		});
+	});
+}
+/** Every recorded pod — of one project, or of all — with where its ownership stands now. */
+function listPods(ctx, projectRef) {
+	const key = projectRef === void 0 ? void 0 : resolveProject(ctx, projectRef).id;
+	const views = /* @__PURE__ */ new Map();
+	const viewOf = (project) => {
+		if (!views.has(project)) try {
+			views.set(project, resolveService(ctx, project, CAPTAIN_SERVICE));
+		} catch {
+			views.set(project, void 0);
+		}
+		return views.get(project);
+	};
+	return readBindings(ctx).filter((b) => key === void 0 || b.project === key).map((b) => {
+		const unit = ctx.store.getAgent(b.pod);
+		return {
+			...b,
+			handle: unit?.handle,
+			branch: unit?.worktree?.branch,
+			live: unit ? isLive(ctx, unit) : false,
+			owner: ownerState(b, viewOf(b.project))
+		};
+	});
+}
+function ownerState(b, view) {
+	if (b.state === "retired") return "retired";
+	if (!view || view.lease.generation !== b.generation || view.lease.holder !== b.captain) return "orphaned";
+	return view.lease.state === "active" && view.health === "healthy" ? "current" : "unavailable";
+}
+/** The registry's view of a pod's session; `cyberlegion unit show` probes its multiplexer. */
+function isLive(ctx, unit) {
+	if (unit.status === "exited" || unit.status === "stopped") return false;
+	return ctx.isLive ? ctx.isLive(unit) : true;
+}
+function fenced(ctx, act, fn) {
+	return withOwnership(ctx, act.project, CAPTAIN_SERVICE, {
+		unit: act.captain,
+		generation: act.generation
+	}, fn);
+}
+function activeBinding(ctx, pod, view) {
+	const existing = readBinding(ctx, pod);
+	if (!existing || existing.project !== view.project.id) throw new Error(`pod "${pod}" is not bound in ${view.project.name}`);
+	if (existing.state === "retired") throw new Error(`pod "${pod}" is already retired`);
+	return existing;
+}
+function podProjectOf(ctx, pod) {
+	const unit = ctx.store.getAgent(pod);
+	if (!unit) throw new Error(`no unit "${pod}"`);
+	if (!unit.worktree?.root) throw new Error(`pod "${pod}" has no worktree; a pod runs in its own project worktree`);
+	const worktree = existsSync(unit.worktree.root) ? realpathSync(unit.worktree.root) : unit.worktree.root;
+	return {
+		...resolveProject(ctx, unit.worktree.root),
+		worktree
+	};
+}
+const now = (ctx) => new Date(ctx.now?.() ?? Date.now()).toISOString();
+const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/;
+function podsDir(ctx) {
+	return join(ctx.store.root, "cyberfleet", "pods");
+}
+function bindingFile(ctx, pod) {
+	if (!SAFE_ID.test(pod)) throw new Error(`invalid pod id "${pod}"`);
+	return join(podsDir(ctx), `${pod}.json`);
+}
+function readBinding(ctx, pod) {
+	const file = bindingFile(ctx, pod);
+	return existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : void 0;
+}
+function readBindings(ctx) {
+	const dir = podsDir(ctx);
+	if (!existsSync(dir)) return [];
+	return readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => JSON.parse(readFileSync(join(dir, f), "utf8")));
+}
+function writeBinding(ctx, binding) {
+	const file = bindingFile(ctx, binding.pod);
+	mkdirSync(podsDir(ctx), { recursive: true });
+	const tmp = `${file}.${process.pid}.tmp`;
+	writeFileSync(tmp, `${JSON.stringify(binding, null, "	")}\n`);
+	renameSync(tmp, file);
+	return binding;
+}
 //#endregion
 //#region src/sdd/hal.ts
 /**
@@ -6543,6 +7026,95 @@ rootOpts(program.command("pause")).description("pause a ship's mission — a cyb
 		json: rec
 	});
 	process.stderr.write("note: this only flips the cyberfleet ship record to status:paused — it is NOT a bridge to SDD's pause-mission checkpoint (which rewrites the plan brief's todos/## NEXT anchor). Run `sdd:pause-mission` in-session for the actual mission checkpoint (flagged gap).\n");
+});
+rootOpts(program.command("captain")).description("show a project's Captain — its home checkout, owner, generation, and health (read-only; starts nothing)").argument("[project]", "project key, a path in any of its checkouts, or its unique name (default: here)").action((project, opts) => {
+	const view = showCaptain(ctxOf(opts), project ?? process.cwd());
+	emit(formatOf(opts), {
+		toon: toonObject({ ...view }),
+		json: view
+	});
+});
+rootOpts(program.command("pods")).description("list the pods each Captain owns, and where that ownership stands (current/unavailable/orphaned/retired)").argument("[project]", "project key, a path in any of its checkouts, or its unique name (default: every project)").action((project, opts) => {
+	const rows = listPods(ctxOf(opts), project);
+	emit(formatOf(opts), {
+		toon: toonList("pods", rows, [
+			{
+				key: "pod",
+				get: (r) => r.handle ?? r.pod
+			},
+			{
+				key: "branch",
+				get: (r) => r.branch ?? "-"
+			},
+			{
+				key: "live",
+				get: (r) => r.live ? "yes" : "no"
+			},
+			{
+				key: "captain",
+				get: (r) => `${r.captain}@${r.generation}`
+			},
+			{
+				key: "owner",
+				get: (r) => r.owner
+			},
+			{
+				key: "mission",
+				get: (r) => r.mission ?? "-"
+			}
+		], `${rows.length} pods`),
+		json: rows
+	});
+});
+const podCmd = program.command("pod").description("a Captain's record of the pods it owns — every change fenced by its generation");
+const podAct = (cmd) => rootOpts(cmd).argument("<pod>", "the pod unit (handle or id)").requiredOption("--generation <n>", "the Captain service generation the caller owns (from `cyberfleet captain`)").option("--project <ref>", "project key, path, or unique name (default: here)").option("--captain <ref>", "the acting Captain unit (default: this session)");
+function actOf(ctx, pod, opts) {
+	const captain = opts.captain ? resolveAgent(ctx.store, opts.captain).id : resolveSelfId(ctx);
+	if (!captain) throw new Error("no session identity — run as a registered unit, or pass --captain");
+	const generation = Number(opts.generation);
+	if (!Number.isInteger(generation) || generation < 0) throw new Error("--generation must be a non-negative integer");
+	return {
+		project: opts.project ?? process.cwd(),
+		captain,
+		generation,
+		pod: resolveAgent(ctx.store, pod).id
+	};
+}
+podAct(podCmd.command("bind")).description("record this Captain as the one owner of a pod in its own project worktree").option("--mission <ref>", "the mission the pod runs").action((pod, opts) => {
+	const ctx = ctxOf(opts);
+	const binding = bindPod(ctx, {
+		...actOf(ctx, pod, opts),
+		...opts.mission ? { mission: opts.mission } : {}
+	});
+	emit(formatOf(opts), {
+		toon: toonObject({
+			...binding,
+			previous: void 0
+		}),
+		json: binding
+	});
+});
+podAct(podCmd.command("adopt")).description("explicit recovery: take over a pod whose Captain generation was replaced").action((pod, opts) => {
+	const ctx = ctxOf(opts);
+	const binding = adoptPod(ctx, actOf(ctx, pod, opts));
+	emit(formatOf(opts), {
+		toon: toonObject({
+			...binding,
+			previous: void 0
+		}),
+		json: binding
+	});
+});
+podAct(podCmd.command("retire")).description("retire a pod once — only its current owner can; close its unit separately").action((pod, opts) => {
+	const ctx = ctxOf(opts);
+	const binding = retirePod(ctx, actOf(ctx, pod, opts));
+	emit(formatOf(opts), {
+		toon: toonObject({
+			...binding,
+			previous: void 0
+		}),
+		json: binding
+	});
 });
 rootOpts(program.command("gate").description("SDD gate operations").command("approve")).description("Council ratification of a gate — STUBBED, not safely relayable through this CLI (see note)").argument("<cr>", "CR ref").argument("<gateName>", "spec | impl").action((cr, gateName, _opts) => {
 	if (gateName !== "spec" && gateName !== "impl") throw new Error("<gateName> must be spec | impl");

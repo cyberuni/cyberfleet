@@ -61,6 +61,10 @@ Units:
   HAL tell when earned. Never spawns — that is Operator's. No location precondition and no mode
   check: it is reached by what the Council asked, and `register` on entry is the only setup. Offloads
   its mechanics — `cyberlegion` for identity and mail, `cyberfleet` for missions.
+- [**`captain`**](./captain/README.md) *(behavioral)* — the **Captain** persona (the `fleet`
+  project's resident): one per project, the `captain` project service in the default checkout. It
+  spawns the project's Pods into their own worktrees, records itself as each Pod's one owner, merges
+  their clean work, and retires each once — every act fenced by its lease's generation.
 - [**`operator`**](./operator/README.md) *(behavioral)* — the **Operator** persona (the `fleet`
   command-center dispatcher): **any spawn**, list the fleet, route messages between ships, and prune
   dead ones. Connected to the command center by invocation, never by a mode probe. Offloads its

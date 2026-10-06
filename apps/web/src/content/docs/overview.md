@@ -1,6 +1,6 @@
 ---
 title: cyberfleet Overview
-description: A harness-agnostic, MCP-free way to direct a fleet of AI agents across your projects — Pod, Operator, Crimp, and Mechanic over the cyberfleet console.
+description: A harness-agnostic, MCP-free way to direct a fleet of AI agents across your projects — Captain, Pod, Operator, Crimp, and Mechanic over the cyberfleet console.
 ---
 
 **cyberfleet** is a harness-agnostic, MCP-free way to direct a fleet of AI agents across your projects. It is the fleet-persona layer on top of [cyberlegion](https://cyberuni.github.io/cyberlegion/) — it carries only fleet-specific logic (ships, missions, and the Council view, derived from [SDD](https://cyberuni.github.io/cyber-sdd/sdd/overview/) state), while the mechanism verbs (register, send, spawn, prune, …) run through the `cyberlegion` console underneath.
@@ -9,24 +9,28 @@ You're the **Council** — the human. You give directions and make decisions; th
 
 ## The automatons
 
-A **ship** is a workspace: a folder, a repository, or a worktree. Your fleet is all the ships you've enlisted, across one project or many.
+A **ship** is a project; its home is the default checkout, and its Pods work in their own worktrees. Your fleet is all the ships you've enlisted, across one project or many.
 
 | Automaton | Reached by | What it does |
 |---|---|---|
-| [**Pod**](/cyberfleet/pod/) | The work asked — bridge work on a project | The bridge-companion of a ship — greets you, clears the inbox, and runs the mission. Never spawns. |
-| [**Operator**](/cyberfleet/operator/) | Invocation — connects your session to the command center | The dispatcher — spawns every ship, lists who's out there, routes messages between ships, and sweeps away the dead ones |
+| [**Captain**](/cyberfleet/captain/) | Project work — the project's one resident automaton | Spawns the project's Pods, records itself as each Pod's owner, gates and merges their work, and retires them |
+| [**Pod**](/cyberfleet/pod/) | The work asked — bridge work on a project | The bridge-companion on one sortie — greets you, clears the inbox, and runs the mission in its own worktree. Never spawns. |
+| [**Operator**](/cyberfleet/operator/) | Invocation — connects your session to the command center | The dispatcher — hands project work to its Captain, lists who's out there, routes messages between ships, and sweeps away the dead ones. Spawns no Pods. |
 | [**Crimp**](/cyberfleet/crimp/) | The Tavern storefront | Recruits **crews** — installable specialist personas — signs them on, and discharges them |
 | [**Mechanic**](/cyberfleet/mechanic/) *(coming soon)* | The bench, over any automaton | Builds a new automaton and reconfigures existing ones — guidance, model, effort, loadout, and leash |
 
 ## The console
 
-Under the automatons sits the `cyberfleet` **console** — the CLI. It's cold and deterministic: identity, messaging, spawning sessions, worktrees, and nothing more. The plugin adds the **automaton** layer on top — Pod, Operator, and the crew are the agents that reason about the situation and reach for the right `cyberfleet` command underneath. Two artifacts, one name: the console is the mechanics, the automatons are the agency that drives them.
+Under the automatons sits the `cyberfleet` **console** — the CLI. It's cold and deterministic: identity, messaging, spawning sessions, worktrees, and nothing more. The plugin adds the **automaton** layer on top — Captain, Pod, Operator, and the crew are the agents that reason about the situation and reach for the right `cyberfleet` command underneath. Two artifacts, one name: the console is the mechanics, the automatons are the agency that drives them.
 
 | Command | What it does |
 |---|---|
 | `cyberfleet missions` | Who needs the Council's hands — ships × mission × gate × leash, derived from SDD state |
 | `cyberfleet jump <peer>` | Select/focus a ship's session, or print its worktree path to `cd` into |
 | `cyberfleet pause <peer>` | Flip a ship's status marker (**not** the SDD `pause-mission` checkpoint) |
+| `cyberfleet captain [project]` | Read-only view of a project's Captain — home, branch, health, lease generation, owner |
+| `cyberfleet pods [project]` | The Pods each Captain owns, with owner state (current, unavailable, orphaned, retired) and whether each is live |
+| `cyberfleet pod bind\|adopt\|retire <pod> --generation <n>` | Record a Pod's one owner, take over an orphaned one, or retire it — each fenced by the Captain's lease generation |
 | `cyberfleet gate approve <cr> <gate>` | Council ratification — **stubbed**; a human-attributed gate write can't be safely relayed via CLI |
 
 ## The control panel

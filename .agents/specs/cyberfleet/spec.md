@@ -92,6 +92,7 @@ now; cyberfleet no longer owns or re-describes them.
 | Folder | Type | What |
 |---|---|---|
 | [`pod/`](./pod/README.md) | behavioral | the **Pod** persona — the ship's bridge: greet, clear inbox, run the mission, hail crew, HAL tell, shepherd its PR to green and report ready to discharge; no precondition, no probe; never spawns |
+| [`captain/`](./captain/README.md) | behavioral | the **Captain** persona — one per project, the `captain` project service in its default checkout: contact or start it, spawn its Pods into their own worktrees and record their one owner, merge and retire them once, keep unavailable and orphaned Pods visible; every act fenced by the lease's generation |
 | [`operator/`](./operator/README.md) | behavioral | the **Operator** persona — the command-center dispatcher: any spawn, list the fleet, route messages, prune dead ships |
 | [`recruitment/`](./recruitment/README.md) | behavioral | the **Crimp** persona — recruit/discharge crew types from the Tavern (browse, install, register; uninstall, retire) |
 | [`mechanic/`](./mechanic/README.md) | behavioral | the **Mechanic** persona — build a new automaton or adjust an existing one's program (governance/model/effort/leash), re-chip its loadout, hot-swap the unit |
@@ -105,6 +106,9 @@ Where a new concept lives — slot here, do not invent placement:
 
 - **a new bridge behavior** (mission entry, inbox etiquette, hailing crew, the HAL tell — anything
   Pod does while working a ship) → `pod/` (the Pod persona).
+- **a new project-resident behavior** (contacting or starting a project's Captain, spawning a Pod,
+  Pod ownership and recovery, merging and retiring a project's Pods, the Captain view and `pod`
+  verbs) → `captain/` (the Captain persona).
 - **a new fleet-level dispatch behavior** (**any** spawn, list the fleet, route between ships, prune
   — anything the Council calls Operator for) → `operator/` (the Operator persona).
 - **a "which persona am I" concern, a ship-commissioning or mode-detection operation** →
@@ -161,6 +165,6 @@ reason to exist, and the `hal` field it derives is load-bearing for the Pod pers
 | Concept | Facets |
 |---|---|
 | `crew-ops` | `mechanic/` (behavior) · `recruitment/` (behavior) |
-| `fleet` | `authority/` (behavior) · `operator/` (behavior) · `pod/` (behavior) |
+| `fleet` | `authority/` (behavior) · `captain/` (behavior) · `operator/` (behavior) · `pod/` (behavior) |
 
 <!-- END generated: by-concept -->

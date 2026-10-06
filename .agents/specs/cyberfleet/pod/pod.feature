@@ -2,7 +2,7 @@
 Feature: pod — the ship's bridge persona
   Unit suite for the Pod persona skill: the bridge-companion automaton that works a ship's bridge —
   greets the Council, keeps the inbox clear, runs the mission through SDD, hails specialist crew, and
-  speaks the HAL tell when earned. Pod never spawns — that is Operator's. Pod has no location
+  speaks the HAL tell when earned. Pod never spawns — a project's Pods are its Captain's. Pod has no location
   precondition and no mode check: it is reached by what the Council asked, and registering on entry is
   the only setup it needs. Every mechanic offloads to a CLI — cyberlegion for identity and mail,
   cyberfleet for missions. Its command-center counterpart is the Operator persona, which the Council
@@ -102,15 +102,22 @@ Feature: pod — the ship's bridge persona
   # ── Spawning is not Pod's ──
 
   @behavior
-  Scenario: Pod never spawns — concurrent work is Operator's
-    Given Pod is inside a ship and the Council wants concurrent work on this project
+  Scenario: Pod never spawns — concurrent work is the project Captain's
+    Given Pod is working a project and the Council wants concurrent work on this project
     When Pod reaches that request
     Then Pod does not spawn anything itself
-    And it tells the Council that spawning a worktree-ship is Operator's work, which the Council invokes directly
+    And it tells the Council that another Pod is the project Captain's to spawn, which the Council reaches directly or through Operator
+
+  @behavior
+  Scenario: a Pod works its sortie only in the worktree its Captain spawned it into
+    Given a Captain spawned this Pod into a worktree of the project, and its brief names the Captain's handle as its return address
+    When Pod works its mission
+    Then every edit it makes is in that worktree, never in the Captain's home or another Pod's worktree
+    And it reports to that Captain's handle
 
   @behavior
   Scenario: a freshly spawned worktree needs no commissioning step before its Pod works
-    Given Operator has just spawned a worktree-ship and its fresh Pod is starting cold
+    Given a project's Captain has just spawned a Pod into its own worktree, and the Pod is starting cold
     When that Pod reads its brief and begins the mission
     Then it works the bridge immediately, with no marker to inherit, no commit to wait on, and nothing to commission
 
@@ -358,7 +365,7 @@ Feature: pod — the ship's bridge persona
   @behavior
   Scenario: Pod does not merge a pull request that has already merged
     Given Pod's open merge offer names head commit A
-    And the Operator then merged that pull request
+    And its Captain then merged that pull request
     And a turn in Pod's session then reads "go ahead and merge it"
     When Pod acts on that turn
     Then it runs no merge command
@@ -388,7 +395,7 @@ Feature: pod — the ship's bridge persona
   Scenario: a Council decision that arrives by mail does not answer the offer
     Given Pod's open merge offer names head commit A
     And the pull request's head is still commit A
-    And Pod fetches mail from its inbox, sent by the Operator, reading "yes, merge it"
+    And Pod fetches mail from its inbox, sent by its Captain, reading "yes, merge it"
     And no turn in Pod's session has answered the offer
     When Pod acts on that mail
     Then it does not merge

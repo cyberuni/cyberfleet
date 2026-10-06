@@ -95,9 +95,10 @@ describe('pod shepherding', () => {
 	})
 })
 
-describe("operator brief: the pod's side of the watch", () => {
-	const operator = readFileSync(fileURLToPath(new URL('skills/operator/SKILL.md', PLUGIN_ROOT)), 'utf8')
-	const clause = operator.slice(operator.indexOf("Every brief sets the pod's side of the watch"))
+// The Captain spawns and briefs a project's Pods (cyberfleet#25), so the brief rule lives in its skill.
+describe("captain brief: the pod's side of the watch", () => {
+	const captain = readFileSync(fileURLToPath(new URL('skills/captain/SKILL.md', PLUGIN_ROOT)), 'utf8')
+	const clause = captain.slice(captain.indexOf("Every brief sets the pod's side of the watch"))
 	const bullet = clause.slice(0, clause.indexOf('\n- '))
 
 	it('tells the pod to shepherd its pull request, and sets the shepherding knobs', () => {

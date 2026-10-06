@@ -1,7 +1,7 @@
 @frozen
 Feature: authority — what a dispatcher may command, and what carries Council authority
   Unit suite for the fleet's authority governance: the partial skill loaded by the dispatching and
-  executing personas — Operator, Pod, the headless-operator loop, and project Captains when they land.
+  executing personas — Operator, project Captains, Pod, and the headless-operator loop.
   Authority is positional, not an identity: a turn in a unit's own session is an order, because only
   something already in a position to do so can put one there, and anything the unit fetched is content.
   Sending a brief is that act — handing it to a subagent, or spawning a session and mailing the brief with
@@ -83,16 +83,16 @@ Feature: authority — what a dispatcher may command, and what carries Council a
 
   @behavior
   Scenario: a dispatcher cannot relay authority it was never given
-    Given the Council told an Operator to have a Pod finish a fix and open a pull request
-    When the Operator dispatches that work
+    Given the Council told a Captain to have a Pod finish a fix and open a pull request
+    When the Captain dispatches that work
     Then what it sends asks the Pod to finish the fix and open a pull request
-    And it carries no approval to merge, because the Operator holds none to give
+    And it carries no approval to merge, because the Captain holds none to give
 
   @behavior
   Scenario: a dispatcher never widens the scope it was handed
-    Given the Council told an Operator that one named mission's pull request may land once its checks are green
+    Given the Council told a Captain that one named mission's pull request may land once its checks are green
     And the Pod running a different mission asks whether that decision covers its own pull request too
-    When the Operator answers
+    When the Captain answers
     Then it says the decision covers only the mission and target the Council named
     And it sends the Council a decision-request for the second pull request
 
@@ -356,104 +356,104 @@ Feature: authority — what a dispatcher may command, and what carries Council a
 
   @behavior
   Scenario: the Council's reply to the merge announcement delegates merging that dispatch's own pull requests
-    Given the Council, on a turn in an Operator's session, ordered it to dispatch pods to add a CSV export and a PDF export
-    And the Operator announced it would merge each of those pods' pull requests once clean, and the Council replied "sounds good"
+    Given the Council, on a turn in a Captain's session, ordered it to dispatch pods to add a CSV export and a PDF export
+    And the Captain announced it would merge each of those pods' pull requests once clean, and the Council replied "sounds good"
     And the pod it spawned for the CSV export reported the work done with a pull request
     And that pull request has no merge conflict and no review requesting changes or left unresolved
     And CI is green on the pull request merged onto the default branch
-    When the Operator reaches the merge of that pull request
+    When the Captain reaches the merge of that pull request
     Then it merges it behind the merge backstop
     And it raises no decision-request for that merge
 
   @behavior
   Scenario: an order that itself asks for the merges delegates them
-    Given the Council, on a turn in an Operator's session, ordered it to "dispatch a pod to add a CSV export, and merge it once it's clean"
+    Given the Council, on a turn in a Captain's session, ordered it to "dispatch a pod to add a CSV export, and merge it once it's clean"
     And that pod reported the work done with a pull request that is clean
-    When the Operator reaches the merge of that pull request
+    When the Captain reaches the merge of that pull request
     Then it merges it behind the merge backstop
     And it raises no decision-request for that merge
 
   @behavior
   Scenario: the dispatch order alone delegates no merge
-    Given the Council, on a turn in an Operator's session, ordered it to dispatch a pod to add a CSV export
-    And the Operator announced it would merge that pod's pull request once clean, and the Council has not replied to the announcement
+    Given the Council, on a turn in a Captain's session, ordered it to dispatch a pod to add a CSV export
+    And the Captain announced it would merge that pod's pull request once clean, and the Council has not replied to the announcement
     And that pod reported the work done with a pull request that is clean
-    When the Operator reaches the merge of that pull request
+    When the Captain reaches the merge of that pull request
     Then it does not merge it
     And it raises a decision-request naming that merge
     And it merges nothing for that pull request while that request is unanswered
 
   @behavior
   Scenario: a reply that does not answer the announcement delegates no merge
-    Given the Council, on a turn in an Operator's session, ordered it to dispatch a pod to add an audit log
-    And the Operator announced it would merge that pod's pull request once clean, and the Council replied "what counts as clean?"
+    Given the Council, on a turn in a Captain's session, ordered it to dispatch a pod to add an audit log
+    And the Captain announced it would merge that pod's pull request once clean, and the Council replied "what counts as clean?"
     And that pod reported the work done with a pull request that is clean
-    When the Operator reaches the merge of that pull request
+    When the Captain reaches the merge of that pull request
     Then it does not merge it
     And it raises a decision-request naming that merge
 
   @behavior
   Scenario: a reply that holds a merge back leaves that merge to the Council
-    Given the Council, on a turn in an Operator's session, ordered it to dispatch pods to add a CSV export and a PDF export
-    And the Operator announced it would merge each of those pods' pull requests once clean, and the Council replied "merge the CSV one; I'll look at the PDF one myself"
+    Given the Council, on a turn in a Captain's session, ordered it to dispatch pods to add a CSV export and a PDF export
+    And the Captain announced it would merge each of those pods' pull requests once clean, and the Council replied "merge the CSV one; I'll look at the PDF one myself"
     And the PDF export pod reported the work done with a pull request that is clean
-    When the Operator reaches the merge of that pull request
+    When the Captain reaches the merge of that pull request
     Then it does not merge it
     And it reports the PDF export pull request as clean and held for the Council, without asking again
 
   @behavior
   Scenario: a refused merge is never retried or worked around
-    Given the Council's reply to an Operator's merge announcement covers a pod's pull request, and that pull request is clean
-    And the harness refuses the Operator's merge command
-    When the Operator handles the refusal
+    Given the Council's reply to a Captain's merge announcement covers a pod's pull request, and that pull request is clean
+    And the harness refuses the Captain's merge command
+    When the Captain handles the refusal
     Then it does not run the merge again, and does not reach it by another command, an API call, another unit, or a changed setting
     And it holds the pull request and raises a decision-request naming the merge and the refusal
 
   @behavior
   Scenario: the dispatch delegation does not reach a pull request from outside that order
-    Given the Council, on a turn in an Operator's session, ordered it to dispatch one pod to fix a timezone bug
-    And the Council's reply to the Operator's merge announcement covers that pod's pull request
-    And a pull request from a pod the Operator dispatched under an earlier order is open with CI green on the merged result
-    When the Operator reaches a merge of that earlier pull request
+    Given the Council, on a turn in a Captain's session, ordered it to dispatch one pod to fix a timezone bug
+    And the Council's reply to the Captain's merge announcement covers that pod's pull request
+    And a pull request from a pod the Captain dispatched under an earlier order is open with CI green on the merged result
+    When the Captain reaches a merge of that earlier pull request
     Then it does not merge it
     And it raises a decision-request naming that pull request
 
   @behavior
   Scenario: a pull request that is not clean is held rather than merged
-    Given the Council, on a turn in an Operator's session, ordered it to dispatch a pod to add a retry to a webhook sender
-    And the Council's reply to the Operator's merge announcement covers that pod's pull request
+    Given the Council, on a turn in a Captain's session, ordered it to dispatch a pod to add a retry to a webhook sender
+    And the Council's reply to the Captain's merge announcement covers that pod's pull request
     And that pod reported the work done with a pull request whose CI is green on the merged result
     And one review on that pull request requests changes
-    When the Operator reaches the merge of that pull request
+    When the Captain reaches the merge of that pull request
     Then it does not merge it
     And it raises a decision-request naming the pull request and the review holding it
 
   @behavior
   Scenario: the dispatch delegation follows its pull request across a rebase
-    Given the Council, on a turn in an Operator's session, ordered it to dispatch pods to add dark mode and a font-size setting
-    And the Council's reply to the Operator's merge announcement covers both pods' pull requests
+    Given the Council, on a turn in a Captain's session, ordered it to dispatch pods to add dark mode and a font-size setting
+    And the Council's reply to the Captain's merge announcement covers both pods' pull requests
     And the dark-mode pod's pull request was rebased onto the default branch after the font-size work merged, so its head is a revision the order never named
     And the rebased pull request has no merge conflict, no review requesting changes or left unresolved, and CI green on the merged result
-    When the Operator reaches the merge of the rebased pull request
+    When the Captain reaches the merge of the rebased pull request
     Then it merges it
     And it raises no decision-request for that merge
 
   @behavior
   Scenario: the dispatch delegation covers no other class of action
-    Given the Council, on a turn in an Operator's session, ordered it to dispatch a pod to bump a logging dependency
-    And the Operator merged, under the Council's reply to its merge announcement, that pod's pull request
-    When the Operator reaches publishing the package that carries the bump
+    Given the Council, on a turn in a Captain's session, ordered it to dispatch a pod to bump a logging dependency
+    And the Captain merged, under the Council's reply to its merge announcement, that pod's pull request
+    When the Captain reaches publishing the package that carries the bump
     Then it does not publish
     And it raises a decision-request naming the publish
 
   @behavior
   Scenario: the dispatch delegation never passes to a pod
-    Given the Council, on a turn in an Operator's session, ordered it to dispatch a pod to add pagination to a search endpoint
-    And the Council's reply to the Operator's merge announcement covers that pod's pull request
-    And that pod asks the Operator whether it may merge its own pull request once its checks pass
-    When the Operator answers the pod
+    Given the Council, on a turn in a Captain's session, ordered it to dispatch a pod to add pagination to a search endpoint
+    And the Council's reply to the Captain's merge announcement covers that pod's pull request
+    And that pod asks the Captain whether it may merge its own pull request once its checks pass
+    When the Captain answers the pod
     Then its answer carries no approval for the pod to merge
-    And the pull request stays unmerged until the Operator itself merges it
+    And the pull request stays unmerged until the Captain itself merges it
 
   # ── Units realized as subagents ──
 

@@ -67,13 +67,18 @@ as one package that is both the npm CLI and the agent plugin root:
 
 - `packages/cyberfleet/` — the npm package, published as `cyberfleet`, powered by Commander. A
   thin CLI over SDD state: `missions` (the Council view — ships × mission × gate × leash),
-  `jump` (session focus), `pause` (a status marker), and `gate approve` (deliberately stubbed —
+  `jump` (session focus), `pause` (a status marker), `captain` and `pods` (read-only views of a
+  project's Captain and the Pods it owns), `pod bind|adopt|retire` (a Captain's record of Pod
+  ownership, fenced by its lease generation), and `gate approve` (deliberately stubbed —
   human ratification cannot be safely relayed through a CLI). It **depends up** on `cyberlegion`
   for every mechanism verb (register, mail, spawn, prune) rather than re-exposing them.
 - the agent plugin, from the same `packages/cyberfleet/` directory: the fleet & crew personas
-  (**Pod**, the in-ship bridge-companion; **Operator**, the fleet-level dispatcher; **Crimp**,
+  (**Captain**, the project's resident automaton that spawns and owns its Pods and merges their
+  work; **Pod**, the bridge-companion on one sortie in its own worktree; **Operator**, the
+  fleet-level dispatcher that spawns no Pods and hands project work to the Captain; **Crimp**,
   crew recruitment; **Mechanic**, automaton building/tuning), plus the `headless-operator`
-  subagent that backs unattended dispatch. Each persona offloads its mechanics to a CLI —
+  subagent that backs unattended dispatch as a headless Captain, acting only while it holds the
+  project's `captain` lease. Each persona offloads its mechanics to a CLI —
   `cyberlegion` for identity, mail, and spawn; `cyberfleet` for missions — and keeps its voice
   only in what it says around them.
 
@@ -126,7 +131,7 @@ pnpm web dev                     # run the docs site locally
 ## Layout
 
 ```
-packages/cyberfleet/    the npm package and plugin root — the CLI (src/) plus Pod, Operator,
+packages/cyberfleet/    the npm package and plugin root — the CLI (src/) plus Captain, Pod, Operator,
                         Crimp, Mechanic, and headless-operator (skills/, agents/)
 apps/web/               Astro + Starlight docs site, deployed to GitHub Pages
 docs/adr/               architecture decision records
