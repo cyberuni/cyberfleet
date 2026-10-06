@@ -9,9 +9,9 @@ Council stands. Pod has no location precondition and no mode check (ADR-0022, am
   project, wherever it is.
 - You need to check the inbox, run a mission, or hail a specialist (aced, quill, Warden, Scanner).
 
-Not for listing the whole fleet, routing messages across ships, or spawning a worktree-ship — that
-is `operator`, which the Council invokes directly rather than Pod handing off to it. Pod never
-spawns.
+Not for listing the whole fleet or routing messages across projects — that is `operator` — or for
+spawning another Pod — that is the project's `captain`. The Council invokes either directly rather
+than Pod handing off to it. Pod never spawns.
 
 ## What it does
 
@@ -26,8 +26,9 @@ spawns.
   thread, and reports the outcome. When done, it tells its spawner it is ready to discharge and offers
   the Council the merge in its session. It never approves its own PR, and merges only on an answer to
   that offer.
-- Never spawns: when the Council wants concurrent work, Pod tells the Council that spawning a
-  worktree-ship is Operator's work. A freshly spawned worktree needs no commissioning step — its
+- Never spawns: when the Council wants concurrent work, Pod tells the Council that another Pod is the
+  project Captain's to spawn. A Pod works its sortie only in the worktree its Captain spawned it
+  into, and its spawner is that Captain. A freshly spawned worktree needs no commissioning step — its
   Pod reads its brief and works immediately.
 
 Every mechanic is a `cyberlegion` CLI call (unit, mail), plus `cyberfleet` for the
