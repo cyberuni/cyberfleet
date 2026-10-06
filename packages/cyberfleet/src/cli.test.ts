@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -67,7 +67,7 @@ describe('cli wiring', () => {
 
 	it('--help lists only the fleet verb surface (no mechanism verbs)', () => {
 		const out = execFileSync('node', [BIN, '--help'], { encoding: 'utf8' })
-		for (const verb of ['missions', 'jump', 'pause', 'gate']) {
+		for (const verb of ['missions', 'jump', 'pause', 'gate', 'captain', 'pods', 'pod']) {
 			expect(out).toContain(verb)
 		}
 		// the mechanism verbs were cut — they live in cyberlegion now. Assert on verbs whose strings
@@ -130,5 +130,44 @@ describe('fleet verbs', () => {
 			needsCouncil: true,
 			hal: true,
 		})
+	})
+})
+
+describe('captain and pod verbs', () => {
+	function project(): string {
+		const dir = join(work, 'alpha')
+		execFileSync('git', ['init', '-q', '-b', 'main', dir])
+		execFileSync('git', [
+			'-C',
+			dir,
+			'-c',
+			'user.name=t',
+			'-c',
+			'user.email=t@t',
+			'commit',
+			'-q',
+			'--allow-empty',
+			'-m',
+			'i',
+		])
+		return dir
+	}
+
+	it('captain --json reports a project with no Captain as vacant, homed at its default checkout', () => {
+		const dir = project()
+		const view = JSON.parse(cf(['captain', dir, '--format', 'json']))
+		expect(view).toMatchObject({ name: 'alpha', health: 'vacant', generation: 0 })
+		expect(realpathSync(view.home)).toBe(realpathSync(dir))
+	})
+
+	it('pods --json lists nothing before any pod is bound', () => {
+		expect(JSON.parse(cf(['pods', project(), '--format', 'json']))).toEqual([])
+	})
+
+	it('pod bind refuses a caller that is not the Captain', () => {
+		const dir = project()
+		seedShip('pod1', 'pod1', { worktree: { root: dir, branch: 'main' } })
+		seedShip('caller', 'caller')
+		expect(() => cf(['pod', 'bind', 'pod1', '--project', dir, '--generation', '1', '--captain', 'caller'])).toThrow()
 	})
 })
