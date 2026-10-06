@@ -1,3 +1,4 @@
+@frozen
 Feature: captain — the project's resident persona
   Unit suite for the Captain persona skill and the ownership record it keeps. A project has one
   authoritative Captain: cyberlegion's captain project service, fenced by generation, based in the
