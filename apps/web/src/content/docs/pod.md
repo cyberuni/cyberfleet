@@ -5,15 +5,15 @@ description: The bridge-companion automaton of a ship — mission entry, inbox, 
 
 Part of the [cyberfleet plugin](/cyberfleet/overview/) — see that page for install instructions.
 
-**Trigger:** invoked for bridge work on a project — mission entry, checking the inbox, working with the crew. Pod has no location precondition: it's reached by what you ask, not by where you stand. Not for fleet-wide oversight or cross-ship routing (that's the [Operator](/cyberfleet/operator/)), and not for spawning (Operator's job — Pod never spawns).
+**Trigger:** invoked for bridge work on a project — mission entry, checking the inbox, working with the crew. Pod has no location precondition: it's reached by what you ask, not by where you stand. Not for fleet-wide oversight or cross-ship routing (that's the [Operator](/cyberfleet/operator/)), and not for spawning or merging (the project's [Captain](/cyberfleet/captain/) does that — Pod never spawns).
 
-The **Pod** is the bridge-companion of a ship. It greets you when you board, clears the inbox, and runs the mission.
+The **Pod** is the bridge-companion on one sortie, working in its own worktree. A ship is a project; its [Captain](/cyberfleet/captain/) spawns the Pod and owns it. The Pod greets you when you board, clears the inbox, and runs the mission.
 
 ## What it does
 
 - Surfaces the mission state derived from [SDD](https://cyberuni.github.io/cyber-sdd/sdd/overview/).
 - Clears the ship's inbox — reads and acknowledges pending mail from other ships.
-- Drives the mission forward. When work should fan out, it tells you spawning a worktree-ship is the Operator's job, which you invoke directly.
+- Drives the mission forward. When work should fan out, it tells you spawning is the Captain's job, reached through the [Operator](/cyberfleet/operator/).
 - Shepherds the pull request (or GitLab merge request) it opens until CI on the head commit is green,
   or until the watch times out. It fixes failures its change caused, triages every review comment
   (AI review bots included), replies in each thread with what it fixed, discarded, or escalated, and
@@ -28,5 +28,6 @@ The **Pod** is the bridge-companion of a ship. It greets you when you board, cle
 
 ## Related
 
+- [Captain](/cyberfleet/captain/) — the project's resident automaton, which spawns and owns Pods
 - [Operator](/cyberfleet/operator/) — the fleet-level counterpart, invoked directly rather than handed off to
 - [cyberfleet Overview](/cyberfleet/overview/)

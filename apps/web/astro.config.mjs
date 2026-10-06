@@ -22,6 +22,7 @@ export default defineConfig({
 				{
 					label: 'Automatons',
 					items: [
+						{ label: 'Captain', link: '/captain/' },
 						{ label: 'Pod', link: '/pod/' },
 						{ label: 'Operator', link: '/operator/' },
 						{ label: 'Crimp', link: '/crimp/' },

@@ -14,8 +14,8 @@ Part of [cyber-civitas](https://cyber-civitas.github.io), a self-contained syste
 ## Why
 
 You're the **Council** — the human. You give directions and make decisions; the fleet is
-autonomous and carries them out. A **ship** is a workspace: a folder, a repository, or a
-worktree; your fleet is all the ships you've enlisted, across one project or many.
+autonomous and carries them out. A **ship** is a project, with its home in the default checkout; its Pods work in their own
+worktrees. Your fleet is all the ships you've enlisted, across one project or many.
 
 ## Installation
 
@@ -37,6 +37,8 @@ npx cyberfleet@0.0.6 <command>
 npx cyberfleet missions              # the Council view: ships × mission × gate × leash
 npx cyberfleet jump <peer>           # focus a ship's session, or print its worktree path
 npx cyberfleet pause <peer>          # flip a ship's status marker
+npx cyberfleet captain [project]     # a project's Captain: home, health, lease generation
+npx cyberfleet pods [project]        # the Pods each Captain owns, and who owns them now
 npx cyberfleet gate approve <cr> <gate>  # stubbed — Council ratification can't be relayed via CLI
 ```
 
@@ -51,7 +53,7 @@ reference.
 ## Plugin
 
 The npm package, `packages/cyberfleet`, is also the agent plugin root. It ships — the fleet & crew
-personas (**Pod**, **Operator**, **Crimp**, **Mechanic**) and the `headless-operator` subagent
+personas (**Captain**, **Pod**, **Operator**, **Crimp**, **Mechanic**) and the `headless-operator` subagent
 for unattended dispatch.
 
 ```

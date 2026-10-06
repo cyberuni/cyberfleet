@@ -1,29 +1,18 @@
 ---
 title: Operator
-description: The dispatcher automaton of the fleet — spawn ships, list who's out there, route messages, sweep the dead.
+description: The dispatcher automaton of the fleet — hand work to a project's Captain, list who's out there, route messages, sweep the dead.
 ---
 
 Part of the [cyberfleet plugin](/cyberfleet/overview/) — see that page for install instructions.
 
-**Trigger:** invoked for fleet-level dispatch — spawning, listing, and pruning ships, and routing messages between sessions. Invoking the skill is what connects your session to the command center; the connection holds wherever you invoke it, including inside a project you're already working in. Not for in-ship mission work (that's the [Pod](/cyberfleet/pod/)).
+**Trigger:** invoked for fleet-level dispatch — handing work to a project's Captain, listing and pruning units, and routing messages between sessions. Invoking the skill is what connects your session to the command center; the connection holds wherever you invoke it, including inside a project you're already working in. Not for in-ship mission work (that's the [Pod](/cyberfleet/pod/)), and not for running a project (that's its [Captain](/cyberfleet/captain/)).
 
 The **Operator** is the dispatcher of the fleet. It's where you survey what's out there and decide what sails next.
 
 ## What it does
 
-- Spawns every ship — your first, a new peer session, or a parallel worktree-ship on a project that's already a ship. All spawning is Operator's; Pod never spawns.
-- Lists the live ships and, via `cyberfleet missions`, which need the Council's hands — ships × mission × gate × leash, derived from [SDD](https://cyberuni.github.io/cyber-sdd/sdd/overview/) state.
-- Watches the ships it spawns and lands their work. Each ship opens a pull request and reports back
-  to the session that spawned it, not to whichever session opened Operator most recently.
-  When it dispatches, Operator tells you it will merge each of those pull requests once it is clean
-  (the ship reported it done, it has no merge conflict, no review is blocking it, and CI is green on
-  the merged result), and asks you to reply. Your reply is what lets it merge them without asking you
-  again — the order to dispatch alone does not, and neither does it for Claude Code auto mode, which
-  blocks a merge you did not ask for in your own words. Until you reply, a clean pull request waits for
-  you to approve that merge. A merge the harness refuses waits for you too; Operator never retries it
-  or works around it. Anything short of clean waits for you.
-- Orchestrates several ships on one order: merges their work in dependency order, and after each
-  merge tells the ships still open to rebase, adapt to what landed, and re-verify.
+- Spawns no Pods. Project work goes to that project's [Captain](/cyberfleet/captain/): Operator reads it with `cyberfleet captain <project>`, starts it in its home (`cyberlegion service start <project> captain --cwd <home>`) when it is not healthy, or hands the order to the healthy owner with `cyberlegion unit nudge --message`. Calling Operator transfers no ownership.
+- Lists the live units and, via `cyberfleet missions`, which need the Council's hands — ships × mission × gate × leash, derived from [SDD](https://cyberuni.github.io/cyber-sdd/sdd/overview/) state.
 - Keeps one captain at the command center. The standing `operator` is a single long-lived session
   working from its home (`~/code`, say). A session you open Operator in takes that claim only when
   nobody holds it, so dispatching from inside a project never pulls the command center away from the
@@ -34,11 +23,11 @@ The **Operator** is the dispatcher of the fleet. It's where you survey what's ou
 - Relays what the Council decided, never an approval of its own: the ship receives your own words —
   just "Approve", or your sentence nearly verbatim — with nothing added, and Operator records your
   words, who relayed them, and what they cover on the work's thread. Operator can pass on no more
-  authority than it holds, so it cannot tell a ship that a merge is approved. The merge authority your
-  reply gives it stays with Operator; a ship never merges its own work on that authority. A ship's Pod
-  merges only when you answer, in its own session, the merge offer it made itself.
+  authority than it holds, so it cannot tell a ship that a merge is approved. A Pod never merges its own work on that
+  authority; it merges only when you answer, in its own session, the merge offer it made itself.
 
 ## Related
 
+- [Captain](/cyberfleet/captain/) — the project's resident automaton, which owns the merge
 - [Pod](/cyberfleet/pod/) — the in-ship counterpart
 - [cyberfleet Overview](/cyberfleet/overview/)
