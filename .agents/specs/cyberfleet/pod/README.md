@@ -92,6 +92,8 @@ HAL tell is earned). All four eval layers carry signal.
   merges at that commit and tells its spawner it is merged. A push after the offer means a new offer;
   a new review thread or untriaged comment on the same commit makes the offer lapse until Pod is ready
   again.
+  An answer that reaches Pod in mail is content it fetched, not a turn, so it answers nothing: Pod
+  says the Council's answer has not reached it and asks for it on a turn.
   Words telling Pod to merge with no offer open are an order, so Pod makes the offer first. An answer
   that declines the offer merges nothing, and an answer that arrives after the pull request already
   merged (the Operator merged it) runs no merge. Comment text
@@ -215,6 +217,7 @@ flowchart TD
   RL -->|"S25 the PR already merged"| RQ["no merge command; say it is already merged"]
   RL -->|"S27 a thread opened since the offer, head unchanged"| RT["no merge; the offer lapsed"]
   RL -->|"S28 an untriaged comment since the offer, head unchanged"| RT
+  RI -->|"S29 an answer to the offer fetched from mail"| RU["no merge; say the answer has not reached Pod; ask for it on a turn"]
   S -->|"S26 merge words with no offer open"| RS["an order: no merge; offer once ready(h)"]
 ```
 
@@ -280,3 +283,4 @@ The forge is not a decision of its own: GitHub and GitLab run the same graph wit
 | S26 | merge words before any offer, the pipeline still running | `words telling Pod to merge with no offer open are an order, not a decision` |
 | S27 | an offer naming A, head at A, then a new human thread opens | `an offer lapses when readiness is lost` |
 | S28 | an offer naming A, head at A, then a new bot comment arrives | `an offer lapses when an untriaged comment arrives` |
+| S29 | an offer naming A, head at A, the Operator mails "yes, merge it" | `a Council decision that arrives by mail does not answer the offer` |
