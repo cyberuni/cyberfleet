@@ -72,7 +72,7 @@ when one exists, and sends them to the Coordinator as a turn.
 
 ### 2. The Operator relays to the Captain
 
-The Operator hails the Captain: it posts the request to the ship's address channel, starts the
+The Operator posts and rings: it posts the request to the ship's address channel, starts the
 Captain if no healthy one holds the lease, and rings it.
 
 ```sh
@@ -158,7 +158,7 @@ From here the work is landed as described in
 | 2 | Start the Captain on demand, once | `service start` | — | Built |
 | 2 | Start it in the Bridge's left pane | `spawn --at` | — | Gap: placement is relative to the caller only |
 | 2 | Wait for a reply | — | `entry wait` | Built |
-| 2 | Post, start, and ring as one step | — | — | Gap: `cyberfleet hail` |
+| 2 | Post, start, and ring as one step | `send --start` | — | Gap: `send` already rings; starting an absent receiver is the missing part (waking is the runtime's job, civitas 0001) |
 | 3 | Find an existing work channel for an issue | — | `channel resolve --store gh` | Built |
 | 3 | Open a work channel keyed by the issue | — | `channel create --kind work --store --native-id` | Built |
 | 3 | Write the decision back to the issue | — | `cynapse.published` write-back | Planned (cynapse ADR-0011) |

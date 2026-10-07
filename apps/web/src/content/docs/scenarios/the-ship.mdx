@@ -123,7 +123,8 @@ its issue, and has members but no owner.
 
 Posting to a channel does not wake anyone. Until the runtime watches channels itself, **the poster
 rings**: it posts, resolves or starts the receiver with `cyberlegion service start`, and nudges it
-with `cyberlegion unit nudge`. ADR-0023 names that combined step `hail`.
+with `cyberlegion unit nudge`. Folded into one step, that is `cyberlegion send --start`
+(ADR-0023's provisional `hail`).
 
 ## Features this layout needs
 
@@ -134,4 +135,4 @@ with `cyberlegion unit nudge`. ADR-0023 names that combined step `hail`.
 | Address and work channels with owners and members | `cynapse channel create --kind address\|work --owner --member` | Built in cynapse; cyberfleet does not depend on cynapse yet |
 | Open a ship as a workspace with named tabs and a pane layout | cyber-mux layout templates | cyber-mux has templates; cyberlegion does not call them, and no `cyberfleet` verb opens a ship |
 | Start a session in a named slot, such as the Bridge's right pane | `cyberlegion spawn --at` | Gap: `--at` only places relative to the caller (`pane:right`, `pane:down`, `tab`, `workspace`), and tabs are unnamed |
-| Post, start, and nudge as one step | `cyberfleet hail` | Gap: proposed in ADR-0023, not built |
+| Post, start, and nudge as one step | `cyberlegion send --start` | Gap: `send` already rings; it needs to start a receiver that is not running. ADR-0023 called this step `hail` and put it in cyberfleet, but waking is the runtime's job |
