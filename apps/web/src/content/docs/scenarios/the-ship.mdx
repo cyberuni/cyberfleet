@@ -1,0 +1,137 @@
+---
+title: The ship
+description: How a ship is laid out in herdr (Dashboard, Bridge, and Engine Room tabs), which automaton sits where, on which model tier, and which channels connect them.
+---
+
+import Mermaid from '../../../components/Mermaid.astro'
+
+:::caution[Proposed design]
+This section describes the next fleet topology, building on
+[ADR-0023](https://github.com/cyberuni/cyberfleet/blob/main/docs/adr/0023-captain-mission-sortie.md).
+The Captain and the Coordinator are not shipped yet. Each scenario ends with the features it still
+needs and whether `cyberlegion` or `cynapse` already provides them.
+:::
+
+A **ship** is a project. Its home is the project's main checkout, and it opens as one herdr
+workspace with three tabs. The scenarios in this section all happen on this layout:
+
+- [Work from the Dashboard](/cyberfleet/scenarios/work-from-the-dashboard/): the Council asks the ship's Operator for work.
+- [Work from the Command Center](/cyberfleet/scenarios/work-from-the-command-center/): the Council asks the fleet-level Operator, which relays to the ship's Captain.
+- [Landing a pull request](/cyberfleet/scenarios/landing-a-pull-request/): a Pod's pull request reaches trunk through the Coordinator.
+- [Work across ships](/cyberfleet/scenarios/work-across-ships/): a Captain needs work from another ship.
+- [Captains in dispute](/cyberfleet/scenarios/captains-in-dispute/): two Captains disagree, and the dispute needs settling.
+
+## The crew
+
+| Automaton | Seat | Model tier | Starts | Job |
+| --- | --- | --- | --- | --- |
+| **Council** | Wherever you are | Human | — | Gives directions and makes decisions. All authority starts here. |
+| **Operator** | Dashboard tab, left pane, main checkout | Mid (Sonnet) | With the ship | Your voice in the ship. Answers status itself and relays work to the Captain. |
+| **Captain** | Bridge tab, left pane, main checkout | High (Opus) | On demand | Decides. Judges a request's freshness, priority, and scope, owns the issue tracker and the plan, spawns Pods, and rules on pull requests that are not clean. |
+| **Coordinator** | Bridge tab, right pane | Low (Haiku) | On demand | Lands work. Sequences rebases, checks each pull request against the clean bar, merges clean ones in order, and escalates the rest to the Captain. |
+| **Pod** | Its own herdr workspace and git worktree | Set per sortie by the Captain | Spawned by the Captain | Carries out one sortie and opens its pull request. |
+
+The tiers follow how often each role acts and how much each action matters. The Captain takes few
+turns, and each one changes the plan. The Coordinator takes many turns, and most are a check and a
+command. The Operator holds a conversation. Starting the Captain and the Coordinator on demand means
+the Opus session costs nothing while there is nothing to decide.
+
+## The layout
+
+<Mermaid
+	caption="One herdr workspace per ship, three tabs. Pods open in their own workspaces, nested under the ship."
+	code={`flowchart TB
+  subgraph dash["Tab 1: Dashboard (main checkout)"]
+    direction LR
+    op["Operator session<br/>Sonnet"]
+    ui["Status UI<br/>issues, PRs, missions, CI"]
+  end
+  subgraph bridge["Tab 2: Bridge (main checkout)"]
+    direction LR
+    cap["Captain session<br/>Opus, on demand"]
+    coord["Coordinator session<br/>Haiku, on demand"]
+  end
+  subgraph engine["Tab 3: Engine Room"]
+    direction LR
+    sb["Storybook"]
+    site["Docs site, dev server"]
+  end
+  subgraph pods["Pod workspaces, one git worktree each, spawned by the Captain"]
+    direction LR
+    p1["Pod A"]
+    p2["Pod B"]
+  end
+  op ~~~ ui
+  cap ~~~ coord
+  sb ~~~ site
+  p1 ~~~ p2
+  dash ~~~ bridge ~~~ engine ~~~ pods`}
+/>
+
+### Dashboard
+
+The first tab, running in the main checkout. Its layout is yours to change. The default puts the
+Operator session on the left, where you talk to the ship, and a status UI on the right that shows the
+ship's issues, pull requests, missions, and CI. The UI is any program that renders that state, such
+as a refreshing `cyberfleet missions` view or the cynapse GUI.
+
+### Bridge
+
+The second tab. The Captain's session is on the left, and the Coordinator's session is on the right.
+Both panes stay empty until something needs them. The first message to either one starts its session
+in its pane, through `cyberlegion service start`, so a ship you only ask questions of never starts an
+Opus session.
+
+### Engine Room
+
+The third tab, for long-running processes the work needs: Storybook, the docs site, a dev server.
+These are processes, not agents. A Pod that needs one reads its address rather than starting its own.
+
+## The channels
+
+The automatons talk over [cynapse](https://github.com/cyberuni/cynapse) channels. An **address
+channel** belongs to whoever receives on it. A **work channel** belongs to a piece of work, keyed by
+its issue, and has members but no owner.
+
+<Mermaid
+	caption="Who posts where. Solid arrows post; dotted arrows read."
+	code={`flowchart TB
+  op["Operator"]
+  cap["Captain"]
+  coord["Coordinator"]
+  pod["Pod"]
+  shipaddr[("ship address channel<br/>owner: Captain")]
+  coordaddr[("Coordinator address channel<br/>owner: Coordinator")]
+  work[("work channel per issue<br/>members, no owner")]
+  op -- request --> shipaddr
+  shipaddr -.-> cap
+  cap -- reply on the request thread --> shipaddr
+  shipaddr -.-> op
+  cap -- plan, decisions --> work
+  pod -- progress, done report --> work
+  pod -- PR ready --> coordaddr
+  coordaddr -.-> coord
+  coord -- not clean, frontier grew --> shipaddr
+  coord -- landed --> work`}
+/>
+
+| Channel | Kind | Owner | Carries |
+| --- | --- | --- | --- |
+| Ship address | Address | Captain | Requests to the ship, from the Operator, another ship's Captain, or the Coordinator's escalations |
+| Coordinator address | Address | Coordinator | "Pull request ready" notices from Pods |
+| One per issue | Work | None | The plan, the Pods' reports, decisions, and landings for that piece of work |
+
+Posting to a channel does not wake anyone. Until the runtime watches channels itself, **the poster
+rings**: it posts, resolves or starts the receiver with `cyberlegion service start`, and nudges it
+with `cyberlegion unit nudge`. ADR-0023 names that combined step `hail`.
+
+## Features this layout needs
+
+| Need | Provided by | Status |
+| --- | --- | --- |
+| A per-role model and effort | `cyberlegion spawn --model --effort`, also accepted by `service start` | Built |
+| Start a role on demand, at most once, with a fenced lease | `cyberlegion service start <project> <name>` | Built |
+| Address and work channels with owners and members | `cynapse channel create --kind address\|work --owner --member` | Built in cynapse; cyberfleet does not depend on cynapse yet |
+| Open a ship as a workspace with named tabs and a pane layout | cyber-mux layout templates | cyber-mux has templates; cyberlegion does not call them, and no `cyberfleet` verb opens a ship |
+| Start a session in a named slot, such as the Bridge's right pane | `cyberlegion spawn --at` | Gap: `--at` only places relative to the caller (`pane:right`, `pane:down`, `tab`, `workspace`), and tabs are unnamed |
+| Post, start, and nudge as one step | `cyberfleet hail` | Gap: proposed in ADR-0023, not built |

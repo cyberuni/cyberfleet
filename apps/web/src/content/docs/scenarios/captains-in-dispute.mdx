@@ -1,0 +1,125 @@
+---
+title: Captains in dispute
+description: Scenario 5. Two Captains disagree about work that spans their ships; the dispute moves to an arbitration channel, standing rules settle what they can, and the Council decides the rest from a mediator's brief.
+---
+
+import Mermaid from '../../../components/Mermaid.astro'
+
+:::caution[Proposed design]
+See [The ship](/cyberfleet/scenarios/the-ship/) for the layout, the crew, and what is built.
+:::
+
+Continuing [Work across ships](/cyberfleet/scenarios/work-across-ships/): Captain B declines A's
+request ("the extension point already exists; use it in A"), and Captain A disagrees ("the extension
+point cannot express this; the fix belongs in B"). Other disputes take the same path:
+
+- both Captains claim the same fix, or both decline it;
+- two ships each need to land a breaking change first;
+- two Captains read one change and derive conflicting intents from it.
+
+There is no lead Captain, and a Captain has no authority in another ship
+(authority-governance §2). So no Captain can settle a dispute by ruling. The process below settles
+most disputes without the Council, and brings the rest to the Council already summarized.
+
+## Who is involved
+
+| Automaton | Tier | Role in this scenario |
+| --- | --- | --- |
+| Captain A and Captain B | Opus | State their positions, and apply standing rules |
+| Mediator | Opus, headless, cold | Writes a brief of both positions with a recommendation. Decides nothing. |
+| Command Center Operator | Sonnet | Starts the mediator, puts the brief to the Council, and relays the answer |
+| Council | — | Decides any dispute the rules do not settle |
+
+## The ladder
+
+<Mermaid
+	caption="Each rung settles what it can. Only the Council's rung binds both ships."
+	code={`flowchart TD
+  d["Captains disagree"] --> ch["open an arbitration channel<br/>anchored at the disputed entry"]
+  ch --> pos["each Captain posts its position:<br/>claim, evidence, cost, what would change its mind"]
+  pos --> r1{"one rebuttal each:<br/>agreed?"}
+  r1 -- yes --> done["record the outcome, both proceed"]
+  r1 -- no --> rule{"does a standing rule settle it?"}
+  rule -- yes --> done
+  rule -- no --> med["Command Center starts a cold mediator"]
+  med --> brief["brief: both positions, options,<br/>consequences, recommendation"]
+  brief --> council["Council decides"]
+  council --> relay["Operator relays the Council's words<br/>as a turn to each Captain"]
+  relay --> done`}
+/>
+
+## Step by step
+
+### 1. Open an arbitration channel
+
+The Captain that hits the disagreement branches an arbitration channel from the disputed entry, with
+both Captains as members. Arguing moves out of the work channel, so the Pods' reports stay readable.
+
+```sh
+cynapse channel create <handle> --kind work --type fleet.arbitration --title "<the question>" \
+  --anchor <disputed-entry> --member <captain-a>:party --member <captain-b>:party
+cyberlegion unit nudge <other-captain-handle>
+```
+
+Meanwhile both Captains hold the disputed sorties and keep working everything else. Nobody acts on
+the disputed point while it is open.
+
+### 2. State positions, with a bound
+
+Each Captain posts one position: the claim, the evidence, the cost to its ship, and what would change
+its mind. Each gets one rebuttal. The bound matters, because two Opus sessions arguing without one is
+the most expensive loop the fleet can run. If they agree, either Captain records the outcome and the
+channel closes.
+
+### 3. Apply standing rules
+
+Many disputes repeat, so the Council writes rules for them in advance, and either Captain can settle
+a dispute by citing one. For example:
+
+- **The owner of an artifact decides about that artifact.** B decides B's API; A decides how A uses
+  it.
+- **A ratified decision outranks an unratified one.**
+- **A green trunk and a released contract outrank convenience.** The change that keeps both is
+  preferred.
+
+The Captains apply the rules; they never write or widen them. Writing one is widening a delegation,
+which is ratification-class (authority-governance §5).
+
+### 4. Mediate, then put it to the Council
+
+If no rule settles it, either Captain asks the Command Center Operator for mediation. The Operator
+starts a **mediator**: a fresh, headless Opus session that has worked for neither ship. It reads the
+arbitration channel and both issues, and writes a brief: each position in its own words, the
+options, what each option costs each ship, and a recommendation.
+
+```sh
+cyberlegion spawn --agent mediator --model opus --cwd <home> --brief-file <arbitration-brief>
+```
+
+The mediator decides nothing. A decision binding two ships is cross-project authority, which
+reaches ships only from the Council through the Command Center.
+
+### 5. The Council decides, and the Operator relays
+
+The Operator puts the brief to you. Your answer goes to each Captain, as you wrote it, as a turn
+(`cyberlegion unit nudge --message`), and onto the arbitration channel as the record. Each Captain
+applies it within its own ship. If the decision becomes a pattern, it is a candidate for a new
+standing rule, and only you can add one.
+
+## Why a mediator, not one of the Captains
+
+Either Captain summarizing the dispute would present its own side best. A cold session reads both
+sides from the channel with no stake and no context from either ship. The Command Center Operator
+could write the brief itself, but it runs on the mid tier, and weighing two plans against each other
+is the judgment the high tier is for.
+
+## Features this scenario needs
+
+| Step | Need | cyberlegion | cynapse | Status |
+| --- | --- | --- | --- | --- |
+| 1 | Branch a channel from an entry, with both Captains | — | `channel create --anchor --member` | Built |
+| 1 | Hold the disputed sorties while the rest continue | — | A state record on the mission | Gap: shared with cross-repository ordering |
+| 2 | Bound the exchange | — | Channel conventions (`--convention`) | Built in cynapse; the bound is persona logic |
+| 3 | Standing rules the Council writes | — | — | Gap: no home for fleet doctrine yet |
+| 4 | Start a headless mediator | `spawn --agent mediator --model opus` | — | Spawn built; no mediator agent |
+| 5 | Relay the Council's words to two ships | `unit nudge --message` | `entry append` | Built |

@@ -1,0 +1,120 @@
+---
+title: Work across ships
+description: Scenario 4. A Captain finds its work needs a change in another ship; it files the request there, hails that ship's Captain, and replans around the dependency until it lands.
+---
+
+import Mermaid from '../../../components/Mermaid.astro'
+
+:::caution[Proposed design]
+See [The ship](/cyberfleet/scenarios/the-ship/) for the layout, the crew, and what is built.
+:::
+
+Ship A's Captain is planning issue 42 and finds that one sortie needs a change in ship B, a library
+A depends on. Neither Captain commands the other. Work crosses ships as an **invitation**: A asks, B
+decides when and whether, and A plans around the answer
+([ADR-0023](https://github.com/cyberuni/cyberfleet/blob/main/docs/adr/0023-captain-mission-sortie.md) §5).
+
+## Who is involved
+
+| Automaton | Ship | Role in this scenario |
+| --- | --- | --- |
+| Captain A | A | Finds the dependency, files the request, and replans around it |
+| Captain B | B | Triages the request like any other, and owns B's sortie |
+| Pods and Coordinator of B | B | Do and land B's sortie, as in scenarios 1 and 3 |
+| Command Center Operator | Fleet | Carries a decision-request to the Council if the Captains cannot agree on order |
+| Council | — | Decides anything that crosses ships: sequencing disputes, and B's release |
+
+## The flow
+
+<Mermaid
+	caption="A asks; B decides. A's blocked sortie waits; its other sorties keep going."
+	code={`sequenceDiagram
+  participant KA as Captain A
+  participant TB as ship B issue tracker
+  participant SB as ship B address channel
+  participant KB as Captain B
+  participant WB as work channel, B issue
+  participant XB as Coordinator B
+  KA->>TB: gh issue create in B, relates to A issue 42
+  KA->>SB: entry append, type ship.request
+  KA->>KB: service start in B, then unit nudge
+  KA->>KA: mark the sortie blocked, spawn Pods on the rest
+  KB->>SB: entry list --unread
+  KB->>WB: channel create, Captain A as a member
+  KB->>SB: reply on the thread: accepted, priority, ETA
+  Note over KB,XB: B's Pods work and land, scenarios 1 and 3
+  XB->>WB: entry append, type landed
+  XB->>KA: unit nudge, the poster rings members
+  KA->>KA: unblock the sortie, spawn its Pod`}
+/>
+
+## Step by step
+
+### 1. Captain A files the request in B
+
+The durable request is an **issue in B's repository**, not a message
+(authority-governance §2). The issue survives any session, and B's Captain triages it from B's own
+queue. Captain A records the relation on both issues, "A 42 is blocked by B 7", so either end shows
+it.
+
+```sh
+gh issue create -R <org>/<ship-b> --title "<what A needs>" --body "<why, and blocks <org>/<ship-a>#42>"
+```
+
+### 2. Captain A hails B
+
+The message is only the doorbell for the issue:
+
+```sh
+cynapse entry append <ship-b-address> --type ship.request --ref gh:<org>/<ship-b>#7
+cyberlegion service start <ship-b> captain --agent captain --model opus
+cyberlegion unit nudge <captain-b-handle>
+```
+
+### 3. Captain A replans
+
+The sortie that needs B is blocked; the rest of issue 42 is not. Captain A records the block,
+spawns Pods on the sorties that are ready, and does not spawn a Pod to work around B's code in A.
+
+### 4. Captain B decides
+
+The request is content Captain B fetched, so it judges it on the merits, exactly as it would a
+request from its own Operator. Taking on the work is dispatch, and needs no Council decision. It
+answers on the request's thread with one of:
+
+- **Accept**, with a priority. It opens the issue's work channel with Captain A as a member, so A
+  sees B's progress and the landing.
+- **Decline**, with the reason, for example "this belongs in A, here is the extension point". Captain
+  A replans.
+- **Needs the Council**, when accepting would commit more of B than its leash allows. Captain B
+  raises a decision-request through the Command Center Operator.
+
+### 5. B lands, and A is rung
+
+B's sortie runs and lands as in [Landing a pull request](/cyberfleet/scenarios/landing-a-pull-request/).
+B's Coordinator posts the landing on the work channel and rings its members, including Captain A.
+Captain A unblocks the sortie and spawns its Pod.
+
+### 6. When landing is not enough
+
+If A consumes B as a published package, a merge in B does not reach A. B has to release, and
+releasing is ratification-class (authority-governance §5). Captain B asks the Council, through the
+Command Center Operator, to release. A's sortie stays blocked until the release exists, not until
+the merge.
+
+## When the Captains disagree
+
+If B declines and A still needs the change, or both claim the same fix, neither Captain overrides
+the other. That is [Captains in dispute](/cyberfleet/scenarios/captains-in-dispute/).
+
+## Features this scenario needs
+
+| Step | Need | cyberlegion | cynapse | Status |
+| --- | --- | --- | --- | --- |
+| 1 | File an issue in another repository | — | — | `gh`, built |
+| 1 | Record "blocked by" on both issues | — | Relations across stores | Planned (cynapse ADR-0010) |
+| 2 | Hail another ship's Captain, in that ship's Bridge | `service start`, `unit nudge` | `entry append` | Built, except placement into B's Bridge (see scenario 2) |
+| 3 | Record a sortie blocked on another repository | — | A state record on the mission | Gap: cross-repository ordering has no home yet (ADR-0023, Open dependencies) |
+| 4 | Add Captain A to B's work channel | — | `channel create --member` | Built at creation only; no verb adds a member later |
+| 5 | Ring every member of a channel | Runtime doorbell for channel members | Members list | Gap: until the runtime watches channels, the poster rings, and needs the member list |
+| 6 | Release B on the Council's decision | — | — | Ratification-class; no fleet verb |

@@ -1,0 +1,176 @@
+---
+title: Landing a pull request
+description: Scenario 3. A Pod reports its pull request ready; the Coordinator sequences rebases, lands clean work in order, and escalates what is not clean to the Captain.
+---
+
+import Mermaid from '../../../components/Mermaid.astro'
+
+:::caution[Proposed design]
+See [The ship](/cyberfleet/scenarios/the-ship/) for the layout, the crew, and what is built.
+:::
+
+Every scenario that produces code ends here. A Pod has opened a pull request and told the
+Coordinator it is ready. The Coordinator's job is to get it onto trunk in the right order without
+breaking trunk, and to wake the Captain only when a decision is needed.
+
+## Who is involved
+
+| Automaton | Tier | Role in this scenario |
+| --- | --- | --- |
+| Pod | Set by the Captain | Rebases, fixes, and re-verifies its own pull request when told |
+| Coordinator | Haiku | Checks, orders, merges, and escalates |
+| Captain | Opus | Rules on what the Coordinator escalates, and replans |
+| Council | Human | Holds merge authority, and decides anything above the Captain's leash |
+
+## Why a separate Coordinator
+
+Landing is a loop: check a pull request, tell a Pod to rebase, wait for CI, merge, tell the next
+Pods that trunk moved, and repeat. Almost every turn is a status read and a command. Running that
+loop on the Captain's Opus session spends the most expensive tier on the cheapest turns, and keeps
+the Captain's context full of CI logs. Splitting it out lets the Captain sleep through a run of clean
+merges and wake only for the ones that need judgment.
+
+What keeps a Haiku Coordinator safe is that **it does not judge cleanliness**. Whether a pull request
+is clean is a fact computed by a command, and the Coordinator acts on that result. It never decides
+that a pull request is "clean enough".
+
+## The decision flow
+
+The check sends each pull request one of four ways:
+
+<Mermaid
+	caption="Two outcomes loop back to the Pod. Only judgment reaches the Captain."
+	code={`flowchart TD
+  ready["Pod: PR ready"] --> check{"clean-bar check"}
+  check -- "conflict only" --> rebase["Pod rebases<br/>in Operation order"]
+  check -- "CI red from this PR" --> fix["Pod fixes"]
+  check -- "clean" --> land["land it"]
+  check -- "needs judgment" --> esc["escalate to the Captain"]
+  rebase --> ready
+  fix --> ready`}
+/>
+
+A clean pull request still has to be covered, next in line, and green on the merged result:
+
+<Mermaid
+	caption="Landing. Nothing red reaches trunk."
+	code={`flowchart TD
+  clean["clean PR"] --> deleg{"delegation<br/>covers it?"}
+  deleg -- no --> ask["ask the Council<br/>via the Operator"]
+  deleg -- yes --> order{"next in<br/>Operation order?"}
+  order -- no --> hold["hold"]
+  order -- yes --> spec{"CI on the<br/>merged result"}
+  spec -- red --> esc["hold, bisect,<br/>escalate"]
+  spec -- green --> merge["merge, close<br/>the Pod"]
+  merge --> moved["other Pods:<br/>trunk moved"]
+  merge --> grew{"frontier<br/>grew?"}
+  grew -- yes --> ring["ring the Captain"]`}
+/>
+
+What the Captain does with an escalation:
+
+<Mermaid
+	caption="The Captain rules on scope and plan, never past a red check."
+	code={`flowchart LR
+  esc["escalation"] --> rule{"Captain rules"}
+  rule -- accept --> back["direction to the Pod,<br/>check again"]
+  rule -- reject --> close["close the PR,<br/>replan"]
+  rule -- "above leash" --> council["decision-request<br/>to the Council"]`}
+/>
+
+## Step by step
+
+### 1. Check the clean bar
+
+The Coordinator reads its address channel and checks each ready pull request against the four
+conditions in authority-governance §7: the Pod reported the work done, there is no merge conflict,
+no review requests changes or leaves a thread unresolved, and CI is green on the merged result.
+
+```sh
+cynapse entry list <coordinator-address> --unread
+gh pr view <pr> --json mergeable,reviewDecision,statusCheckRollup
+```
+
+### 2. Handle the mechanical cases itself
+
+- **A merge conflict, and nothing else.** The Coordinator decides which pull request goes first,
+  using the mission graph's Operation order, and tells the other Pod to rebase once the first one
+  lands.
+- **CI red, caused by this pull request.** The Pod fixes it, as it already does while shepherding.
+
+Each instruction goes on the Pod's address and rings it:
+
+```sh
+cynapse entry send <pod> --type trunk.moved --ref gh:<org>/<repo>#57
+cyberlegion unit nudge <pod-handle>
+```
+
+### 3. Land clean work in order
+
+A clean pull request lands only if the Council's standing merge delegation covers it, and only in
+Operation order. The Coordinator runs speculative CI on the merged result first, as
+[merge-backstop-governance](https://github.com/cyberuni/cyberfleet/blob/main/packages/cyberfleet/skills/merge-backstop-governance/SKILL.md)
+requires, and merges only on green. After a merge it closes the merged Pod's unit
+(`cyberlegion unit close`), posts the landing on the work channel, and tells every other open Pod
+that trunk moved.
+
+### 4. Escalate what needs judgment
+
+The Coordinator rings the Captain for anything that is not a fact check:
+
+- a review that asks for a change of scope;
+- two pull requests that conflict in meaning, not only in text;
+- a pull request that stays red after the Pod's fixes, or that a bisect isolated as the culprit;
+- a Pod that reports it is stuck.
+
+```sh
+cynapse entry append <ship-address> --type pr.escalation --ref gh:<org>/<repo>#57 --body "<what holds it>"
+cyberlegion service start <project> captain --agent captain --model opus
+cyberlegion unit nudge <captain-handle>
+```
+
+### 5. The Captain rules
+
+- **Accept.** The Captain decides the question that held the pull request, for example that the
+  review's request is out of scope and becomes a follow-up issue. It sends that direction to the Pod,
+  and the pull request goes back through the clean-bar check. "Accept" does not mean "merge it
+  anyway": a red pull request never lands, whoever rules on it.
+- **Reject.** The Captain closes the pull request, updates the issue, and replans the sortie.
+- **Above its leash.** The Captain raises a decision-request to the Council through the Operator.
+
+In every case the Captain then reviews the plan: which sorties the ruling blocks, and which became
+ready. It spawns Pods for newly unblocked sorties.
+
+### 6. Wake the Captain when the frontier grows
+
+A landed merge can unblock sorties that were waiting on it. Computing the ready frontier is
+deterministic, so the Coordinator runs it after each merge and rings the Captain only when new
+sorties became ready. The Captain decides whether to spawn and with which model. A run of merges
+that unblocks nothing costs no Opus turns.
+
+## Open questions
+
+- **Who holds the trunk lease.** ADR-0023 has the Captain hold the project's service lease, with
+  merges and graph writes behind `service verify`. With the Coordinator merging, the cleaner split is
+  two leases: `service start <project> coordinator` fences merges, and the Captain's lease fences the
+  mission graph. Each store keeps a single writer.
+- **Who retires missions on the graph.** If the Captain stays the graph's only writer, the
+  Coordinator posts each landing for the Captain to record on its next turn, without ringing it.
+  Retirement is then late but never wrong.
+- **Merge authority.** authority-governance §7 says only the Operator merges under a standing
+  delegation. The Coordinator merging needs that section amended so the delegation can name the
+  ship's Coordinator.
+
+## Features this scenario needs
+
+| Step | Need | cyberlegion | cynapse | Status |
+| --- | --- | --- | --- | --- |
+| 1 | Read "PR ready" notices | — | `entry list --unread`, `read` | Built |
+| 1 | The clean bar as one deterministic check | — | — | Gap: proposed `cyberfleet pr clean <pr>`, built on `gh` |
+| 2, 4 | Tell a Pod or the Captain, and ring them | `unit nudge`, `service start` | `entry send`, `entry append` | Built |
+| 3 | Fence merges to one Coordinator | `service start`, `service verify --generation` | — | Built in cyberlegion; not wired |
+| 3 | Merge in Operation order with speculative CI | — | — | merge-backstop-governance, built for the Operator |
+| 3 | Tear down a merged Pod | `unit close` | — | Built |
+| 3 | Post the landing on the issue | — | `entry append`; `cynapse.published` write-back | Append built; write-back planned |
+| 6 | Recompute the ready frontier | — | — | SDD mission graph, built |
+| — | A Coordinator allowed to merge under the Council's delegation | — | — | Gap: authority-governance §7 |

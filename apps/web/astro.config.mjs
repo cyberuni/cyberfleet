@@ -28,6 +28,17 @@ export default defineConfig({
 						{ label: 'Mechanic', link: '/mechanic/' },
 					],
 				},
+				{
+					label: 'Scenarios',
+					items: [
+						{ label: 'The ship', link: '/scenarios/the-ship/' },
+						{ label: 'Work from the Dashboard', link: '/scenarios/work-from-the-dashboard/' },
+						{ label: 'Work from the Command Center', link: '/scenarios/work-from-the-command-center/' },
+						{ label: 'Landing a pull request', link: '/scenarios/landing-a-pull-request/' },
+						{ label: 'Work across ships', link: '/scenarios/work-across-ships/' },
+						{ label: 'Captains in dispute', link: '/scenarios/captains-in-dispute/' },
+					],
+				},
 			],
 			editLink: {
 				baseUrl: 'https://github.com/cyberuni/cyberfleet/edit/main/apps/web/',

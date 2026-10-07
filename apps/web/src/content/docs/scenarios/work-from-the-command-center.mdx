@@ -1,0 +1,115 @@
+---
+title: Work from the Command Center
+description: Scenario 2. The Council asks the fleet-level Operator for work on a ship; the Operator resolves the ship and relays to its Captain.
+---
+
+import Mermaid from '../../../components/Mermaid.astro'
+
+:::caution[Proposed design]
+See [The ship](/cyberfleet/scenarios/the-ship/) for the layout, the crew, and what is built.
+:::
+
+You are in the **Command Center**: a session outside every ship, based at your home folder
+(`~/code`, say), talking to its Operator. You ask for work on a project: "In cyberlegion, make
+`unit prune` report what it swept." The Command Center Operator sends the request straight to that
+ship's Captain.
+
+Everything after the Captain receives the request is the same as
+[Work from the Dashboard](/cyberfleet/scenarios/work-from-the-dashboard/) from step 3 on. This page
+covers what is different: finding the ship, and placing the Captain in a ship you are not in.
+
+## Who is involved
+
+| Automaton | Tier | Role in this scenario |
+| --- | --- | --- |
+| Council | Human | Asks for the work from the Command Center |
+| Command Center Operator | Sonnet | Resolves which ship, relays the request, and reports back |
+| Captain of the target ship | Opus | Same as scenario 1: judges, files, plans, and spawns |
+| The ship's own Operator | Sonnet | Not involved. Its status UI shows the new issue and Pods |
+
+## The flow
+
+<Mermaid
+	caption="The Command Center goes to the Captain directly, not through the ship's Operator."
+	code={`sequenceDiagram
+  actor C as Council
+  participant CC as Command Center Operator
+  participant R as project registry
+  participant S as ship address channel
+  participant K as Captain
+  participant X as Coordinator
+  C->>CC: In cyberlegion, make unit prune report what it swept
+  CC->>R: project list, project show
+  R-->>CC: the ship and its address
+  CC->>C: Announces the merge-when-clean bar
+  C->>CC: Yes
+  CC->>S: entry append, type ship.request
+  CC->>K: service start in the ship, then unit nudge
+  Note over K: judges, files, plans, spawns, as in scenario 1
+  K->>S: reply on the request thread
+  CC->>S: entry wait on the request
+  CC->>C: Filed as cyberlegion issue 88, 1 Pod out
+  CC->>X: unit nudge with the Council's merge words
+  Note over X: lands the work, see Landing a pull request`}
+/>
+
+## Step by step
+
+### 1. Resolve the ship
+
+The Operator maps the project you named to a registered ship and its address channel:
+
+```sh
+cyberlegion project list
+cyberlegion project show <project>
+cynapse participant resolve <project>/captain
+```
+
+- **No match.** It asks you which project you meant, or offers to register one. It never guesses.
+- **The work spans two ships.** It sends the request to the ship where the work starts, and says so.
+  That Captain brings in the other ship, as in
+  [Work across ships](/cyberfleet/scenarios/work-across-ships/). The Operator does not split
+  the work itself, because splitting is planning, and planning is the Captain's.
+
+### 2. Relay to the Captain
+
+This is the same hail as scenario 1. The difference is placement: the Captain must start in the
+target ship's Bridge tab, not next to the Command Center session.
+
+```sh
+cynapse entry append <ship-address> --type ship.request --body "<the Council's words>"
+cyberlegion service start <project> captain --agent captain --model opus
+cyberlegion unit nudge <captain-handle>
+```
+
+### 3. The Captain treats it as a request
+
+The request is content the Captain fetched from its address channel, not an order typed in its
+session (authority-governance §1). That is enough here: taking on work and dispatching the ship's
+own Pods is dispatch, and needs no Council decision. The Captain still judges freshness and priority
+on the merits, so it can answer "already done in PR 80" or "queued behind the release".
+
+### 4. The merge delegation travels as a turn
+
+You gave the merge delegation in the Command Center's session. The Command Center Operator sends your
+words to the target ship's Coordinator as a turn, with `cyberlegion unit nudge --message`, and
+records them on the work channel. Your words still cover only the pull requests of this request's
+Pods.
+
+## Why not go through the ship's Operator
+
+Relaying Command Center → ship Operator → Captain adds a Sonnet hop that makes no decision. The ship's
+Operator would only pass the request on, and every extra relay is another place for the Council's
+words to drift. The ship's Operator still sees the work, because its status UI reads the same tracker
+and channels.
+
+## Features this scenario needs
+
+| Step | Need | cyberlegion | cynapse | Status |
+| --- | --- | --- | --- | --- |
+| 1 | List and look up registered projects | `project list`, `project show` | — | Built |
+| 1 | Map a project to its address channel | — | `participant resolve`, `channel resolve` | Built in cynapse; the project-to-address key is cynapse's (cross-package decision 0004) |
+| 2 | Start a Captain in another ship's Bridge tab | `service start`, `spawn --at` | — | Gap: `--at` places relative to the caller, which here is the Command Center |
+| 2 | Wait for the reply from outside the ship | — | `entry wait` | Built |
+| 4 | Relay the Council's words to a unit in another ship | `unit nudge --message` | `entry append` | Built mechanically; the governance gap from scenario 1 applies |
+| — | A fleet-level Operator seat at the home folder | `unit register --home` | — | Built in cyberlegion; the Operator persona is not rewritten for it yet |
