@@ -68,7 +68,9 @@ The Operator first decides what kind of turn it is:
 Because this order dispatches work, the Operator also announces the clean bar and asks whether to
 merge each resulting pull request once it is clean. Your reply is the standing merge delegation
 (authority-governance §7). The Operator records your words, as you wrote them, on the work channel
-when one exists, and sends them to the Coordinator as a turn.
+when one exists, and relays them to the Coordinator as a turn whenever the Coordinator asks about a
+clean pull request. The Coordinator starts on demand and loses its turns on restart, so the Operator,
+not the Coordinator, holds the delegation.
 
 ### 2. The Operator relays to the Captain
 

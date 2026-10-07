@@ -59,7 +59,8 @@ ADR-0023 gave each project a Captain and moved spawning to it, but left four thi
 | Pod | Own workspace and worktree | Set per sortie | Spawned by the Captain | One sortie, one pull request |
 | Mediator | Headless, cold | High | Per dispute | Writes a brief of a dispute; decides nothing |
 
-Tab 3, the Engine Room, holds long-running processes (Storybook, dev servers), not agents.
+Tab 3, the Engine Room, holds long-running processes (Storybook, dev servers) for the main checkout,
+not agents. A Pod that needs a preview of its own branch starts one in its own worktree.
 
 Flow (scenario 1): Council → Operator → ship address channel + `send --start` → Captain (judges, files or
 updates the issue, opens the work channel, plans, spawns Pods) → Pods work, report on the work
@@ -94,8 +95,9 @@ Council, then replans and spawns on what became unblocked.
 Each is marked **load-bearing** (expensive to unwind once built on) or **cheap** (revisit freely).
 
 - **P1. The clean bar is a command, not a judgment.** *Load-bearing.* `cyberfleet pr clean <pr>`
-  computes the four conditions of authority-governance §7 from `gh`; the Coordinator acts on its
-  exit status and never decides "clean enough". This is what makes a Haiku Coordinator safe; without
+  computes the four conditions of authority-governance §7, from `gh` (conflict, reviews, CI on the
+  merged result) and from the issue's cynapse work channel (the Pod reported the work done); the
+  Coordinator acts on its exit status and never decides "clean enough". This is what makes a Haiku Coordinator safe; without
   it the C6 saving becomes a risk.
 - **P2. The Coordinator handles mechanical "not clean" itself.** *Cheap.* A text conflict means
   ordering a rebase, and a red CI caused by the pull request goes back to its Pod. Only judgment
@@ -108,16 +110,31 @@ Each is marked **load-bearing** (expensive to unwind once built on) or **cheap**
 - **P4. The Council's merge delegation names the ship's Coordinator.** *Load-bearing; changes the
   authority model.* authority-governance §7 says only the Operator merges under a delegation, never
   transferably. Amend it so the Operator's announcement says the Coordinator lands the work, and the
-  Council's reply delegates to that ship's Coordinator for that request's pull requests. The Operator
-  relays the words as a turn (`unit nudge --message`) and records them on the work channel.
+  Council's reply delegates to that ship's Coordinator for that request's pull requests.
+  **Delivery has to survive an on-demand Coordinator.** The Coordinator is often not running when
+  the Council answers, and a restarted session has lost its turns; a copy it reads from the work
+  channel is fetched content, which §3 refuses as a claim. So the Operator, which received the words
+  in its own session, holds the delegation and records it (the words, the request, and the pull
+  requests it covers as Pods attach them) on the work channel as its audit trail. When the
+  Coordinator finds a clean pull request it holds no delegation for in its current session, it asks
+  the Operator, and the Operator relays the Council's words as a turn (`unit nudge --message`). An
+  Operator that no longer holds them asks the Council again. The amended §7 must say a delegation is
+  scoped to a request's pull requests, survives the Coordinator's restarts this way, and is spent per
+  merge.
 - **P5. Two leases per ship.** *Load-bearing.* `service start <project> coordinator` fences merges
-  (`service verify` before `gh pr merge`); the Captain's lease fences the tracker and plan.
+  (`service verify` before `gh pr merge`) and the Coordinator's `retired` appends to the graph (P6);
+  the Captain's lease fences the tracker and the plan events.
   ADR-0023 §2 gave both to the Captain. cyber-civitas 0002 (leases in the runtime) already allows it.
 - **P6. Split mission-graph writes by kind.** *Load-bearing; needs cyber-sdd.* The graph is
   single-writer by design (cyber-sdd ADR-0026; `loops.md` L90). The frontier only grows once a
   landing is retired, so a Captain-only writer means a Captain turn per merge. Recommend: the Captain
   appends plan events, the Coordinator appends `retired`, both under an append lock (git ref
   compare-and-swap with retry). The Coordinator rings the Captain only when `ready` grew.
+- **P6a. The Coordinator has its own integration worktree.** *Load-bearing.* Speculative CI on the
+  merged result and bisection (merge-backstop §2-3) need a checkout, and the main checkout is shared
+  by the Operator and the Captain. The Coordinator works in a dedicated worktree provisioned through
+  the runtime (civitas 0003), unless the host's merge queue does the speculation, in which case it
+  reads the queue's results instead.
 - **P7. Separate address channels.** *Cheap.* The ship address channel (owner Captain) takes
   requests and escalations; a Coordinator address channel takes "PR ready". Pods report progress on
   the issue's work channel.
@@ -144,7 +161,7 @@ Each is marked **load-bearing** (expensive to unwind once built on) or **cheap**
 - Q1. **Where do standing rules live?** Candidates: cyberfleet policy files, agent-harness references
   (`.agents/references/`), cyber-truss, or dna relation metadata. Nothing decides this today.
 - Q2. **What does the Dashboard's status UI run?** A refreshing `cyberfleet missions`, the cynapse
-  GUI, a mission TUI (#4), or something new. Overlaps #7 (ship blueprint).
+  GUI, a mission TUI (cyberfleet#4), or something new. Overlaps cyberfleet#7 (ship blueprint).
 - Q3. **Pod model tier.** The Council set Operator, Captain, and Coordinator tiers; the plan has the
   Captain choose per sortie (the mission graph already carries `modelTier`). Confirm.
 - Q4. **Who registers the Captain and Coordinator as cynapse participants**, and when? An address
@@ -155,6 +172,14 @@ Each is marked **load-bearing** (expensive to unwind once built on) or **cheap**
 - Q7. **The headless variants.** `headless-operator` becomes a headless Captain (ADR-0023 step 5);
   does landing in headless mode get a headless Coordinator, or does one loop do both when no Council
   is present?
+- Q9. **What the Captain keeps between sessions.** It starts on demand and exits, and each start is
+  a fresh session at a new lease generation. The graph and the tracker hold state, not reasoning.
+  Decide what the Captain writes before it exits (a decision log on the ship address channel, its
+  rationale on each issue) and what it rereads on start.
+- Q10. **Does cyberfleet call cynapse directly?** Recommendation: yes, for channels and state records
+  (opening work channels, delegation records, blocked sorties), since the product layer may depend on
+  communication; and through cyberlegion only for waking (`send --start`). The alternative, every
+  channel call through cyberlegion, puts message meaning in the runtime.
 - Q8. **"Operation order".** Define it in fleet docs as the SDD mission graph's Operation, since
   cyberfleet's "mission" means something else.
 
@@ -198,7 +223,7 @@ make in that module, not a constraint on the design.
   `pod/pod.feature`, root `spec.md`. Hygiene tied to them: #80, #31, #30.
 - **New:** `captain` and `coordinator` personas, agents, spec nodes; a `dispute` node and `mediator`
   agent; CLI verbs `ship open` (wrapping cyberlegion) and `pr clean`.
-- **Tracking already open:** #24 (topology parent), #25 + PR #93 (Captain ownership), #92 (route
+- **Tracking already open** (all cyberfleet): #24 (topology parent), #25 + PR #93 (Captain ownership), #92 (route
   Captain and Pod mail through cynapse), #26 (Operator as portable entry point — **conflicts** with
   the ship-resident Operator; re-scope), #27 (Command Center integration), #3 and #2 (cross-project
   dependencies and trace), #79 (Operator on Pod ready-to-discharge — becomes the Coordinator's), #83,
@@ -278,7 +303,7 @@ No code dependency in either direction. Shared ground to align with rather than 
   Captains-in-dispute stance.
 - Its **leash** (a write that removes or reverses a criterion stops for an approver; additions
   proceed) and **pre-approval cascade** match the Captain's escalation and the Council's delegations.
-- **#36** proposes keeping the run ledger in a cynapse work channel keyed by subject — the same
+- **cyber-truss#36** proposes keeping the run ledger in a cynapse work channel keyed by subject — the same
   keying cyberfleet's work channels use.
 - Parked **"approvers per workflow"** (backlog) is the same question as per-ship authority versus the
   Council; settled rejections include a `blocked` status and per-set declared approvers.
@@ -295,7 +320,8 @@ No code dependency in either direction. Shared ground to align with rather than 
 - **Boards:** the cyber-civitas org has **no GitHub Projects** (GraphQL and `gh project list` both
   empty). Existing tracking is in **cyberuni Project #1 "Command Center"**, which already holds
   cyberfleet #24, #25, #26, #27, #3, #92, #9, cyber-truss #5-#11, cyber-sdd #14, and cyberlegion
-  #6-#8. Other cyberuni boards: #2 Mission Memory, #3 Agent Configuration Testing, #4 cynapse review.
+  #6-#8. Other cyberuni boards: Project 2 Mission Memory, Project 3 Agent Configuration Testing,
+  Project 4 cynapse review.
 
 ### dna, agent-harness
 
@@ -325,7 +351,7 @@ cynapse:
 5. CLI `channel member add|list|remove` over `Store.addMember`.
 6. Project → address recipe, idempotent (civitas 0004), documented and tested.
 7. Recipe for a work channel with no external subject.
-8. Land PRs #94 and #92; release 0.2.0; announce the async/CLI-rename break (#71, #72, #75).
+8. Land cynapse PRs #94 and #92; release 0.2.0; announce the async/CLI-rename break (#71, #72, #75).
 9. `cynapse.published` write-back entry type (ADR-0011), added to the public contract.
 10. Relations across stores for "blocked by" (ADR-0010): names, per-store spelling, a read helper.
 
@@ -336,7 +362,8 @@ cyberlegion:
 12. `service stop` that stops the owner and releases the lease, generation-checked.
 13. `unit status` and `nudge --when-idle` (ring or defer) on cyber-mux `agent status`.
 14. Opaque service keys (civitas 0004), or `project register --key`. *Waits on:* 6.
-15. #153 stages 1-2 (participants, direct sends via cynapse); fix #154.
+15. cyberlegion#153 stages 1-2 (participants, direct sends via cynapse); fix cyberlegion#154.
+    Unblocked by cynapse 0.1.0.
 15a. `send --start <project> <role> [spawn options]`: post to a cynapse channel, resolve or start its
     owner with `service start`, ring it — the "poster rings" step until the channel watcher (#153)
     replaces it. Replaces ADR-0023's provisional `hail`.
@@ -359,7 +386,8 @@ cyber-sdd:
 
 ### Phase 2 — cyberfleet core
 
-23. Depend on cynapse; route Captain and Pod traffic through it (#92, #25 mail half). *Waits on:* 8.
+23. Depend on cynapse for channels and state records (Q10); route Captain and Pod traffic through
+    it (cyberfleet#92, cyberfleet#25 mail half).
 24. `cyberfleet ship open <project>`: the ship template's content (Dashboard, Bridge, Engine Room)
     and the role-to-slot binding, handed to cyberlegion's layout open (15b). *Waits on:* 15b
     (degraded mode below until then).
@@ -368,9 +396,9 @@ cyber-sdd:
 26. `cyberfleet pr clean <pr>`: the clean bar as a command (P1).
 27. **Captain**: skill, agent, spec node; triage (freshness, priority, details), issue write,
     work-channel open, plan writes, Pod spawn with model per sortie, rulings. Continues #25 / PR #93.
-28. **Coordinator**: skill, agent, spec node; loads merge-backstop-governance; landing moves out of
-    `headless-operator`; rings the Captain only on escalation or frontier growth. *Waits on:* 2, 19,
-    21, 26.
+28. **Coordinator**: skill, agent, spec node; loads merge-backstop-governance; integration worktree
+    (P6a); landing moves out of `headless-operator`; asks the Operator for the delegation (P4); rings
+    the Captain only on escalation or frontier growth. *Waits on:* 2, 19, 21, 26.
 29. **Operator rewrite**: ship-resident and Command Center seats; classify, relay, announce the merge
     bar; reopen `operator.feature` (with #79, #12, #13). *Waits on:* 2, 25.
 30. **Pod**: report on the work channel; "PR ready" to the Coordinator; reopen `pod.feature`.
@@ -383,10 +411,10 @@ cyber-sdd:
 
 ### Phase 3 — across ships and disputes
 
-33. Invitations: issue in the other repository, `send --start` to its Captain, accept/decline/needs-Council replies (#3, #2).
+33. Invitations: issue in the other repository, `send --start` to its Captain, accept/decline/needs-Council replies (cyberfleet#3, cyberfleet#2).
     *Waits on:* 5, 25.
 34. Blocked sorties: graph blocker (20) plus a cynapse state record; unblock on landing or on release.
-35. Landing rings channel members: poster-rings using 5 until the runtime doorbell (#153) exists.
+35. Landing rings channel members: poster-rings using 5 until the runtime doorbell (cyberlegion#153) exists.
 36. Dispute node, arbitration channel conventions, the bound on exchanges (P11).
 37. Mediator agent (headless, cold, high tier) and its brief format.
 38. Standing rules: home (Q1), format, the Council-only write path.
@@ -399,8 +427,10 @@ cyber-sdd:
 ### Critical path
 
 ADR-0024 → authority §7 → Coordinator (28), which also waits on the cyber-sdd append lock (19) and
-`pr clean` (26). cynapse 0.2.0 (8) gates cyberlegion's move to cynapse (15) and `send --start` (15a), which
-gate crew addressing (25) and every scenario. Slot placement (11, 16, 17) gates scenario 2 and the full layout, but not scenario 1.
+`pr clean` (26) and its integration worktree (P6a). cyberlegion's cynapse stages 1-2 (15) are
+unblocked by cynapse 0.1.0 already; they gate `send --start` (15a), which gates crew addressing (25)
+and every scenario. cynapse 0.2.0 (8) is not a gate, but its owner-`unread` fix (#94) is needed
+before a Captain triages its address channel with `unread`. Slot placement (11, 16, 17) gates scenario 2 and the full layout, but not scenario 1.
 
 ## Candidate scenarios for later pages
 
@@ -436,13 +466,17 @@ the crew can fail. Each names the pattern it exercises.
 - **Haiku drift.** If P1 is not built first, the Coordinator ends up judging cleanliness. Mitigation:
   no Coordinator merges before `pr clean` exists.
 - **Authority laundering through the Coordinator.** A merge delegation that reaches the Coordinator
-  as fetched content instead of a turn is a claim, and §3 refuses it. Mitigation: relay only with
-  `unit nudge --message`; #154 fixed first.
+  as fetched content instead of a turn is a claim, and §3 refuses it. Mitigation: the Operator holds
+  and re-relays it (P4); cyberlegion#154 fixed first.
 - **cynapse churn.** The async `Store` and CLI renames will break call shapes. Mitigation: one adapter
   module in cyberfleet; pin `^0.1.0` → `^0.2.0` deliberately.
 - **Two Opus sessions arguing.** Mitigation: the bound in P11, enforced in persona logic.
-- **Scope.** This touches seven repositories. Mitigation: degraded mode ships scenario 1 on Phase 1's
-  cynapse items alone.
+- **Scope.** This touches seven repositories. Mitigation: a first step that ships scenario 1 up to the
+  Pods (Operator, Captain, Pods, items 15, 15a, 23, 25, 27, 29, 30) and leaves landing to the
+  Operator under today's §7 until the Coordinator (28) and its prerequisites exist.
+- **The saving is assumed.** C6 is a hypothesis. Mitigation: measure cost per landed pull request
+  with the Captain landing versus the Coordinator landing, on the first step above, before the
+  Coordinator becomes load-bearing.
 
 ## Boards
 
@@ -452,5 +486,5 @@ Center", which already holds most of the related issues. Decide at fine-tuning.
 
 ## NEXT
 
-Fine-tune with the Council: walk P1-P12 and Q1-Q8, mark each locked or rejected in this file, and pick
+Fine-tune with the Council: walk P1-P12 (with P6a) and Q1-Q10, mark each locked or rejected in this file, and pick
 the board. Then write ADR-0024 (item 1) and file the Phase 1 issues in each repository.

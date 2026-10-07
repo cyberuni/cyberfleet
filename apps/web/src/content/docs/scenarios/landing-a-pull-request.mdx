@@ -162,7 +162,12 @@ that unblocks nothing costs no Opus turns.
   That needs a change in cyber-sdd's mission-graph store.
 - **Merge authority.** authority-governance §7 says only the Operator merges under a standing
   delegation. The Coordinator merging needs that section amended so the delegation can name the
-  ship's Coordinator.
+  ship's Coordinator. Delivery has to survive a Coordinator that starts on demand and loses its turns
+  on restart: the Operator holds the Council's words, and relays them as a turn whenever the
+  Coordinator asks about a clean pull request it holds no delegation for.
+- **Where speculative CI runs.** The main checkout is shared with the Operator and the Captain, so
+  the Coordinator runs merged-result CI and bisection in its own integration worktree, or reads a
+  host merge queue's results.
 
 ## Features this scenario needs
 
