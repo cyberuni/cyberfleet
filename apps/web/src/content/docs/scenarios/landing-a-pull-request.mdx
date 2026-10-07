@@ -154,9 +154,12 @@ that unblocks nothing costs no Opus turns.
   merges and graph writes behind `service verify`. With the Coordinator merging, the cleaner split is
   two leases: `service start <project> coordinator` fences merges, and the Captain's lease fences the
   mission graph. Each store keeps a single writer.
-- **Who retires missions on the graph.** If the Captain stays the graph's only writer, the
-  Coordinator posts each landing for the Captain to record on its next turn, without ringing it.
-  Retirement is then late but never wrong.
+- **Who retires missions on the graph.** The mission graph has one writer by design, and the ready
+  frontier only grows once a landed mission is recorded as retired. If the Captain stays the only
+  writer, the Coordinator cannot see the frontier grow without waking the Captain on every merge,
+  which defeats the split. The recommendation is to split the writes by kind under an append lock:
+  the Captain appends plan events (nodes, edges, claims), and the Coordinator appends retirements.
+  That needs a change in cyber-sdd's mission-graph store.
 - **Merge authority.** authority-governance §7 says only the Operator merges under a standing
   delegation. The Coordinator merging needs that section amended so the delegation can name the
   ship's Coordinator.
