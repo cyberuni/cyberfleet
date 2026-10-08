@@ -126,6 +126,14 @@ Feature: operator — the command-center persona
     When it names what the ship does if its return address resolves to no live unit
     Then the brief tells the ship to report to the handle operator instead
 
+  @behavior
+  Scenario: a spawn brief spells out the cyberlegion command that delivers the report
+    Given Operator is writing the cold brief for a ship it is about to spawn
+    When it names how the ship reports back
+    Then the brief names its thread id and spells out cyberlegion mail send --to the return handle --thread that id, with a subject and a body
+    And the brief says not to use the harness's own messaging tool for fleet handles
+    And the brief tells the ship to send the same command --to operator when the return handle resolves to no live unit
+
   # ── Triggering ──
 
   @trigger

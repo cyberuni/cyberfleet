@@ -83,7 +83,11 @@ all spawning is Operator's, and **Pod never spawns**, so there is no intra-missi
 contrast against. Never invoke a rule of the in-ship Pod persona; never type into a dispatched ship's
 pane. Dispatch is `cyberlegion unit spawn` with a brief
 that stands on its own (the new Pod starts cold and reads it through its own SessionStart hook) and
-`--at workspace` so each ship opens in its own workspace.
+`--at workspace` so each ship opens in its own workspace. The brief names its thread id and spells out
+the exact reply command, as the in-session Operator's does: `cyberlegion mail send --to <return handle>
+--thread <thread id> --subject "<done|blocked>: <work item>" --body "<pull request URL, CI state, anything held>"`,
+the same send with `--to operator` when the return handle resolves to no live unit, and never the
+harness's own messaging tool, which cannot reach cyberlegion handles.
 
 ## Report and ask via the relay
 

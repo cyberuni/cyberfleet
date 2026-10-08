@@ -293,6 +293,14 @@ Feature: pod — the ship's bridge persona
     When it reports to its dispatcher on the brief's thread
     Then the report gives the pull request URL, the CI result, how each finding was handled, and anything that needs a human decision
 
+  @behavior
+  Scenario: Pod sends its report with cyberlegion mail send, never the harness's own messaging tool
+    Given Pod's brief names a return handle and a thread id
+    When it reports to its dispatcher
+    Then it runs cyberlegion mail send --to that handle --thread that id
+    And it does not use the harness's own messaging tool to reach the handle
+    And when that handle resolves to no live unit it sends the same command --to operator
+
   # ── Discharge and the merge offer ──
 
   @behavior

@@ -65,6 +65,13 @@ connected wherever the Council invokes it, including inside a project an agent i
   this brief's thread to the return address when the work is done or blocked; **never merge** the pull request;
   and when told trunk moved, rebase onto it, adapt the work to what landed, re-verify, push, and report
   again.
+- Every brief spells out the **exact reply command** — the return address is a cyberlegion handle, and
+  a pod that is not told how to reach it reaches for its harness's own messaging tool, which cannot see
+  cyberlegion handles, so the report is lost. Name the thread id in the brief and write the command
+  out with it: `cyberlegion mail send --to <return handle> --thread <thread id> --subject "<done|blocked>: <work item>"
+  --body "<pull request URL, CI state, anything held>"`. Say not to use the harness's own messaging
+  tool (Claude Code's SendMessage and the like) for fleet handles. The fallback goes through the same
+  command: if the return handle resolves to no live unit, the same send with `--to operator`.
 - With the dispatch, **announce the merges** to the Council: say that you will merge each pull request of
   this order's pods once it is clean, name the four-part bar below, and ask the Council to reply before
   the first one lands. The Council's reply, in its own words, is what authorizes those merges — the order
