@@ -18,6 +18,17 @@
 	},
 	"overrides": [
 		{
+			"includes": ["**/*.astro"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noUnusedVariables": "off",
+						"noUnusedImports": "off"
+					}
+				}
+			}
+		},
+		{
 			"includes": ["packages/cyberfleet/src/**/*.ts"],
 			"linter": {
 				"rules": {
