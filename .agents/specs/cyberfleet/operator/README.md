@@ -90,6 +90,13 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
   that spawned the pod holds the order and the watch, so its reports go there. The brief also names
   the fallback: when that handle resolves to no live unit — the spawning session has exited — the pod
   reports to `operator` instead, where the next session to connect finds it on the board.
+- **Name the reply command in the brief** — the return address is a cyberlegion handle, and a pod
+  told only the handle reaches for its harness's own messaging tool (Claude Code's SendMessage and the
+  like), whose recipients are the harness's agents, so the report never arrives and the `operator`
+  fallback fails the same way (cyberfleet#96). The brief names its thread id and spells out
+  `cyberlegion mail send --to <return handle> --thread <thread id> --subject ... --body ...`, says not
+  to use the harness's own messaging tool for fleet handles, and routes the fallback through the same
+  command with `--to operator`.
 - **Own every spawn** — spawning a worktree-ship is fleet-level work the Council calls Operator for,
   including parallel work on a project that is already a ship. Pod never spawns (ADR-0022 decision
   8, as amended — this reverses d8's original "spawning is a ship capability, not something reserved
@@ -189,6 +196,7 @@ Every scenario in [`operator.feature`](./operator.feature) maps to one of these 
 | **register, and claim only an empty command center** | connecting registers this session under its own handle, never as `operator`, then claims the standing `operator` owner (`unit claim operator`) only when `unit claim operator --show` reports no presence; a live claim held by another session is left where it is and this session dispatches under its own handle; an empty claim that cannot be taken is reported and dispatch continues; a missing standing owner routes to `init-cyberlegion` with the advice to register it with `--home`, and is never minted here |
 | **read what the command center took** | the claim holder, on connecting, leads the board with `mail inbox --owner operator --unread`; an acted-on report is acked (`mail read --owner operator --ack`), an unacted one stays unread; a session not holding the claim neither reads nor acks that mailbox |
 | **the return address is the spawning session** | a spawn brief names this session's own registered handle, never its id and never `operator`; the pod falls back to `operator` only when that handle resolves to no live unit |
+| **name the reply command** | a spawn brief names its thread id and spells out `cyberlegion mail send --to <return handle> --thread <thread id> --subject ... --body ...`, with the same send `--to operator` as the fallback; never the harness's own messaging tool |
 | **delivery is not the doorbell** | a sent message whose ring never landed is reported delivered and not resent; only a handle that resolved to no live unit is undelivered |
 | **describe the work, not the location** | the `description` names the fleet-level work and states no location condition a harness cannot evaluate |
 | **leave in-ship work to Pod, by topic** | mission work and specialist crew inside one ship are routed to Pod topically, not via a mode probe |

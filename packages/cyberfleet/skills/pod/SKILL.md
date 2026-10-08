@@ -102,7 +102,10 @@ times out, stop and report the state as it stands. Never loop past the timeout.
 4. **Sweep once more on green.** Bots often post just after CI finishes. Read the comments again
    before reporting. If that sweep pushes a commit, the new head needs its own green.
 5. **Report** to whoever dispatched you, on the brief's thread (`cyberlegion mail send --to
-   <return address> --thread <id>`). Include the pull request URL; the CI result (green, red with the
+   <return address> --thread <thread id> --subject ... --body ...`). The return address is a cyberlegion
+   handle: never use the harness's own messaging tool (Claude Code's SendMessage and the like), whose
+   recipients are the harness's agents and cannot reach it. If the handle resolves to no live unit, send
+   the same command with `--to operator`. Include the pull request URL; the CI result (green, red with the
    failing check, or timed out); each finding and how it was handled (fixed with its commit, discarded
    with its reason, escalated); and anything that needs a human decision.
 6. **Tell your spawner when you are ready to discharge.** You are ready when all of these hold: the
