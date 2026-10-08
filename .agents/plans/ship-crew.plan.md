@@ -158,30 +158,56 @@ Each is marked **load-bearing** (expensive to unwind once built on) or **cheap**
 
 ### Open questions
 
+Each carries a recommendation for the fine-tuning pass, and is marked load-bearing or cheap.
+
 - Q1. **Where do standing rules live?** Candidates: cyberfleet policy files, agent-harness references
-  (`.agents/references/`), cyber-truss, or dna relation metadata. Nothing decides this today.
+  (`.agents/references/`), cyber-truss, or dna relation metadata. *Cheap; not on the critical path.*
+  Recommend: agent-harness references, `.agents/references/standing-rules.md` in the repository a
+  rule binds, and `~/.agents/references/` for a rule across ships. cyberfleet owns the format;
+  authority-governance makes the write path Council-only (a Captain editing one is widening it).
+  Defer the format to Phase 3 (item 38); nothing before it reads a rule.
 - Q2. **What does the Dashboard's status UI run?** A refreshing `cyberfleet missions`, the cynapse
-  GUI, a mission TUI (cyberfleet#4), or something new. Overlaps cyberfleet#7 (ship blueprint).
-- Q3. **Pod model tier.** The Council set Operator, Captain, and Coordinator tiers; the plan has the
-  Captain choose per sortie (the mission graph already carries `modelTier`). Confirm.
-- Q4. **Who registers the Captain and Coordinator as cynapse participants**, and when? An address
-  channel's owner must already be a participant, but these sessions start on demand.
-- Q5. **Where do Pods' workspaces nest** when the Command Center starts the work? herdr nests a new
-  workspace under the caller's, which would put them under the Command Center.
+  GUI, a mission TUI (cyberfleet#4), or something new. *Cheap.* Recommend: the template's default
+  right pane runs a refreshing `cyberfleet missions` (no new code), replaced by the mission TUI (#4)
+  when it exists. The pane is a template slot, so a Council that wants something else edits its
+  layout. #7 (ship blueprint) becomes the template's content.
+- Q3. **Pod model tier.** *Cheap.* Recommend: confirm. The Captain sets it per sortie from the
+  graph's `modelTier`, defaulting to mid when the node has none.
+- Q4. **Who registers the Captain and Coordinator as cynapse participants**, and when? *Load-bearing
+  (the key is the identity).* Recommend: the participant is the **role**, not the session, keyed
+  from the project's cynapse address and the role (for example `<project-address>/captain`).
+  `registerParticipant` is already idempotent on a live key ("the runtime may re-register on every
+  start"), so whoever first needs the address registers it — `ship open`, or `send --start` before
+  it starts the owner. A session acts as the role while it holds the role's lease; the generation,
+  not the participant, tells sessions apart.
+- Q5. **Where do Pods' workspaces nest** when the Command Center starts the work? *Cheap.* Mostly
+  dissolved by P9 and C4: the Captain spawns Pods, and an interactive Captain sits in its ship's
+  Bridge, so nesting under the caller already puts Pods under the ship. It bites only for a headless
+  Captain (Q7), which has no pane. Recommend: demote item 18 to "when headless Captains spawn into
+  panes", and have the headless Captain spawn Pods with `--at workspace` under the ship explicitly.
 - Q6. **Does the existing `operator` owner and mailbox migrate** (ADR-0023 §8) before or with this?
+  *Cheap.* Recommend: with the Operator rewrite (item 29), after item 23. Retiring it earlier leaves
+  Pod reports with no home until they route through work channels.
 - Q7. **The headless variants.** `headless-operator` becomes a headless Captain (ADR-0023 step 5);
   does landing in headless mode get a headless Coordinator, or does one loop do both when no Council
-  is present?
+  is present? *Load-bearing.* Recommend: two headless agents, the same split as interactive. One loop
+  doing both puts landing back on the high tier, which is the cost C6 is about, and the Coordinator's
+  safety comes from `pr clean` (P1), not from who is watching. With no Council present, the headless
+  Coordinator merges only under a delegation the Council gave before leaving (P4's record) or a
+  standing rule; otherwise it batches the merge as needs-input.
+- Q8. **"Operation order".** *Cheap.* Recommend: define it in the fleet glossary as the SDD mission
+  graph's Operation, since cyberfleet's "mission" means something else.
 - Q9. **What the Captain keeps between sessions.** It starts on demand and exits, and each start is
   a fresh session at a new lease generation. The graph and the tracker hold state, not reasoning.
-  Decide what the Captain writes before it exits (a decision log on the ship address channel, its
-  rationale on each issue) and what it rereads on start.
-- Q10. **Does cyberfleet call cynapse directly?** Recommendation: yes, for channels and state records
-  (opening work channels, delegation records, blocked sorties), since the product layer may depend on
-  communication; and through cyberlegion only for waking (`send --start`). The alternative, every
-  channel call through cyberlegion, puts message meaning in the runtime.
-- Q8. **"Operation order".** Define it in fleet docs as the SDD mission graph's Operation, since
-  cyberfleet's "mission" means something else.
+  *Cheap.* Recommend: each ruling is written where it acts — its rationale as a comment on the issue
+  (write-back), and a one-line decision entry (ruling, issue, lease generation) on the ship address
+  channel. On start, the Captain rereads its unread address channel, the graph's `ready`, and the
+  decision entries since its last generation. Nothing else carries over; a decision that is not
+  written down did not happen.
+- Q10. **Does cyberfleet call cynapse directly?** *Load-bearing.* Recommend: yes, for channels and
+  state records (opening work channels, delegation records, blocked sorties), since the product
+  layer may depend on communication; and through cyberlegion only for waking (`send --start`). The
+  alternative, every channel call through cyberlegion, puts message meaning in the runtime.
 
 ## Responsibilities
 
@@ -484,7 +510,12 @@ The detailed action plan was meant for the cyber-civitas projects, but that org 
 Projects yet. Either create one there (cross-package work) or extend cyberuni Project #1 "Command
 Center", which already holds most of the related issues. Decide at fine-tuning.
 
+Recommend: extend cyberuni Project #1. It already holds the parent and most related issues, and a
+second board splits one plan's tracking across two places. Create a cyber-civitas board only when
+work there is owned by the cyber-civitas org itself.
+
 ## NEXT
 
 Fine-tune with the Council: walk P1-P12 (with P6a) and Q1-Q10, mark each locked or rejected in this file, and pick
-the board. Then write ADR-0024 (item 1) and file the Phase 1 issues in each repository.
+the board. Walk the load-bearing ones first: P1, P3, P4, P5, P6, P6a, Q4, Q7, Q10; then the cheap
+ones as a batch. Then write ADR-0024 (item 1) and file the Phase 1 issues in each repository.
