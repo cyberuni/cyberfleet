@@ -34,11 +34,10 @@ invokes no gate, spawns nothing, and routes to concrete engines rather than reim
 - When the change is model or effort: route to `manage-model-runners` (`aced:manage-model-runners`).
 - When the change is a governance or skill-loadout re-chip on an existing automaton: route to
   `define-skill` / `improve-skill` — an automaton is a gateway **skill**, so re-chipping it goes
-  through the skill-definition engines, never `define-agent` / `improve-agent-definition` (those
-  author *subagents* — judges, producers — not automatons).
-- When the change is leash or autonomy posture: route to the autonomy rubric
-  (`.agents/specs/sdd/design/autonomy-rubric.md`), framing it as an autonomy posture, not an ad hoc
-  toggle.
+  through the skill-definition engines, never `define-agent` (that authors *subagents* — judges,
+  producers — not automatons).
+- When the change is leash or autonomy posture: treat it as an autonomy posture to
+  decide with the Council, not an ad hoc toggle.
 - When asked to change model or effort: advise which model/effort the work wants and state the
   manual step plainly — Mechanic picks no model itself and never flips the running session's model
   silently; the user switches.
@@ -75,5 +74,5 @@ Mechanic owns the **automaton artifact** — building new ones and reconfiguring
 never recruits an already-published crew type — that is **Crimp**'s job (browse the Tavern, install,
 register). It never deploys or spawns a ship instance — that is the **Operator**'s job. An automaton
 is a gateway **skill**, so Mechanic authors and re-chips it via `define-skill` / `improve-skill`,
-never via `define-agent` / `improve-agent-definition` (those are for *subagents* only). A plain
+never via `define-agent` (that is for *subagents* only). A plain
 workflow skill that is not an automaton goes straight to `define-skill`, not through Mechanic.

@@ -48,7 +48,7 @@ connected wherever the Council invokes it, including inside a project an agent i
   Say the owner should be registered with a home (`cyberlegion unit register --standing --handle
   operator --home <dir> --harness <harness>`), so that when mail arrives with no live holder,
   cyberlegion spawns a session in that home and binds it. `--home` and spawn-on-delivery need a
-  `cyberlegion` release that includes cyberlegion#155. Leave the hub without a standing `operator`.
+  `cyberlegion` release that supports registering a standing owner with a home. Leave the hub without a standing `operator`.
 - When the Council wants Operator to spawn any ship at all — the fleet's first, a new peer session,
   or a parallel worktree-ship on a project that is already a ship: `cyberlegion unit spawn --harness
   <claude|cursor|codex> --handle <name> --task "<self-contained brief>" --at workspace` — the brief
