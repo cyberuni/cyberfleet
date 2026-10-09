@@ -1,5 +1,11 @@
 # cyberfleet
 
+## 0.5.2
+
+### Patch Changes
+
+- dccd740: Remove references the shipped skills cannot resolve: the unshipped `improve-agent-definition` skill and autonomy-rubric path in Mechanic, and the `cyberlegion#155` issue citation in Operator. `authority-governance` now defers relayed-decision rules to cyberlegion's `relay-governance` and keeps only the fleet-specific parts.
+
 ## 0.5.1
 
 ### Patch Changes
