@@ -30,10 +30,10 @@ Mechanic is a **thin, in-session dispatcher**, the same shape as `aced:manage`:
 | build a **new** automaton | `define-skill` |
 | governance / loadout re-chip on an existing automaton | `define-skill` / `improve-skill` |
 | model / effort | `manage-model-runners` (`aced:manage-model-runners`) |
-| leash / autonomy | the autonomy rubric |
+| leash / autonomy | an autonomy posture to decide with the Council |
 
 An automaton is a gateway **skill**, not a subagent — so building and re-chipping it route to
-`define-skill` / `improve-skill`, never to `define-agent` / `improve-agent-definition` (those author
+`define-skill` / `improve-skill`, never to `define-agent` (that authors
 *subagents* only).
 
 - **Advises, never silently switches** — Mechanic picks no model itself; it recommends and the user
