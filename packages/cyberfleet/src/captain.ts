@@ -28,7 +28,7 @@ export interface PodBinding {
 	/** The owning Captain's unit id, and the service generation it owned the Pod under. */
 	captain: string
 	generation: number
-	mission?: string
+	sortie?: string
 	state: 'active' | 'retired'
 	boundAt: string
 	retiredAt?: string
@@ -39,7 +39,7 @@ export interface PodBinding {
 export interface CaptainView {
 	project: string
 	name: string
-	/** The default checkout the Captain is based in. Mission edits never happen here. */
+	/** The default checkout the Captain is based in. Sortie edits never happen here. */
 	home: string
 	/** The branch the home is on now, and the remote's default branch — reported, never switched. */
 	homeBranch?: string
@@ -98,7 +98,7 @@ export interface PodAct {
  * not the Captain's home, not another project's checkout. Rebinding the same owner is a no-op; a pod
  * another Captain generation owns is refused (recover it with `adoptPod`).
  */
-export function bindPod(ctx: ServiceContext, act: PodAct & { mission?: string }): PodBinding {
+export function bindPod(ctx: ServiceContext, act: PodAct & { sortie?: string }): PodBinding {
 	const podProject = podProjectOf(ctx, act.pod)
 	return fenced(ctx, act, (view) => {
 		if (podProject.id !== view.project.id)
@@ -120,7 +120,7 @@ export function bindPod(ctx: ServiceContext, act: PodAct & { mission?: string })
 			project: view.project.id,
 			captain: act.captain,
 			generation: act.generation,
-			...(act.mission ? { mission: act.mission } : {}),
+			...(act.sortie ? { sortie: act.sortie } : {}),
 			state: 'active',
 			boundAt: now(ctx),
 		})

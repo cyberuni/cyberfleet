@@ -6453,7 +6453,7 @@ function bindPod(ctx, act) {
 			project: view.project.id,
 			captain: act.captain,
 			generation: act.generation,
-			...act.mission ? { mission: act.mission } : {},
+			...act.sortie ? { sortie: act.sortie } : {},
 			state: "active",
 			boundAt: now(ctx)
 		});
@@ -7059,8 +7059,8 @@ rootOpts(program.command("pods")).description("list the pods each Captain owns, 
 				get: (r) => r.owner
 			},
 			{
-				key: "mission",
-				get: (r) => r.mission ?? "-"
+				key: "sortie",
+				get: (r) => r.sortie ?? "-"
 			}
 		], `${rows.length} pods`),
 		json: rows
@@ -7080,11 +7080,11 @@ function actOf(ctx, pod, opts) {
 		pod: resolveAgent(ctx.store, pod).id
 	};
 }
-podAct(podCmd.command("bind")).description("record this Captain as the one owner of a pod in its own project worktree").option("--mission <ref>", "the mission the pod runs").action((pod, opts) => {
+podAct(podCmd.command("bind")).description("record this Captain as the one owner of a pod in its own project worktree").option("--sortie <issue-ref>", "the sortie (issue) the pod carries").action((pod, opts) => {
 	const ctx = ctxOf(opts);
 	const binding = bindPod(ctx, {
 		...actOf(ctx, pod, opts),
-		...opts.mission ? { mission: opts.mission } : {}
+		...opts.sortie ? { sortie: opts.sortie } : {}
 	});
 	emit(formatOf(opts), {
 		toon: toonObject({

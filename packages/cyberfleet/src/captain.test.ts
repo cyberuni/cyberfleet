@@ -111,8 +111,8 @@ describe('bindPod', () => {
 		unit('cap', root)
 		unit('pod1', root, trees[0])
 		const generation = startCaptain(root, 'cap')
-		const binding = bindPod(ctx, { project: root, captain: 'cap', generation, pod: 'pod1', mission: 'github-25' })
-		expect(binding).toMatchObject({ pod: 'pod1', captain: 'cap', generation, mission: 'github-25', state: 'active' })
+		const binding = bindPod(ctx, { project: root, captain: 'cap', generation, pod: 'pod1', sortie: 'github-25' })
+		expect(binding).toMatchObject({ pod: 'pod1', captain: 'cap', generation, sortie: 'github-25', state: 'active' })
 		expect(listPods(ctx, root).map((p) => p.pod)).toEqual(['pod1'])
 	})
 

@@ -169,7 +169,7 @@ rootOpts(program.command('pods'))
 					{ key: 'live', get: (r) => (r.live ? 'yes' : 'no') },
 					{ key: 'captain', get: (r) => `${r.captain}@${r.generation}` },
 					{ key: 'owner', get: (r) => r.owner },
-					{ key: 'mission', get: (r) => r.mission ?? '-' },
+					{ key: 'sortie', get: (r) => r.sortie ?? '-' },
 				],
 				`${rows.length} pods`,
 			),
@@ -197,10 +197,10 @@ function actOf(ctx: IdContext, pod: string, opts: { generation: string; project?
 
 podAct(podCmd.command('bind'))
 	.description('record this Captain as the one owner of a pod in its own project worktree')
-	.option('--mission <ref>', 'the mission the pod runs')
+	.option('--sortie <issue-ref>', 'the sortie (issue) the pod carries')
 	.action((pod, opts) => {
 		const ctx = ctxOf(opts)
-		const binding = bindPod(ctx, { ...actOf(ctx, pod, opts), ...(opts.mission ? { mission: opts.mission } : {}) })
+		const binding = bindPod(ctx, { ...actOf(ctx, pod, opts), ...(opts.sortie ? { sortie: opts.sortie } : {}) })
 		emit(formatOf(opts), { toon: toonObject({ ...binding, previous: undefined }), json: binding })
 	})
 
