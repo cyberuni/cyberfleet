@@ -266,8 +266,10 @@ inferred from how the work went.
   address registers it, whether that is `ship open` or `send --start`. A session acts as the role
   while it holds the role's lease. The lease generation, not the participant, tells sessions apart.
 - **Channels.** The Operator's address channel takes the Council's calls. The ship address channel
-  (owner: the Captain) takes requests, escalations, and landing reports. A Coordinator address
-  channel takes "PR ready". Pods report progress on their sortie channel (§8).
+  (owner: the Captain) takes requests, landing reports, and the pointer that rings the Captain to an
+  escalation; the escalation itself is a thread in its sortie channel, so its ruling posts back
+  where the Pod and the Coordinator read (§8). A Coordinator address channel takes "PR ready". Pods
+  report progress on their sortie channel.
 - **Waking is cyberlegion's.** ADR-0023 §4's provisional `cyberfleet hail` becomes
   `cyberlegion send --start`: post to a channel, resolve or start its owner with `service start`,
   ring it. It stays in place until the runtime's channel watcher (cyberlegion#153) replaces it.
