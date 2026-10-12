@@ -252,8 +252,11 @@ inferred from how the work went.
 - **Two kinds of edge.** The tracker's parent and child links join work items, mission to sortie,
   and cynapse keeps no copy of them (cynapse ADR-0011). Anchors branch a conversation inside one work
   item. The whole trace is a walk over the tracker's tree, then over each sortie's anchors. GitHub
-  sub-issues can live in another repository. Across organizations this is unconfirmed; there, the
-  epic lives in a tracker that spans them, or the link is a cynapse relation (cynapse ADR-0010).
+  sub-issues can live in another repository with the same owner, but not across owners: the REST
+  endpoint that adds a sub-issue requires the parent's and the child's repositories to share one. A
+  mission spanning organizations (cyberuni and cyber-civitas, for one) keeps its epic in a tracker
+  that spans them, such as Asana, or links its children with a cynapse relation (cynapse
+  ADR-0010).
 
 ### 9. Addressing and waking
 

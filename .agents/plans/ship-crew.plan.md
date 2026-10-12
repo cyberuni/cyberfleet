@@ -487,8 +487,9 @@ cynapse:
 8. Land cynapse PRs #94 and #92; release 0.2.0; announce the async/CLI-rename break (#71, #72, #75).
 9. `cynapse.published` write-back entry type (ADR-0011), added to the public contract.
 10. Relations across stores for "blocked by" (ADR-0010): names, per-store spelling, a read helper.
-    Needed for mission-to-sortie links only across GitHub organizations, where sub-issues are
-    unconfirmed (P13).
+    Needed for mission-to-sortie links only across GitHub organizations, where sub-issues are not
+    supported (the add-sub-issue endpoint requires one owner), unless the epic lives in a tracker
+    that spans them (P13).
 
 cyberlegion:
 
