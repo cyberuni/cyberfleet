@@ -209,7 +209,7 @@ decisions they name; ADR-0024 is written to match.
 - **R8. The Coordinator reports once, when its queue settles.** It posts one report of what landed
   and rings the Captain when its open pull request count reaches 0, then exits; escalations still go
   at once. The Captain reviews the settled queue. Supersedes R1's report per landing.
-- **R9. No Operator in a ship; the ship is two tabs.** The Dashboard and the Bridge merge into the
+- **R9. No Operator in a ship; the ship is two tabs.** *Reverted by R10.* The Dashboard and the Bridge merge into the
   **Bridge** (first tab, main checkout): the Captain left, where the Council talks to the ship
   directly; the Coordinator and the missions view stacked right. The Engine Room stays. The Captain
   starts when the ship opens or when called. Consequences written into ADR-0024: a delegation's
@@ -217,6 +217,14 @@ decisions they name; ADR-0024 is written to match.
   Bridge), named in the record, and the Coordinator asks that holder; questions inside a ship are
   answered at the high tier. Supersedes C1's three tabs, C3 for the Captain, and the rest of R5's
   "the Dashboard's left pane is the Council's own session".
+
+- **R10. R9 reverted; the Command Center mirrors the ship.** Both open on a **Dashboard**. Ship:
+  Dashboard (left: the **remote pane**, a standing call to the one Operator; right: ship status),
+  Bridge (Captain left, Coordinator right, both on demand again), Engine Room. Command Center:
+  Dashboard (left: the **Operator's seat**, the one Operator; right: fleet status) and the **Flag
+  Bridge**, where the fleet's roadmap and cross-ship decisions are made; its seat is open until a
+  scenario needs a fleet-level role. The remote pane decides and holds nothing, so the Operator
+  holds words given through it; words given to a Captain on its Bridge are the Captain's. R8 stands.
 
 ### Questions settled at fine-tuning (2026-10-11)
 

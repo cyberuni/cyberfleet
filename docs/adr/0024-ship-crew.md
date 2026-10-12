@@ -35,17 +35,18 @@ ADR-0023 gave each project a Captain and moved spawning to it. It left four thin
 
 ## Decision
 
-### 1. The ship has two tabs
+### 1. The ship and the Command Center share a shape
 
-A ship is a herdr workspace with two tabs, opened from a template. There is no Operator in a ship.
+Each is a herdr workspace opened from a template, and each opens on a **Dashboard**. Every layout
+is a template slot the Council can change.
 
-| Tab | Holds |
-| --- | --- |
-| **Bridge** (first) | The main checkout. Left: the Captain, where the Council talks to the ship directly. Right, stacked: the Coordinator, and a refreshing `cyberfleet missions` until the mission TUI (cyberfleet#4) replaces it. The layout is a template slot the Council can change. |
-| **Engine Room** | Long-running processes for the main checkout (Storybook, dev servers). No agents. A Pod that needs a preview of its own branch starts one in its own worktree. |
-
-The Captain starts when the ship is opened or when it is called (§3); the Coordinator starts on
-demand, when there is work to land.
+| Place | Tab | Holds |
+| --- | --- | --- |
+| Ship | **Dashboard** (first) | The main checkout. Left: the **remote pane**, which calls the Operator in the Command Center (§3). Right: the ship's issues, pull requests, and status, from a refreshing `cyberfleet missions` until the mission TUI (cyberfleet#4) replaces it. |
+| Ship | **Bridge** | Left: the Captain. Right: the Coordinator. Both start on demand, not with the ship. |
+| Ship | **Engine Room** | Long-running processes for the main checkout (Storybook, dev servers). No agents. A Pod that needs a preview of its own branch starts one in its own worktree. |
+| Command Center | **Dashboard** (first) | Left: the **Operator's seat**, the one Operator. Right: fleet status across ships. |
+| Command Center | **Flag Bridge** | Where the fleet's roadmap and cross-ship decisions are made. Its seat is left open until a scenario needs a fleet-level role. |
 
 Opening a ship is the runtime's job: cyberlegion applies a cyber-mux template and starts or
 reserves role sessions in its named slots. cyberfleet supplies the template's content and the
@@ -56,8 +57,8 @@ pane).
 
 | Automaton | How many | Seat | Tier | Starts | Job |
 | --- | --- | --- | --- | --- | --- |
-| Operator | One | Command Center | Mid | With the Command Center | The Council's interface to the fleet. Answers questions itself; relays work to the target ship's Captain; holds the Council's merge delegations. |
-| Captain | One per ship | Bridge, left | High | When the ship opens, or when called | Freshness, priority, scope; the issue tracker; the plan; spawns and manages Pods; reviews what landed; rules on escalations. |
+| Operator | One | Command Center Dashboard, left | Mid | With the Command Center | The Council's interface to the fleet. Answers questions itself; relays work to the target ship's Captain; holds the Council's merge delegations. |
+| Captain | One per ship | Bridge, left | High | On demand | Freshness, priority, scope; the issue tracker; the plan; spawns and manages Pods; reviews what landed; rules on escalations. |
 | Coordinator | One per ship | Bridge, right | Low | On demand | Lands work: clean bar, rebase order, speculative CI, merge; reports to the Captain when its queue settles; escalates judgment. |
 | Pod | Many | Own workspace and worktree | Per Pod | Spawned by the Captain, or by a Pod for a gate | One line of work (impl, judge, refactor, audit) in one sortie. |
 | Mediator | Per dispute | Headless, cold | High | Per dispute | Writes a brief of a dispute. Decides nothing. |
@@ -71,17 +72,21 @@ doing both. One loop would put landing back on the high tier.
 
 ### 3. Calling the crew is a phone call
 
-There is one Operator, in the Command Center, and one Captain per ship. On a ship's Bridge the
-Council talks to its Captain directly: those are turns in the Captain's own session. Anywhere else,
-`/operator` or `/captain` calls that one automaton, and never makes the calling session one:
+There is one Operator, in the Command Center Dashboard's left pane, and one Captain per ship. On a
+ship's Bridge the Council talks to its Captain directly: those are turns in the Captain's own
+session. Anywhere else, `/operator` or `/captain` calls that one automaton, and never makes the
+calling session one:
 
 - The calling session posts the Council's words, verbatim, to the role's address channel and rings
   it (`cyberlegion send --start`, which starts it if it is not running), then shows the reply.
 - Calling takes over nothing. The called automaton keeps its own session, lease, and history.
 
+A ship Dashboard's **remote pane** is a standing call to the Operator: whatever the Council says
+there reaches the Operator as above, and the reply comes back to it. The remote pane decides
+nothing and holds nothing, so the Council's words are held by the Operator (§5).
+
 The Operator answers questions from `cyberfleet missions`, `gh`, and channels without waking a
-Captain. Only work goes up, to the target ship's Captain. Inside a ship, questions go to the Captain,
-at the high tier; the Captain may hand a status read to a low-tier subagent. A request spanning ships goes to the ship
+Captain. Only work goes up, to the target ship's Captain. A request spanning ships goes to the ship
 where it starts, and that Captain invites the other one (§10).
 
 ### 4. The clean bar is a command
@@ -170,8 +175,8 @@ The plan lives in the tracker. cyber-sdd's mission graph is not a dependency: it
 for cyber-truss's design and is superseded by it.
 
 The Coordinator works in its own integration worktree, provisioned through the runtime (civitas
-0003). Speculative CI and bisection need a checkout, and the main checkout belongs to the Captain. If the host's merge queue does the speculation, the Coordinator reads its
-results instead.
+0003). Speculative CI and bisection need a checkout, and the main checkout belongs to the Captain. If
+the host's merge queue does the speculation, the Coordinator reads its results instead.
 
 ### 8. Sorties, missions, and their channels
 
@@ -265,7 +270,9 @@ This replaces ADR-0023 §5's step from the arbitration channel straight to the C
 
 | Term | Meaning |
 | --- | --- |
-| **Bridge, Engine Room** | The ship's two tabs (§1). |
+| **Dashboard, Bridge, Engine Room** | The ship's three tabs (§1). |
+| **Flag Bridge** | The Command Center's second tab, for the fleet's roadmap and cross-ship decisions (§1). |
+| **remote pane** | A ship Dashboard's left pane: a standing call to the one Operator (§3). |
 | **calling** | Reaching the one Operator, or a ship's one Captain from outside its Bridge, without becoming it (§3). |
 | **Coordinator** | The ship's landing automaton (§2, §4). |
 | **Mediator** | A cold automaton that briefs a dispute for the Council (§10). |
@@ -297,8 +304,6 @@ nowhere to go.
 - The Captain takes a review turn per settled queue. That is the outer loop's cost, and it is
   judgment the Coordinator must not make. A queue that keeps refilling delays that review; work
   waiting on a landing is not replanned until the queue settles.
-- Questions asked on a ship's Bridge are answered at the high tier, since there is no ship
-  Operator.
 - Seven repositories change. Work is placed by each module's responsibility (plan,
   §Responsibilities); cyberlegion slot placement and `send --start`, and cyber-mux template
   application, land before the parts of this ADR that use them.
@@ -309,10 +314,10 @@ nowhere to go.
 ### Degraded mode
 
 Until cyberlegion has slot-addressed placement and cyber-mux can apply a template into a named tab,
-`ship open` applies the template with `cyber-mux open --template` and starts the Captain in it; the
-Captain starts the Coordinator with `--at pane:right` relative to itself. Opening a ship works this
-way; calling the Captain of a ship that is not open, from the Command Center, does not place it on a
-Bridge.
+`ship open` applies the template with `cyber-mux open --template`. A `/captain` call from the ship's
+remote pane starts the Captain with `--at tab` relative to that pane, and the Captain starts the
+Coordinator with `--at pane:right` relative to itself. Starting a Captain from inside its ship works
+this way; the Operator relaying to a Captain that is not running cannot place it on its Bridge.
 
 ## Implementation order
 
