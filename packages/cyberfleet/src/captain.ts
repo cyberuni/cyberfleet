@@ -3,12 +3,12 @@ import { join } from 'node:path'
 import {
 	type AgentRecord,
 	realExec,
-	resolveProject,
 	resolveService,
 	type ServiceContext,
 	type ServiceView,
 	withOwnership,
 } from 'cyberlegion'
+import { type ProjectAddress, projectAddressOf } from './project-address.ts'
 
 // A project's Captain is cyberlegion's `captain` project service: one authoritative owner per
 // project, fenced by generation, started by `cyberlegion service start` in the project's default
@@ -16,8 +16,8 @@ import {
 // Every ownership change below runs inside `withOwnership`, so a session that is not the Captain at
 // the generation it names cannot record, adopt, or retire a Pod.
 //
-// The project key is whatever cyberlegion resolved the project to. It is stored and compared, never
-// parsed, so a key from another addressing scheme (cynapse, cyber-civitas decision 0004) drops in.
+// The project key comes from `projectAddressOf`, the one place a checkout maps to a project. Here it
+// is stored and compared, never parsed.
 
 export const CAPTAIN_SERVICE = 'captain'
 
@@ -57,19 +57,19 @@ export interface CaptainView {
  * never started reads as `vacant` at generation 0.
  */
 export function showCaptain(ctx: ServiceContext, projectRef: string): CaptainView {
-	const project = resolveProject(ctx, projectRef)
+	const address = projectAddressOf(ctx, projectRef)
 	const exec = ctx.exec ?? realExec
 	const branches = {
-		homeBranch: exec('git', ['-C', project.root, 'branch', '--show-current']) || undefined,
-		defaultBranch: exec('git', ['-C', project.root, 'symbolic-ref', '--short', 'refs/remotes/origin/HEAD'])?.replace(
+		homeBranch: exec('git', ['-C', address.home, 'branch', '--show-current']) || undefined,
+		defaultBranch: exec('git', ['-C', address.home, 'symbolic-ref', '--short', 'refs/remotes/origin/HEAD'])?.replace(
 			/^origin\//,
 			'',
 		),
 	}
-	const base = { project: project.id, name: project.name, home: project.root, ...branches }
+	const base = { project: address.key, name: address.name, home: address.home, ...branches }
 	let view: ServiceView
 	try {
-		view = resolveService(ctx, project.id, CAPTAIN_SERVICE)
+		view = resolveService(ctx, address.key, CAPTAIN_SERVICE)
 	} catch {
 		return { ...base, health: 'vacant', generation: 0, control: 'none', note: 'no Captain has been started' }
 	}
@@ -100,12 +100,10 @@ export interface PodAct {
  */
 export function bindPod(ctx: ServiceContext, act: PodAct & { sortie?: string }): PodBinding {
 	const podProject = podProjectOf(ctx, act.pod)
-	return fenced(ctx, act, (view) => {
-		if (podProject.id !== view.project.id)
-			throw new Error(
-				`pod "${act.pod}" runs in another project's checkout (${podProject.name}), not ${view.project.name}`,
-			)
-		if (podProject.worktree === view.project.root)
+	return fenced(ctx, act, (project) => {
+		if (podProject.key !== project.key)
+			throw new Error(`pod "${act.pod}" runs in another project's checkout (${podProject.name}), not ${project.name}`)
+		if (podProject.worktree === project.home)
 			throw new Error(`pod "${act.pod}" sits in the Captain's home; a pod needs its own worktree`)
 		const existing = readBinding(ctx, act.pod)
 		if (existing?.state === 'retired') throw new Error(`pod "${act.pod}" is already retired`)
@@ -117,7 +115,7 @@ export function bindPod(ctx: ServiceContext, act: PodAct & { sortie?: string }):
 		}
 		return writeBinding(ctx, {
 			pod: act.pod,
-			project: view.project.id,
+			project: project.key,
 			captain: act.captain,
 			generation: act.generation,
 			...(act.sortie ? { sortie: act.sortie } : {}),
@@ -132,8 +130,8 @@ export function bindPod(ctx: ServiceContext, act: PodAct & { sortie?: string }):
  * generation. Ownership never moves by a session merely contacting the Captain or reading its mail.
  */
 export function adoptPod(ctx: ServiceContext, act: PodAct): PodBinding {
-	return fenced(ctx, act, (view) => {
-		const existing = activeBinding(ctx, act.pod, view)
+	return fenced(ctx, act, (project) => {
+		const existing = activeBinding(ctx, act.pod, project)
 		if (existing.generation === act.generation && existing.captain === act.captain)
 			throw new Error(`${act.captain} already owns pod "${act.pod}" at generation ${act.generation}`)
 		return writeBinding(ctx, {
@@ -150,8 +148,8 @@ export function adoptPod(ctx: ServiceContext, act: PodAct): PodBinding {
  * owns it now. The pod's unit is torn down separately (`cyberlegion unit close`).
  */
 export function retirePod(ctx: ServiceContext, act: PodAct): PodBinding {
-	return fenced(ctx, act, (view) => {
-		const existing = activeBinding(ctx, act.pod, view)
+	return fenced(ctx, act, (project) => {
+		const existing = activeBinding(ctx, act.pod, project)
 		if (existing.captain !== act.captain || existing.generation !== act.generation)
 			throw new Error(
 				`pod "${act.pod}" is owned by ${existing.captain} at generation ${existing.generation}; adopt it before retiring it`,
@@ -176,7 +174,13 @@ export interface PodRow extends PodBinding {
 
 /** Every recorded pod — of one project, or of all — with where its ownership stands now. */
 export function listPods(ctx: ServiceContext, projectRef?: string): PodRow[] {
-	const key = projectRef === undefined ? undefined : resolveProject(ctx, projectRef).id
+	const bindings = readBindings(ctx)
+	// A stored key is matched as it is, so a binding stays listable under its own key even when no
+	// runtime resolves that key any more; anything else is resolved to its project address first.
+	const key =
+		projectRef === undefined || bindings.some((b) => b.project === projectRef)
+			? projectRef
+			: projectAddressOf(ctx, projectRef).key
 	const views = new Map<string, ServiceView | undefined>()
 	const viewOf = (project: string) => {
 		if (!views.has(project)) {
@@ -188,7 +192,7 @@ export function listPods(ctx: ServiceContext, projectRef?: string): PodRow[] {
 		}
 		return views.get(project)
 	}
-	return readBindings(ctx)
+	return bindings
 		.filter((b) => key === undefined || b.project === key)
 		.map((b) => {
 			const unit = ctx.store.getAgent(b.pod)
@@ -214,14 +218,16 @@ function isLive(ctx: ServiceContext, unit: AgentRecord): boolean {
 	return ctx.isLive ? ctx.isLive(unit) : true
 }
 
-function fenced<T>(ctx: ServiceContext, act: PodAct, fn: (view: ServiceView) => T): T {
-	return withOwnership(ctx, act.project, CAPTAIN_SERVICE, { unit: act.captain, generation: act.generation }, fn)
+function fenced<T>(ctx: ServiceContext, act: PodAct, fn: (project: ProjectAddress) => T): T {
+	const project = projectAddressOf(ctx, act.project)
+	return withOwnership(ctx, project.key, CAPTAIN_SERVICE, { unit: act.captain, generation: act.generation }, () =>
+		fn(project),
+	)
 }
 
-function activeBinding(ctx: ServiceContext, pod: string, view: ServiceView): PodBinding {
+function activeBinding(ctx: ServiceContext, pod: string, project: ProjectAddress): PodBinding {
 	const existing = readBinding(ctx, pod)
-	if (!existing || existing.project !== view.project.id)
-		throw new Error(`pod "${pod}" is not bound in ${view.project.name}`)
+	if (!existing || existing.project !== project.key) throw new Error(`pod "${pod}" is not bound in ${project.name}`)
 	if (existing.state === 'retired') throw new Error(`pod "${pod}" is already retired`)
 	return existing
 }
@@ -231,7 +237,7 @@ function podProjectOf(ctx: ServiceContext, pod: string) {
 	if (!unit) throw new Error(`no unit "${pod}"`)
 	if (!unit.worktree?.root) throw new Error(`pod "${pod}" has no worktree; a pod runs in its own project worktree`)
 	const worktree = existsSync(unit.worktree.root) ? realpathSync(unit.worktree.root) : unit.worktree.root
-	return { ...resolveProject(ctx, unit.worktree.root), worktree }
+	return { ...projectAddressOf(ctx, unit.worktree.root), worktree }
 }
 
 const now = (ctx: ServiceContext) => new Date(ctx.now?.() ?? Date.now()).toISOString()

@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, realpathSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -309,7 +309,7 @@ describe('listPods across projects', () => {
 		expect(listPods(ctx).length).toBe(3)
 	})
 
-	it('treats the project key as opaque: a binding is found by any ref that resolves to it', () => {
+	it('finds a binding by any ref that resolves to its project', () => {
 		const { root, trees } = repo('alpha', 'pod-1')
 		unit('cap', root)
 		unit('pod1', root, trees[0])
@@ -317,5 +317,15 @@ describe('listPods across projects', () => {
 		const binding = bindPod(ctx, { project: trees[0] as string, captain: 'cap', generation, pod: 'pod1' })
 		expect(listPods(ctx, binding.project).map((p) => p.pod)).toEqual(['pod1'])
 		expect(listPods(ctx, 'alpha').map((p) => p.pod)).toEqual(['pod1'])
+	})
+	it('keeps a binding whose key no runtime resolves listable under that key, never parsed', () => {
+		const key = 'cynapse:acme/widget'
+		mkdirSync(join(ctx.store.root, 'cyberfleet', 'pods'), { recursive: true })
+		writeFileSync(
+			join(ctx.store.root, 'cyberfleet', 'pods', 'pod9.json'),
+			JSON.stringify({ pod: 'pod9', project: key, captain: 'cap', generation: 1, state: 'active', boundAt: 'x' }),
+		)
+		expect(listPods(ctx, key)).toMatchObject([{ pod: 'pod9', project: key, owner: 'orphaned' }])
+		expect(listPods(ctx).map((p) => p.pod)).toEqual(['pod9'])
 	})
 })

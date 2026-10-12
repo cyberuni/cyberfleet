@@ -6380,6 +6380,19 @@ var FileStore = class {
 	}
 };
 //#endregion
+//#region src/project-address.ts
+const KEY_SCHEME = "cyberlegion";
+/** The project address of a checkout: a path in any checkout, a key this returned, or a unique name. */
+function projectAddressOf(ctx, ref) {
+	const project = resolveProject(ctx, ref);
+	return {
+		key: project.id,
+		scheme: KEY_SCHEME,
+		name: project.name,
+		home: project.root
+	};
+}
+//#endregion
 //#region src/captain.ts
 const CAPTAIN_SERVICE = "captain";
 /**
@@ -6387,32 +6400,32 @@ const CAPTAIN_SERVICE = "captain";
 * never started reads as `vacant` at generation 0.
 */
 function showCaptain(ctx, projectRef) {
-	const project = resolveProject(ctx, projectRef);
+	const address = projectAddressOf(ctx, projectRef);
 	const exec = ctx.exec ?? realExec;
 	const branches = {
 		homeBranch: exec("git", [
 			"-C",
-			project.root,
+			address.home,
 			"branch",
 			"--show-current"
 		]) || void 0,
 		defaultBranch: exec("git", [
 			"-C",
-			project.root,
+			address.home,
 			"symbolic-ref",
 			"--short",
 			"refs/remotes/origin/HEAD"
 		])?.replace(/^origin\//, "")
 	};
 	const base = {
-		project: project.id,
-		name: project.name,
-		home: project.root,
+		project: address.key,
+		name: address.name,
+		home: address.home,
 		...branches
 	};
 	let view;
 	try {
-		view = resolveService(ctx, project.id, CAPTAIN_SERVICE);
+		view = resolveService(ctx, address.key, CAPTAIN_SERVICE);
 	} catch {
 		return {
 			...base,
@@ -6439,9 +6452,9 @@ function showCaptain(ctx, projectRef) {
 */
 function bindPod(ctx, act) {
 	const podProject = podProjectOf(ctx, act.pod);
-	return fenced(ctx, act, (view) => {
-		if (podProject.id !== view.project.id) throw new Error(`pod "${act.pod}" runs in another project's checkout (${podProject.name}), not ${view.project.name}`);
-		if (podProject.worktree === view.project.root) throw new Error(`pod "${act.pod}" sits in the Captain's home; a pod needs its own worktree`);
+	return fenced(ctx, act, (project) => {
+		if (podProject.key !== project.key) throw new Error(`pod "${act.pod}" runs in another project's checkout (${podProject.name}), not ${project.name}`);
+		if (podProject.worktree === project.home) throw new Error(`pod "${act.pod}" sits in the Captain's home; a pod needs its own worktree`);
 		const existing = readBinding(ctx, act.pod);
 		if (existing?.state === "retired") throw new Error(`pod "${act.pod}" is already retired`);
 		if (existing) {
@@ -6450,7 +6463,7 @@ function bindPod(ctx, act) {
 		}
 		return writeBinding(ctx, {
 			pod: act.pod,
-			project: view.project.id,
+			project: project.key,
 			captain: act.captain,
 			generation: act.generation,
 			...act.sortie ? { sortie: act.sortie } : {},
@@ -6464,8 +6477,8 @@ function bindPod(ctx, act) {
 * generation. Ownership never moves by a session merely contacting the Captain or reading its mail.
 */
 function adoptPod(ctx, act) {
-	return fenced(ctx, act, (view) => {
-		const existing = activeBinding(ctx, act.pod, view);
+	return fenced(ctx, act, (project) => {
+		const existing = activeBinding(ctx, act.pod, project);
 		if (existing.generation === act.generation && existing.captain === act.captain) throw new Error(`${act.captain} already owns pod "${act.pod}" at generation ${act.generation}`);
 		return writeBinding(ctx, {
 			...existing,
@@ -6483,8 +6496,8 @@ function adoptPod(ctx, act) {
 * owns it now. The pod's unit is torn down separately (`cyberlegion unit close`).
 */
 function retirePod(ctx, act) {
-	return fenced(ctx, act, (view) => {
-		const existing = activeBinding(ctx, act.pod, view);
+	return fenced(ctx, act, (project) => {
+		const existing = activeBinding(ctx, act.pod, project);
 		if (existing.captain !== act.captain || existing.generation !== act.generation) throw new Error(`pod "${act.pod}" is owned by ${existing.captain} at generation ${existing.generation}; adopt it before retiring it`);
 		return writeBinding(ctx, {
 			...existing,
@@ -6495,7 +6508,8 @@ function retirePod(ctx, act) {
 }
 /** Every recorded pod — of one project, or of all — with where its ownership stands now. */
 function listPods(ctx, projectRef) {
-	const key = projectRef === void 0 ? void 0 : resolveProject(ctx, projectRef).id;
+	const bindings = readBindings(ctx);
+	const key = projectRef === void 0 || bindings.some((b) => b.project === projectRef) ? projectRef : projectAddressOf(ctx, projectRef).key;
 	const views = /* @__PURE__ */ new Map();
 	const viewOf = (project) => {
 		if (!views.has(project)) try {
@@ -6505,7 +6519,7 @@ function listPods(ctx, projectRef) {
 		}
 		return views.get(project);
 	};
-	return readBindings(ctx).filter((b) => key === void 0 || b.project === key).map((b) => {
+	return bindings.filter((b) => key === void 0 || b.project === key).map((b) => {
 		const unit = ctx.store.getAgent(b.pod);
 		return {
 			...b,
@@ -6527,14 +6541,15 @@ function isLive(ctx, unit) {
 	return ctx.isLive ? ctx.isLive(unit) : true;
 }
 function fenced(ctx, act, fn) {
-	return withOwnership(ctx, act.project, CAPTAIN_SERVICE, {
+	const project = projectAddressOf(ctx, act.project);
+	return withOwnership(ctx, project.key, CAPTAIN_SERVICE, {
 		unit: act.captain,
 		generation: act.generation
-	}, fn);
+	}, () => fn(project));
 }
-function activeBinding(ctx, pod, view) {
+function activeBinding(ctx, pod, project) {
 	const existing = readBinding(ctx, pod);
-	if (!existing || existing.project !== view.project.id) throw new Error(`pod "${pod}" is not bound in ${view.project.name}`);
+	if (!existing || existing.project !== project.key) throw new Error(`pod "${pod}" is not bound in ${project.name}`);
 	if (existing.state === "retired") throw new Error(`pod "${pod}" is already retired`);
 	return existing;
 }
@@ -6544,7 +6559,7 @@ function podProjectOf(ctx, pod) {
 	if (!unit.worktree?.root) throw new Error(`pod "${pod}" has no worktree; a pod runs in its own project worktree`);
 	const worktree = existsSync(unit.worktree.root) ? realpathSync(unit.worktree.root) : unit.worktree.root;
 	return {
-		...resolveProject(ctx, unit.worktree.root),
+		...projectAddressOf(ctx, unit.worktree.root),
 		worktree
 	};
 }
