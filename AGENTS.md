@@ -67,15 +67,18 @@ as one package that is both the npm CLI and the agent plugin root:
 
 - `packages/cyberfleet/` — the npm package, published as `cyberfleet`, powered by Commander. A
   thin CLI over SDD state: `missions` (the Council view — ships × mission × gate × leash),
-  `jump` (session focus), `pause` (a status marker), and `gate approve` (deliberately stubbed —
-  human ratification cannot be safely relayed through a CLI). It **depends up** on `cyberlegion`
-  for every mechanism verb (register, mail, spawn, prune) rather than re-exposing them.
+  `jump` (session focus), `pause` (a status marker), `gate approve` (deliberately stubbed —
+  human ratification cannot be safely relayed through a CLI), and the Captain's Pod record:
+  `captain` (a project's Captain lease, read-only), `pods` (each Pod and whether a Captain holds
+  its owning role now), and `pod bind|retire` (fenced by the Captain's lease generation). It
+  **depends up** on `cyberlegion` for every mechanism verb (register, mail, spawn, prune) rather
+  than re-exposing them.
 - the agent plugin, from the same `packages/cyberfleet/` directory: the fleet & crew personas
   (**Pod**, the in-ship bridge-companion; **Operator**, the fleet-level dispatcher; **Crimp**,
   crew recruitment; **Mechanic**, automaton building/tuning), plus the `headless-operator`
   subagent that backs unattended dispatch. Each persona offloads its mechanics to a CLI —
-  `cyberlegion` for identity, mail, and spawn; `cyberfleet` for missions — and keeps its voice
-  only in what it says around them.
+  `cyberlegion` for identity, mail, and spawn; `cyberfleet` for missions and Pod ownership — and
+  keeps its voice only in what it says around them.
 
 The npm package root doubles as the plugin root, so an installed plugin carries the CLI with it.
 The CLI build inlines every runtime dependency (`tsdown.config.ts`), so it runs from a plugin

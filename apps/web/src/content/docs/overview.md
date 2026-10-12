@@ -28,6 +28,9 @@ Under the automatons sits the `cyberfleet` **console** — the CLI. It's cold an
 | `cyberfleet jump <peer>` | Select/focus a ship's session, or print its worktree path to `cd` into |
 | `cyberfleet pause <peer>` | Flip a ship's status marker (**not** the SDD `pause-mission` checkpoint) |
 | `cyberfleet gate approve <cr> <gate>` | Council ratification — **stubbed**; a human-attributed gate write can't be safely relayed via CLI |
+| `cyberfleet captain [project]` | Read a project's Captain lease — home checkout, holder, generation, health. Starts nothing |
+| `cyberfleet pods [project]` | List the Pods a project's Captain role owns, and whether a Captain holds that role now (`--all` for every project) |
+| `cyberfleet pod bind\|retire <pod>` | Record the Captain role as a Pod's one owner, or retire the Pod once — fenced by the caller's Captain lease generation |
 
 ## The control panel
 
