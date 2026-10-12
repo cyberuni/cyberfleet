@@ -302,7 +302,7 @@ This replaces ADR-0023 §5's step from the arbitration channel straight to the C
 | **Flag Bridge** | The Command Center's second tab, for the fleet's roadmap and cross-ship decisions (§1). |
 | **remote pane** | A ship Dashboard's left pane: a mid-tier session for talking to the one Operator and directing traffic from inside a ship (§3). |
 | **calling** | Reaching the one Operator, or a Captain from outside its pane, without becoming it (§3). |
-| **Coordinator** | The ship's landing automaton (§2, §4). |
+| **Coordinator** | The low-tier automaton that does a Captain's mechanics: a ship's lands pull requests (§4), the fleet's keeps epics and lands missions (§8). |
 | **Mediator** | A cold automaton that briefs a dispute for the Council (§10). |
 | **sortie** | An issue in flight: releasable, in one repository, owned by its Captain (§8). |
 | **mission** | An epic in flight: several sorties delivering one outcome (§8). |
