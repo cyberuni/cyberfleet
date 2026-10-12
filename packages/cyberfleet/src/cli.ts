@@ -156,9 +156,11 @@ rootOpts(program.command('pods'))
 	.description(
 		"list the pods each project's Captain role owns, and whether a Captain holds the role now (current/unavailable/retired)",
 	)
-	.argument('[project]', 'project key, a path in any of its checkouts, or its unique name (default: every project)')
+	.argument('[project]', 'project key, a path in any of its checkouts, or its unique name (default: here)')
+	.option('--all', 'list the pods of every project')
 	.action((project, opts) => {
-		const rows = listPods(ctxOf(opts), project)
+		if (opts.all && project) throw new Error('pass a project or --all, not both')
+		const rows = listPods(ctxOf(opts), opts.all ? undefined : (project ?? process.cwd()))
 		emit(formatOf(opts), {
 			toon: toonList(
 				'pods',

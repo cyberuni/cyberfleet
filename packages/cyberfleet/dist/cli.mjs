@@ -7029,8 +7029,9 @@ rootOpts(program.command("captain")).description("show a project's Captain — i
 		json: view
 	});
 });
-rootOpts(program.command("pods")).description("list the pods each project's Captain role owns, and whether a Captain holds the role now (current/unavailable/retired)").argument("[project]", "project key, a path in any of its checkouts, or its unique name (default: every project)").action((project, opts) => {
-	const rows = listPods(ctxOf(opts), project);
+rootOpts(program.command("pods")).description("list the pods each project's Captain role owns, and whether a Captain holds the role now (current/unavailable/retired)").argument("[project]", "project key, a path in any of its checkouts, or its unique name (default: here)").option("--all", "list the pods of every project").action((project, opts) => {
+	if (opts.all && project) throw new Error("pass a project or --all, not both");
+	const rows = listPods(ctxOf(opts), opts.all ? void 0 : project ?? process.cwd());
 	emit(formatOf(opts), {
 		toon: toonList("pods", rows, [
 			{

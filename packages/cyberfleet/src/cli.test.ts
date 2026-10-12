@@ -165,6 +165,17 @@ describe('captain and pod verbs', () => {
 		expect(JSON.parse(cf(['pods', project(), '--format', 'json']))).toEqual([])
 	})
 
+	it('pods defaults to the project here, as captain does; --all lists every project', () => {
+		const dir = project()
+		mkdirSync(join(root, 'cyberfleet', 'pods'), { recursive: true })
+		writeFileSync(
+			join(root, 'cyberfleet', 'pods', 'elsewhere.json'),
+			JSON.stringify({ pod: 'elsewhere', project: 'cynapse:acme/widget', role: 'captain', state: 'active' }),
+		)
+		expect(JSON.parse(cf(['pods', '--format', 'json'], {}, dir))).toEqual([])
+		expect(JSON.parse(cf(['pods', '--all', '--format', 'json'], {}, dir))).toMatchObject([{ pod: 'elsewhere' }])
+	})
+
 	it('pod bind refuses a caller that does not hold the Captain lease, and records the one that does', () => {
 		const dir = project()
 		const tree = join(work, 'alpha.worktrees', 'pod-1')
