@@ -2,4 +2,4 @@
 "cyberfleet": minor
 ---
 
-Add `cyberfleet captain`, `cyberfleet pods`, and `cyberfleet pod bind|adopt|retire`: a project's Captain is cyberlegion's `captain` project service, and each Pod is recorded with exactly one owning Captain at its service generation. A stale Captain cannot record, adopt, or retire a Pod, a Pod is retired once, and a Pod whose Captain is gone or replaced stays listed as unavailable or orphaned until it is explicitly adopted.
+Add `cyberfleet captain`, `cyberfleet pods`, and `cyberfleet pod bind|retire`. A project's Captain is cyberlegion's `captain` project service, and each Pod is owned by that Captain role, so a Captain restart or a new Captain session keeps its Pods with nothing to adopt. Binding and retiring run fenced at the caller's lease generation: a session that does not hold the Captain's lease cannot record or retire a Pod, and a Pod is retired once. `pods` lists each Pod as `current`, `unavailable` (no Captain holds the role now), or `retired`, and `pod bind --sortie <issue-ref>` records the sortie the Pod carries.

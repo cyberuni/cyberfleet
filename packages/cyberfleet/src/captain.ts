@@ -13,8 +13,10 @@ import { type ProjectAddress, projectAddressOf } from './project-address.ts'
 // A project's Captain is cyberlegion's `captain` project service: one authoritative owner per
 // project, fenced by generation, started by `cyberlegion service start` in the project's default
 // checkout. cyberfleet adds the fleet policy on top — the Captain's home, and which Pods it owns.
-// Every ownership change below runs inside `withOwnership`, so a session that is not the Captain at
-// the generation it names cannot record, adopt, or retire a Pod.
+// A Pod is owned by the Captain role, not by a session: each start of a Captain is a fresh session
+// at a new lease generation (ADR-0024 §9), and the Pods stay with the role across them. Every
+// ownership change below runs inside `withOwnership`, so a session that does not hold the role's
+// lease at the generation it names cannot record or retire a Pod.
 //
 // The project key comes from `projectAddressOf`, the one place a checkout maps to a project. Here it
 // is stored and compared, never parsed.
@@ -23,17 +25,24 @@ export const CAPTAIN_SERVICE = 'captain'
 
 export interface PodBinding {
 	pod: string
-	/** The opaque project key the owning Captain's service lives under. */
+	/**
+	 * The owner is the role, not a session: the Captain service of this project. Whichever session
+	 * holds that lease acts for it, so a restart or a new Captain session moves nothing.
+	 */
 	project: string
-	/** The owning Captain's unit id, and the service generation it owned the Pod under. */
-	captain: string
-	generation: number
+	/** The addressing scheme `project` was minted under — a re-key finds its records by it. */
+	keyScheme: string
+	role: typeof CAPTAIN_SERVICE
+	/** The sortie (an issue) the pod carries. */
 	sortie?: string
 	state: 'active' | 'retired'
+	/** Audit stamps: the session that acted and the lease generation it acted under. */
 	boundAt: string
+	boundBy: string
+	boundAtGeneration: number
 	retiredAt?: string
-	/** Earlier owners, oldest first — kept so an adoption stays explainable. */
-	previous?: { captain: string; generation: number }[]
+	retiredBy?: string
+	retiredAtGeneration?: number
 }
 
 export interface CaptainView {
@@ -87,16 +96,17 @@ export function showCaptain(ctx: ServiceContext, projectRef: string): CaptainVie
 export interface PodAct {
 	/** Any ref cyberlegion resolves to the project: its key, a path in any checkout, or its name. */
 	project: string
-	/** The acting Captain's unit id, and the generation it believes it owns. */
+	/** The acting Captain session's unit id, and the lease generation it believes it holds. */
 	captain: string
 	generation: number
 	pod: string
 }
 
 /**
- * Record `captain` as the one owner of `pod`. The pod must run in its own worktree of this project —
- * not the Captain's home, not another project's checkout. Rebinding the same owner is a no-op; a pod
- * another Captain generation owns is refused (recover it with `adoptPod`).
+ * Record the project's Captain role as the one owner of `pod`, acting as the session that holds the
+ * role's lease at `generation`. The pod must run in its own worktree of this project — not the
+ * Captain's home, not another project's checkout. A pod the role already owns is left as it is,
+ * whichever Captain session binds it again; a retired pod stays retired.
  */
 export function bindPod(ctx: ServiceContext, act: PodAct & { sortie?: string }): PodBinding {
 	const podProject = podProjectOf(ctx, act.pod)
@@ -107,54 +117,35 @@ export function bindPod(ctx: ServiceContext, act: PodAct & { sortie?: string }):
 			throw new Error(`pod "${act.pod}" sits in the Captain's home; a pod needs its own worktree`)
 		const existing = readBinding(ctx, act.pod)
 		if (existing?.state === 'retired') throw new Error(`pod "${act.pod}" is already retired`)
-		if (existing) {
-			if (existing.captain === act.captain && existing.generation === act.generation) return existing
-			throw new Error(
-				`pod "${act.pod}" is owned by ${existing.captain} at generation ${existing.generation}; adopt it to take it over`,
-			)
-		}
+		if (existing) return existing
 		return writeBinding(ctx, {
 			pod: act.pod,
 			project: project.key,
-			captain: act.captain,
-			generation: act.generation,
+			keyScheme: project.scheme,
+			role: CAPTAIN_SERVICE,
 			...(act.sortie ? { sortie: act.sortie } : {}),
 			state: 'active',
 			boundAt: now(ctx),
+			boundBy: act.captain,
+			boundAtGeneration: act.generation,
 		})
 	})
 }
 
 /**
- * Explicit recovery: the current Captain takes over a pod whose owner is no longer the current
- * generation. Ownership never moves by a session merely contacting the Captain or reading its mail.
- */
-export function adoptPod(ctx: ServiceContext, act: PodAct): PodBinding {
-	return fenced(ctx, act, (project) => {
-		const existing = activeBinding(ctx, act.pod, project)
-		if (existing.generation === act.generation && existing.captain === act.captain)
-			throw new Error(`${act.captain} already owns pod "${act.pod}" at generation ${act.generation}`)
-		return writeBinding(ctx, {
-			...existing,
-			captain: act.captain,
-			generation: act.generation,
-			previous: [...(existing.previous ?? []), { captain: existing.captain, generation: existing.generation }],
-		})
-	})
-}
-
-/**
- * Retire a pod once its work is merged or abandoned — exactly once, and only by the Captain that
- * owns it now. The pod's unit is torn down separately (`cyberlegion unit close`).
+ * Retire a pod once its work is merged or abandoned — exactly once, and only by the session holding
+ * the Captain's lease now. The pod's unit is torn down separately (`cyberlegion unit close`).
  */
 export function retirePod(ctx: ServiceContext, act: PodAct): PodBinding {
 	return fenced(ctx, act, (project) => {
 		const existing = activeBinding(ctx, act.pod, project)
-		if (existing.captain !== act.captain || existing.generation !== act.generation)
-			throw new Error(
-				`pod "${act.pod}" is owned by ${existing.captain} at generation ${existing.generation}; adopt it before retiring it`,
-			)
-		return writeBinding(ctx, { ...existing, state: 'retired', retiredAt: now(ctx) })
+		return writeBinding(ctx, {
+			...existing,
+			state: 'retired',
+			retiredAt: now(ctx),
+			retiredBy: act.captain,
+			retiredAtGeneration: act.generation,
+		})
 	})
 }
 
@@ -164,12 +155,11 @@ export interface PodRow extends PodBinding {
 	/** Whether the pod's own session is still there. */
 	live: boolean
 	/**
-	 * `current` — its Captain owns the service at the binding's generation and is healthy.
-	 * `unavailable` — the binding is current but the Captain's session is gone; a restart or recovery
-	 * of that Captain keeps it. `orphaned` — the service moved to a newer generation; the current
-	 * Captain must adopt it. `retired` — done.
+	 * Read from the role's lease. `current` — a Captain session holds it and is healthy.
+	 * `unavailable` — no Captain now (never started, released, expired, or unhealthy); the next one
+	 * to take the lease has the pod with nothing to adopt. `retired` — done.
 	 */
-	owner: 'current' | 'unavailable' | 'orphaned' | 'retired'
+	owner: 'current' | 'unavailable' | 'retired'
 }
 
 /** Every recorded pod — of one project, or of all — with where its ownership stands now. */
@@ -208,8 +198,7 @@ export function listPods(ctx: ServiceContext, projectRef?: string): PodRow[] {
 
 function ownerState(b: PodBinding, view: ServiceView | undefined): PodRow['owner'] {
 	if (b.state === 'retired') return 'retired'
-	if (!view || view.lease.generation !== b.generation || view.lease.holder !== b.captain) return 'orphaned'
-	return view.lease.state === 'active' && view.health === 'healthy' ? 'current' : 'unavailable'
+	return view?.lease.state === 'active' && view.health === 'healthy' ? 'current' : 'unavailable'
 }
 
 /** The registry's view of a pod's session; `cyberlegion unit show` probes its multiplexer. */

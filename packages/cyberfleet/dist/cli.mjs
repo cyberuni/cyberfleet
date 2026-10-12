@@ -6446,9 +6446,10 @@ function showCaptain(ctx, projectRef) {
 	};
 }
 /**
-* Record `captain` as the one owner of `pod`. The pod must run in its own worktree of this project —
-* not the Captain's home, not another project's checkout. Rebinding the same owner is a no-op; a pod
-* another Captain generation owns is refused (recover it with `adoptPod`).
+* Record the project's Captain role as the one owner of `pod`, acting as the session that holds the
+* role's lease at `generation`. The pod must run in its own worktree of this project — not the
+* Captain's home, not another project's checkout. A pod the role already owns is left as it is,
+* whichever Captain session binds it again; a retired pod stays retired.
 */
 function bindPod(ctx, act) {
 	const podProject = podProjectOf(ctx, act.pod);
@@ -6457,52 +6458,32 @@ function bindPod(ctx, act) {
 		if (podProject.worktree === project.home) throw new Error(`pod "${act.pod}" sits in the Captain's home; a pod needs its own worktree`);
 		const existing = readBinding(ctx, act.pod);
 		if (existing?.state === "retired") throw new Error(`pod "${act.pod}" is already retired`);
-		if (existing) {
-			if (existing.captain === act.captain && existing.generation === act.generation) return existing;
-			throw new Error(`pod "${act.pod}" is owned by ${existing.captain} at generation ${existing.generation}; adopt it to take it over`);
-		}
+		if (existing) return existing;
 		return writeBinding(ctx, {
 			pod: act.pod,
 			project: project.key,
-			captain: act.captain,
-			generation: act.generation,
+			keyScheme: project.scheme,
+			role: CAPTAIN_SERVICE,
 			...act.sortie ? { sortie: act.sortie } : {},
 			state: "active",
-			boundAt: now(ctx)
+			boundAt: now(ctx),
+			boundBy: act.captain,
+			boundAtGeneration: act.generation
 		});
 	});
 }
 /**
-* Explicit recovery: the current Captain takes over a pod whose owner is no longer the current
-* generation. Ownership never moves by a session merely contacting the Captain or reading its mail.
-*/
-function adoptPod(ctx, act) {
-	return fenced(ctx, act, (project) => {
-		const existing = activeBinding(ctx, act.pod, project);
-		if (existing.generation === act.generation && existing.captain === act.captain) throw new Error(`${act.captain} already owns pod "${act.pod}" at generation ${act.generation}`);
-		return writeBinding(ctx, {
-			...existing,
-			captain: act.captain,
-			generation: act.generation,
-			previous: [...existing.previous ?? [], {
-				captain: existing.captain,
-				generation: existing.generation
-			}]
-		});
-	});
-}
-/**
-* Retire a pod once its work is merged or abandoned — exactly once, and only by the Captain that
-* owns it now. The pod's unit is torn down separately (`cyberlegion unit close`).
+* Retire a pod once its work is merged or abandoned — exactly once, and only by the session holding
+* the Captain's lease now. The pod's unit is torn down separately (`cyberlegion unit close`).
 */
 function retirePod(ctx, act) {
 	return fenced(ctx, act, (project) => {
-		const existing = activeBinding(ctx, act.pod, project);
-		if (existing.captain !== act.captain || existing.generation !== act.generation) throw new Error(`pod "${act.pod}" is owned by ${existing.captain} at generation ${existing.generation}; adopt it before retiring it`);
 		return writeBinding(ctx, {
-			...existing,
+			...activeBinding(ctx, act.pod, project),
 			state: "retired",
-			retiredAt: now(ctx)
+			retiredAt: now(ctx),
+			retiredBy: act.captain,
+			retiredAtGeneration: act.generation
 		});
 	});
 }
@@ -6532,8 +6513,7 @@ function listPods(ctx, projectRef) {
 }
 function ownerState(b, view) {
 	if (b.state === "retired") return "retired";
-	if (!view || view.lease.generation !== b.generation || view.lease.holder !== b.captain) return "orphaned";
-	return view.lease.state === "active" && view.health === "healthy" ? "current" : "unavailable";
+	return view?.lease.state === "active" && view.health === "healthy" ? "current" : "unavailable";
 }
 /** The registry's view of a pod's session; `cyberlegion unit show` probes its multiplexer. */
 function isLive(ctx, unit) {
@@ -7049,7 +7029,7 @@ rootOpts(program.command("captain")).description("show a project's Captain — i
 		json: view
 	});
 });
-rootOpts(program.command("pods")).description("list the pods each Captain owns, and where that ownership stands (current/unavailable/orphaned/retired)").argument("[project]", "project key, a path in any of its checkouts, or its unique name (default: every project)").action((project, opts) => {
+rootOpts(program.command("pods")).description("list the pods each project's Captain role owns, and whether a Captain holds the role now (current/unavailable/retired)").argument("[project]", "project key, a path in any of its checkouts, or its unique name (default: every project)").action((project, opts) => {
 	const rows = listPods(ctxOf(opts), project);
 	emit(formatOf(opts), {
 		toon: toonList("pods", rows, [
@@ -7066,10 +7046,6 @@ rootOpts(program.command("pods")).description("list the pods each Captain owns, 
 				get: (r) => r.live ? "yes" : "no"
 			},
 			{
-				key: "captain",
-				get: (r) => `${r.captain}@${r.generation}`
-			},
-			{
 				key: "owner",
 				get: (r) => r.owner
 			},
@@ -7081,8 +7057,8 @@ rootOpts(program.command("pods")).description("list the pods each Captain owns, 
 		json: rows
 	});
 });
-const podCmd = program.command("pod").description("a Captain's record of the pods it owns — every change fenced by its generation");
-const podAct = (cmd) => rootOpts(cmd).argument("<pod>", "the pod unit (handle or id)").requiredOption("--generation <n>", "the Captain service generation the caller owns (from `cyberfleet captain`)").option("--project <ref>", "project key, path, or unique name (default: here)").option("--captain <ref>", "the acting Captain unit (default: this session)");
+const podCmd = program.command("pod").description("the Captain role's record of the pods it owns — every change fenced by the caller's lease generation");
+const podAct = (cmd) => rootOpts(cmd).argument("<pod>", "the pod unit (handle or id)").requiredOption("--generation <n>", "the Captain lease generation the caller holds (from `cyberfleet captain`)").option("--project <ref>", "project key, path, or unique name (default: here)").option("--captain <ref>", "the acting Captain session (default: this session)");
 function actOf(ctx, pod, opts) {
 	const captain = opts.captain ? resolveAgent(ctx.store, opts.captain).id : resolveSelfId(ctx);
 	if (!captain) throw new Error("no session identity — run as a registered unit, or pass --captain");
@@ -7095,39 +7071,22 @@ function actOf(ctx, pod, opts) {
 		pod: resolveAgent(ctx.store, pod).id
 	};
 }
-podAct(podCmd.command("bind")).description("record this Captain as the one owner of a pod in its own project worktree").option("--sortie <issue-ref>", "the sortie (issue) the pod carries").action((pod, opts) => {
+podAct(podCmd.command("bind")).description("record the project's Captain role as the one owner of a pod in its own project worktree").option("--sortie <issue-ref>", "the sortie (issue) the pod carries").action((pod, opts) => {
 	const ctx = ctxOf(opts);
 	const binding = bindPod(ctx, {
 		...actOf(ctx, pod, opts),
 		...opts.sortie ? { sortie: opts.sortie } : {}
 	});
 	emit(formatOf(opts), {
-		toon: toonObject({
-			...binding,
-			previous: void 0
-		}),
+		toon: toonObject({ ...binding }),
 		json: binding
 	});
 });
-podAct(podCmd.command("adopt")).description("explicit recovery: take over a pod whose Captain generation was replaced").action((pod, opts) => {
-	const ctx = ctxOf(opts);
-	const binding = adoptPod(ctx, actOf(ctx, pod, opts));
-	emit(formatOf(opts), {
-		toon: toonObject({
-			...binding,
-			previous: void 0
-		}),
-		json: binding
-	});
-});
-podAct(podCmd.command("retire")).description("retire a pod once — only its current owner can; close its unit separately").action((pod, opts) => {
+podAct(podCmd.command("retire")).description("retire a pod once — only the session holding the Captain lease can; close its unit separately").action((pod, opts) => {
 	const ctx = ctxOf(opts);
 	const binding = retirePod(ctx, actOf(ctx, pod, opts));
 	emit(formatOf(opts), {
-		toon: toonObject({
-			...binding,
-			previous: void 0
-		}),
+		toon: toonObject({ ...binding }),
 		json: binding
 	});
 });

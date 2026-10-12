@@ -1,18 +1,20 @@
-import { execFileSync } from 'node:child_process'
+import { execFile, execFileSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
 	type AgentRecord,
 	acquireService,
 	bindService,
 	FileStore,
 	handoffService,
+	releaseService,
 	type ServiceContext,
 	ServiceOwnershipError,
 } from 'cyberlegion'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { adoptPod, bindPod, CAPTAIN_SERVICE, listPods, retirePod, showCaptain } from './captain.ts'
+import { bindPod, CAPTAIN_SERVICE, listPods, type PodBinding, type PodRow, retirePod, showCaptain } from './captain.ts'
 
 // A project has one authoritative Captain — cyberlegion's `captain` project service, fenced by
 // generation — and every Pod it spawns is bound to exactly one owning Captain. These tests drive the
@@ -68,6 +70,35 @@ function startCaptain(project: string, captain: string) {
 	}).lease.generation
 }
 
+const CAPTAIN_MODULE = fileURLToPath(new URL('./captain.ts', import.meta.url))
+
+/**
+ * Run one ownership call in its own process against the shared hub, so calls really interleave.
+ * Every unit counts as live there, as in this file's tests.
+ */
+function race(hub: string, call: string): Promise<{ ok: true; value: unknown } | { ok: false; error: string }> {
+	const script = `
+		import { FileStore, handoffService } from 'cyberlegion'
+		import { bindPod } from ${JSON.stringify(CAPTAIN_MODULE)}
+		const ctx = { store: new FileStore(${JSON.stringify(hub)}), env: {}, isLive: () => true }
+		try { console.log(JSON.stringify({ ok: true, value: ${call} })) }
+		catch (e) { console.log(JSON.stringify({ ok: false, error: String(e?.message ?? e) })) }
+	`
+	return new Promise((resolve, reject) =>
+		execFile(
+			process.execPath,
+			['--input-type=module', '-e', script],
+			{ cwd: fileURLToPath(new URL('.', import.meta.url)) },
+			(err, stdout) => (err ? reject(err) : resolve(JSON.parse(stdout))),
+		),
+	)
+}
+
+/** A listed row, back to the binding it was read from. */
+function bindingOf({ handle: _h, branch: _b, live: _l, owner: _o, ...binding }: PodRow): PodBinding {
+	return binding
+}
+
 beforeEach(() => {
 	work = realpathSync(mkdtempSync(join(tmpdir(), 'cf-captain-')))
 	live = new Set()
@@ -106,14 +137,23 @@ describe('showCaptain', () => {
 })
 
 describe('bindPod', () => {
-	it("records the current Captain as the pod's one owner, at its generation", () => {
+	it("records the Captain role as the pod's one owner, stamped with the binding session and generation", () => {
 		const { root, trees } = repo('alpha', 'pod-1')
 		unit('cap', root)
 		unit('pod1', root, trees[0])
 		const generation = startCaptain(root, 'cap')
 		const binding = bindPod(ctx, { project: root, captain: 'cap', generation, pod: 'pod1', sortie: 'github-25' })
-		expect(binding).toMatchObject({ pod: 'pod1', captain: 'cap', generation, sortie: 'github-25', state: 'active' })
-		expect(listPods(ctx, root).map((p) => p.pod)).toEqual(['pod1'])
+		expect(binding).toMatchObject({
+			pod: 'pod1',
+			project: showCaptain(ctx, root).project,
+			keyScheme: 'cyberlegion',
+			role: CAPTAIN_SERVICE,
+			boundBy: 'cap',
+			boundAtGeneration: generation,
+			sortie: 'github-25',
+			state: 'active',
+		})
+		expect(listPods(ctx, root)).toMatchObject([{ pod: 'pod1', owner: 'current' }])
 	})
 
 	it('refuses a session that does not own the Captain service', () => {
@@ -157,30 +197,62 @@ describe('bindPod', () => {
 		expect(() => bindPod(ctx, { project: a.root, captain: 'cap', generation, pod: 'podb' })).toThrow(/another project/)
 	})
 
-	it('refuses to give an owned pod a second owner', () => {
+	it('leaves a pod the role already owns as it is, whichever Captain session binds it again', () => {
 		const { root, trees } = repo('alpha', 'pod-1')
 		unit('cap', root)
 		unit('cap2', root)
 		unit('pod1', root, trees[0])
 		const old = startCaptain(root, 'cap')
-		bindPod(ctx, { project: root, captain: 'cap', generation: old, pod: 'pod1' })
+		const first = bindPod(ctx, { project: root, captain: 'cap', generation: old, pod: 'pod1', sortie: 'github-1' })
+		expect(bindPod(ctx, { project: root, captain: 'cap', generation: old, pod: 'pod1' })).toEqual(first)
 		const current = handoffService(ctx, root, CAPTAIN_SERVICE, { generation: old, from: 'cap', to: 'cap2' }).lease
 			.generation
-		expect(() => bindPod(ctx, { project: root, captain: 'cap2', generation: current, pod: 'pod1' })).toThrow(/adopt/)
+		expect(bindPod(ctx, { project: root, captain: 'cap2', generation: current, pod: 'pod1' })).toEqual(first)
 	})
 
-	it('is idempotent for the same Captain and generation', () => {
+	it('refuses to bind a pod again once it is retired', () => {
 		const { root, trees } = repo('alpha', 'pod-1')
 		unit('cap', root)
 		unit('pod1', root, trees[0])
 		const generation = startCaptain(root, 'cap')
 		bindPod(ctx, { project: root, captain: 'cap', generation, pod: 'pod1' })
-		expect(bindPod(ctx, { project: root, captain: 'cap', generation, pod: 'pod1' })).toMatchObject({ state: 'active' })
+		retirePod(ctx, { project: root, captain: 'cap', generation, pod: 'pod1' })
+		expect(() => bindPod(ctx, { project: root, captain: 'cap', generation, pod: 'pod1' })).toThrow(/already retired/)
+		expect(listPods(ctx, root)).toMatchObject([{ pod: 'pod1', owner: 'retired' }])
+	})
+
+	it('writes one record when sessions race to bind a pod while the lease is handed off', async () => {
+		const { root, trees } = repo('alpha', 'pod-1')
+		unit('cap', root)
+		unit('cap2', root)
+		unit('pod1', root, trees[0])
+		const generation = startCaptain(root, 'cap')
+		const hub = ctx.store.root
+		const binders = [1, 2, 3, 4, 5, 6].map((n) =>
+			race(
+				hub,
+				`bindPod(ctx, { project: ${JSON.stringify(root)}, captain: 'cap', generation: ${generation}, pod: 'pod1', sortie: 'github-${n}' })`,
+			),
+		)
+		const handoff = race(
+			hub,
+			`handoffService(ctx, ${JSON.stringify(root)}, 'captain', { generation: ${generation}, from: 'cap', to: 'cap2' })`,
+		)
+		const [results, handedOff] = await Promise.all([Promise.all(binders), handoff])
+		expect(handedOff).toMatchObject({ ok: true })
+		const stored = listPods(ctx, root)
+		const bound = results.filter((r) => r.ok)
+		for (const r of results.filter((r) => !r.ok)) expect(r.error).toMatch(/stale|own/i)
+		if (bound.length === 0) expect(stored).toEqual([])
+		else {
+			expect(stored).toHaveLength(1)
+			for (const r of bound) expect(r.value).toEqual(bindingOf(stored[0] as PodRow))
+		}
 	})
 })
 
 describe('retirePod', () => {
-	it('retires once; a second retirement is refused', () => {
+	it('retires once, stamped with the retiring session; a second retirement is refused', () => {
 		const { root, trees } = repo('alpha', 'pod-1')
 		unit('cap', root)
 		unit('pod1', root, trees[0])
@@ -188,6 +260,8 @@ describe('retirePod', () => {
 		bindPod(ctx, { project: root, captain: 'cap', generation, pod: 'pod1' })
 		expect(retirePod(ctx, { project: root, captain: 'cap', generation, pod: 'pod1' })).toMatchObject({
 			state: 'retired',
+			retiredBy: 'cap',
+			retiredAtGeneration: generation,
 		})
 		expect(() => retirePod(ctx, { project: root, captain: 'cap', generation, pod: 'pod1' })).toThrow(/already retired/)
 	})
@@ -203,7 +277,7 @@ describe('retirePod', () => {
 		expect(() => retirePod(ctx, { project: root, captain: 'cap', generation: old, pod: 'pod1' })).toThrow(/stale|own/i)
 	})
 
-	it('refuses the current Captain on a pod it has not adopted', () => {
+	it('lets a later Captain session retire a pod an earlier one bound, with no adoption', () => {
 		const { root, trees } = repo('alpha', 'pod-1')
 		unit('cap', root)
 		unit('cap2', root)
@@ -212,7 +286,12 @@ describe('retirePod', () => {
 		bindPod(ctx, { project: root, captain: 'cap', generation: old, pod: 'pod1' })
 		const current = handoffService(ctx, root, CAPTAIN_SERVICE, { generation: old, from: 'cap', to: 'cap2' }).lease
 			.generation
-		expect(() => retirePod(ctx, { project: root, captain: 'cap2', generation: current, pod: 'pod1' })).toThrow(/adopt/)
+		expect(retirePod(ctx, { project: root, captain: 'cap2', generation: current, pod: 'pod1' })).toMatchObject({
+			boundBy: 'cap',
+			boundAtGeneration: old,
+			retiredBy: 'cap2',
+			retiredAtGeneration: current,
+		})
 	})
 
 	it('refuses a pod that was never bound', () => {
@@ -224,7 +303,39 @@ describe('retirePod', () => {
 	})
 })
 
-describe('recovery — orphaned and unavailable work stays visible', () => {
+describe('between Captain sessions — the role keeps its pods, and they stay visible', () => {
+	it('shows a pod as unavailable after its Captain releases the lease cleanly, then current under the next', () => {
+		const { root, trees } = repo('alpha', 'pod-1')
+		unit('cap', root)
+		unit('cap2', root)
+		unit('pod1', root, trees[0])
+		const old = startCaptain(root, 'cap')
+		bindPod(ctx, { project: root, captain: 'cap', generation: old, pod: 'pod1' })
+		releaseService(ctx, root, CAPTAIN_SERVICE, { generation: old, unit: 'cap' })
+		expect(listPods(ctx, root)).toMatchObject([{ pod: 'pod1', owner: 'unavailable', live: true }])
+		const next = startCaptain(root, 'cap2')
+		expect(listPods(ctx, root)).toMatchObject([{ pod: 'pod1', owner: 'current' }])
+		expect(retirePod(ctx, { project: root, captain: 'cap2', generation: next, pod: 'pod1' })).toMatchObject({
+			state: 'retired',
+		})
+	})
+
+	it('keeps a pod current when the same unit restarts at a new generation, and fences the old one out', () => {
+		const { root, trees } = repo('alpha', 'pod-1')
+		unit('cap', root)
+		unit('pod1', root, trees[0])
+		const old = startCaptain(root, 'cap')
+		bindPod(ctx, { project: root, captain: 'cap', generation: old, pod: 'pod1' })
+		releaseService(ctx, root, CAPTAIN_SERVICE, { generation: old, unit: 'cap' })
+		const restarted = startCaptain(root, 'cap')
+		expect(restarted).toBeGreaterThan(old)
+		expect(listPods(ctx, root)).toMatchObject([{ pod: 'pod1', owner: 'current' }])
+		expect(() => retirePod(ctx, { project: root, captain: 'cap', generation: old, pod: 'pod1' })).toThrow(/stale|own/i)
+		expect(retirePod(ctx, { project: root, captain: 'cap', generation: restarted, pod: 'pod1' })).toMatchObject({
+			state: 'retired',
+		})
+	})
+
 	it('shows a pod whose Captain session is gone as unavailable, not dropped', () => {
 		const { root, trees } = repo('alpha', 'pod-1')
 		unit('cap', root)
@@ -235,18 +346,6 @@ describe('recovery — orphaned and unavailable work stays visible', () => {
 		expect(listPods(ctx, root)).toMatchObject([{ pod: 'pod1', owner: 'unavailable', live: true }])
 	})
 
-	it('shows a pod as orphaned once a new Captain generation replaces its owner', () => {
-		const { root, trees } = repo('alpha', 'pod-1')
-		unit('cap', root)
-		unit('cap2', root)
-		unit('pod1', root, trees[0])
-		const old = startCaptain(root, 'cap')
-		bindPod(ctx, { project: root, captain: 'cap', generation: old, pod: 'pod1' })
-		live.delete('cap')
-		startCaptain(root, 'cap2')
-		expect(listPods(ctx, root)).toMatchObject([{ pod: 'pod1', captain: 'cap', owner: 'orphaned' }])
-	})
-
 	it('shows a pod whose own session is gone as not live', () => {
 		const { root, trees } = repo('alpha', 'pod-1')
 		unit('cap', root)
@@ -255,34 +354,6 @@ describe('recovery — orphaned and unavailable work stays visible', () => {
 		bindPod(ctx, { project: root, captain: 'cap', generation, pod: 'pod1' })
 		live.delete('pod1')
 		expect(listPods(ctx, root)).toMatchObject([{ pod: 'pod1', owner: 'current', live: false }])
-	})
-
-	it('lets the current Captain adopt an orphaned pod, after which the old owner cannot act on it', () => {
-		const { root, trees } = repo('alpha', 'pod-1')
-		unit('cap', root)
-		unit('cap2', root)
-		unit('pod1', root, trees[0])
-		const old = startCaptain(root, 'cap')
-		bindPod(ctx, { project: root, captain: 'cap', generation: old, pod: 'pod1' })
-		live.delete('cap')
-		const current = startCaptain(root, 'cap2')
-		expect(adoptPod(ctx, { project: root, captain: 'cap2', generation: current, pod: 'pod1' })).toMatchObject({
-			captain: 'cap2',
-			generation: current,
-			state: 'active',
-		})
-		expect(listPods(ctx, root)).toMatchObject([{ pod: 'pod1', owner: 'current' }])
-		live.add('cap')
-		expect(() => retirePod(ctx, { project: root, captain: 'cap', generation: old, pod: 'pod1' })).toThrow(/stale|own/i)
-	})
-
-	it('refuses to adopt a pod its current Captain still owns', () => {
-		const { root, trees } = repo('alpha', 'pod-1')
-		unit('cap', root)
-		unit('pod1', root, trees[0])
-		const generation = startCaptain(root, 'cap')
-		bindPod(ctx, { project: root, captain: 'cap', generation, pod: 'pod1' })
-		expect(() => adoptPod(ctx, { project: root, captain: 'cap', generation, pod: 'pod1' })).toThrow(/already owns/)
 	})
 })
 
@@ -305,7 +376,7 @@ describe('listPods across projects', () => {
 				.map((p) => p.pod)
 				.sort(),
 		).toEqual(['a1', 'a2'])
-		expect(listPods(ctx, b.root)).toMatchObject([{ pod: 'b1', captain: 'capB' }])
+		expect(listPods(ctx, b.root)).toMatchObject([{ pod: 'b1', boundBy: 'capB' }])
 		expect(listPods(ctx).length).toBe(3)
 	})
 
@@ -323,9 +394,9 @@ describe('listPods across projects', () => {
 		mkdirSync(join(ctx.store.root, 'cyberfleet', 'pods'), { recursive: true })
 		writeFileSync(
 			join(ctx.store.root, 'cyberfleet', 'pods', 'pod9.json'),
-			JSON.stringify({ pod: 'pod9', project: key, captain: 'cap', generation: 1, state: 'active', boundAt: 'x' }),
+			JSON.stringify({ pod: 'pod9', project: key, keyScheme: 'cynapse', role: 'captain', state: 'active' }),
 		)
-		expect(listPods(ctx, key)).toMatchObject([{ pod: 'pod9', project: key, owner: 'orphaned' }])
+		expect(listPods(ctx, key)).toMatchObject([{ pod: 'pod9', project: key, owner: 'unavailable' }])
 		expect(listPods(ctx).map((p) => p.pod)).toEqual(['pod9'])
 	})
 })
