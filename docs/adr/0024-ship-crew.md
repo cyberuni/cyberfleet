@@ -148,9 +148,12 @@ change (§3).
   and is spent per merge. A follow-up pull request on a reopened sortie is covered when the words
   cover it.
 - Promoting an issue to an epic (§8) can widen what a delegation reaches, so the Captain checks the
-  children against the Council's words when it creates the epic. Children within them keep the
-  delegation, and the Captain records the mapping on the mission channel. A child that adds work the
-  words did not ask for goes back to the Council as a decision-request before it is delegated.
+  children against the Council's words when it creates the epic. Children in its own ship within
+  them keep the delegation, and the Captain records the mapping on the mission channel. A child that
+  adds work the words did not ask for goes back to the Council as a decision-request before it is
+  delegated. A child in another ship never inherits the delegation: authority attaches to the sortie
+  (ADR-0023 §6), so that ship's Captain accepts the sortie or asks the Council, and its merges need
+  their own delegation. In practice a promotion usually starts from the Council's input anyway.
 - A headless Coordinator merges only under a delegation the Council gave before leaving, or under a
   standing rule (§10). Otherwise it batches the merge as needs-input.
 
@@ -164,8 +167,10 @@ Command Center holds the same pair, keyed by its own address: the fleet's Captai
 Coordinator's, which fences epic writes. The Operator holds none; there is one, and it writes
 nothing fenced.
 
-- The **Captain's** lease fences the issue tracker and the plan: filing, scope, promotion, closing
-  and reopening sorties.
+- The **Captain's** lease fences changes to its ship's own sorties and plan: taking an issue in,
+  scope, promotion, closing and reopening. Filing a new issue is a request, not one of these writes:
+  anyone may file one, including the fleet's Coordinator for another ship, and the Captain decides
+  whether to take it in.
 - The **Coordinator's** lease (`cyberlegion service start <project> coordinator`) fences merges:
   `service verify` before `gh pr merge`.
 
@@ -214,9 +219,10 @@ inferred from how the work went.
   request back rather than filling the gap. The Captain keeps the judgment: what the children are,
   and whether they stay within the Council's words (§5). The delegation record is not bookkeeping:
   it stays with whoever relays the Council's words (§3).
-- **The fleet's Coordinator lands missions.** It watches the children's issues. When a blocking
-  issue closes, or at the release when the dependency is consumed as a published package, it lifts
-  the block and rings the waiting Captain. When every child has closed, it closes the epic (an epic
+- **The fleet's Coordinator lands missions.** It watches the children's issues. A cross-ship block
+  usually lifts at the release that carries the fix, because one ship consumes another as a
+  published package; it lifts when the blocking issue closes only when the dependency is consumed
+  from source. Either way the Coordinator lifts the block and rings the waiting Captain. When every child has closed, it closes the epic (an epic
   is done when its children are done) and reports once to the Captain that created it. It starts on
   demand and exits when nothing is pending.
 - **The fleet's Captain takes no part in either.** Every Captain is equally capable; the Flag Bridge
@@ -279,8 +285,8 @@ This replaces ADR-0023 §5's step from the arbitration channel straight to the C
   (promoting the request first if it was an issue). The requesting Captain tells the fleet's
   Coordinator what it needs; the Coordinator files the child and rings the other ship's Captain with
   `send --start`, and that Captain accepts, declines, or asks the Council. The requesting Captain
-  marks its sortie blocked on that issue and keeps planning everything else. If the dependency is
-  consumed as a published package, the block lifts at the release, not the merge (§8).
+  marks its sortie blocked on that issue and keeps planning everything else. The block usually
+  lifts at the release, not the merge (§8).
 - **Asking another ship.** Any Captain can read and analyze another ship. Asking that ship's
   Captain gets a more focused, deeper answer, because it holds that ship's context, so a Captain
   asks rather than reads when the answer matters. This is the assumed process. A cheap alternative
@@ -327,11 +333,13 @@ nowhere to go.
 ### Negative
 
 - authority-governance §7 changes: a delegation now names a Coordinator and is scoped per request.
-  After a restart that loses it, the Coordinator asks for each held merge again. The frozen `authority.feature`, `operator.feature`, and
-  `pod.feature` suites reopen and need the Council's ratification.
+  After a restart that loses it, the Coordinator asks for each held merge again. The frozen
+  `authority.feature`, `operator.feature`, and `pod.feature` suites reopen and need the Council's
+  ratification.
 - The Captain takes a review turn per settled queue. That is the outer loop's cost, and it is
   judgment the Coordinator must not make. A queue that keeps refilling delays that review; work
-  waiting on a landing is not replanned until the queue settles.
+  waiting on a landing in the same ship is not replanned until the queue settles. Across ships this
+  rarely matters, since a cross-ship block usually waits on a release, which is slower.
 - Seven repositories change. Work is placed by each module's responsibility (plan,
   §Responsibilities); cyberlegion slot placement and `send --start`, and cyber-mux template
   application, land before the parts of this ADR that use them.

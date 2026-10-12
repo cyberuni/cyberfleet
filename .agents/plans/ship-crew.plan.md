@@ -255,6 +255,13 @@ decisions they name; ADR-0024 is written to match.
   stays with the relayer (authority-governance §3). It holds a lease keyed by the Command Center's
   address. New work item: the `cyberfleet epic` verbs, beside `pr clean`.
 
+- **R14. Delegations stop at the ship; filing is a request; cross-ship blocks lift at release.**
+  (2026-10-12) A child of a promotion in another ship never inherits the delegation (ADR-0023 §6);
+  promotion usually starts from the Council's input anyway. A Captain's lease fences changes to its
+  own sorties, not the filing of a new issue, so the fleet's Coordinator may file into any ship. A
+  cross-ship block usually lifts at the release that carries the fix, at close only when consumed
+  from source, so the in-ship queue delay rarely matters across ships.
+
 ### Questions settled at fine-tuning (2026-10-11)
 
 The Council locked each recommendation below as written. Each is marked load-bearing or cheap.
