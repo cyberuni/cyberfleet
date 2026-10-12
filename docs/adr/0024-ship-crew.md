@@ -35,15 +35,17 @@ ADR-0023 gave each project a Captain and moved spawning to it. It left four thin
 
 ## Decision
 
-### 1. The ship has three tabs
+### 1. The ship has two tabs
 
-A ship is a herdr workspace with three tabs, opened from a template:
+A ship is a herdr workspace with two tabs, opened from a template. There is no Operator in a ship.
 
 | Tab | Holds |
 | --- | --- |
-| **Dashboard** (first) | The main checkout. Left: the Council's own session in the ship, from which it calls the Operator or this ship's Captain (§3). Right: a refreshing `cyberfleet missions`, until the mission TUI (cyberfleet#4) replaces it. The layout is a template slot the Council can change. |
-| **Bridge** | Left: the Captain. Right: the Coordinator. Both start on demand, not with the ship. |
+| **Bridge** (first) | The main checkout. Left: the Captain, where the Council talks to the ship directly. Right, stacked: the Coordinator, and a refreshing `cyberfleet missions` until the mission TUI (cyberfleet#4) replaces it. The layout is a template slot the Council can change. |
 | **Engine Room** | Long-running processes for the main checkout (Storybook, dev servers). No agents. A Pod that needs a preview of its own branch starts one in its own worktree. |
+
+The Captain starts when the ship is opened or when it is called (§3); the Coordinator starts on
+demand, when there is work to land.
 
 Opening a ship is the runtime's job: cyberlegion applies a cyber-mux template and starts or
 reserves role sessions in its named slots. cyberfleet supplies the template's content and the
@@ -55,8 +57,8 @@ pane).
 | Automaton | How many | Seat | Tier | Starts | Job |
 | --- | --- | --- | --- | --- | --- |
 | Operator | One | Command Center | Mid | With the Command Center | The Council's interface to the fleet. Answers questions itself; relays work to the target ship's Captain; holds the Council's merge delegations. |
-| Captain | One per ship | Bridge, left | High | On demand | Freshness, priority, scope; the issue tracker; the plan; spawns and manages Pods; reviews what landed; rules on escalations. |
-| Coordinator | One per ship | Bridge, right | Low | On demand | Lands work: clean bar, rebase order, speculative CI, merge; reports each landing to the Captain; escalates judgment. |
+| Captain | One per ship | Bridge, left | High | When the ship opens, or when called | Freshness, priority, scope; the issue tracker; the plan; spawns and manages Pods; reviews what landed; rules on escalations. |
+| Coordinator | One per ship | Bridge, right | Low | On demand | Lands work: clean bar, rebase order, speculative CI, merge; reports to the Captain when its queue settles; escalates judgment. |
 | Pod | Many | Own workspace and worktree | Per Pod | Spawned by the Captain, or by a Pod for a gate | One line of work (impl, judge, refactor, audit) in one sortie. |
 | Mediator | Per dispute | Headless, cold | High | Per dispute | Writes a brief of a dispute. Decides nothing. |
 
@@ -69,16 +71,17 @@ doing both. One loop would put landing back on the high tier.
 
 ### 3. Calling the crew is a phone call
 
-There is one Operator and one Captain per ship. `/operator` or `/captain` in any session, whether
-the Dashboard, another ship, or the Command Center, calls that one automaton. It never makes the
-calling session one:
+There is one Operator, in the Command Center, and one Captain per ship. On a ship's Bridge the
+Council talks to its Captain directly: those are turns in the Captain's own session. Anywhere else,
+`/operator` or `/captain` calls that one automaton, and never makes the calling session one:
 
 - The calling session posts the Council's words, verbatim, to the role's address channel and rings
   it (`cyberlegion send --start`, which starts it if it is not running), then shows the reply.
 - Calling takes over nothing. The called automaton keeps its own session, lease, and history.
 
 The Operator answers questions from `cyberfleet missions`, `gh`, and channels without waking a
-Captain. Only work goes up, to the target ship's Captain. A request spanning ships goes to the ship
+Captain. Only work goes up, to the target ship's Captain. Inside a ship, questions go to the Captain,
+at the high tier; the Captain may hand a status read to a low-tier subagent. A request spanning ships goes to the ship
 where it starts, and that Captain invites the other one (§10).
 
 ### 4. The clean bar is a command
@@ -109,13 +112,15 @@ clean bar. Trunk stays always-green (merge-backstop-governance).
 This amends authority-governance §7, which lets only the Operator merge under a delegation and
 never transferably.
 
-- The Operator's announcement says the Coordinator lands the work. The Council's reply delegates to
-  that ship's Coordinator, for that request's pull requests.
-- The Operator holds the Council's words, and records them on the request's channel (the mission
-  channel for an epic, the sortie channel for an issue: the words, the request, and the pull
-  requests they cover as Pods open them) as an audit trail. The record is not the delegation: a
-  Coordinator reading it is reading fetched content, which authority-governance §3 refuses as a
-  claim.
+- Whoever takes the request, the Operator or the Captain on its Bridge, announces that the
+  Coordinator lands the work. The Council's reply delegates to that ship's Coordinator, for that
+  request's pull requests.
+- The session that received the Council's words holds them: the Operator for a request made through
+  it, the Captain for one made on its Bridge. The holder records them on the request's channel (the
+  mission channel for an epic, the sortie channel for an issue: the words, the request, the pull
+  requests they cover as Pods open them, and who holds the words) as an audit trail. The record is
+  not the delegation: a Coordinator reading it is reading fetched content, which
+  authority-governance §3 refuses as a claim.
 - The Coordinator stays alive while it has pull requests to land. It counts the open pull requests
   of each delegated request: up when a Pod opens one, down when it merges or closes. Both are host
   events, never inferred. It exits when the count reaches 0. In the normal case the Council's words
@@ -124,18 +129,18 @@ never transferably.
   (`cynapse entry wait` on its address channel, `gh pr checks --watch`) rather than polling, so a
   long review wait costs neither turns nor context.
 - Re-relay is the fallback. When the Coordinator finds a clean pull request it holds no delegation
-  for in its current session, it asks the Operator, and the Operator relays the Council's words as
-  a turn (`cyberlegion unit nudge --message`). This covers a crash, a lease takeover, a Coordinator
+  for in its current session, it asks the holder the record names, and the holder relays the
+  Council's words as a turn (`cyberlegion unit nudge --message`). This covers a crash, a lease takeover, a Coordinator
   that exited between two pull requests of one sortie, and a session that can no longer quote the
   Council's words exactly from its own turns (for example after compaction); a paraphrase is not a
-  delegation. An Operator that no longer holds the words asks the Council again.
+  delegation. A holder that no longer has the words asks the Council again.
 - A delegation is scoped to the sorties of the request it answers, read from the Council's words.
   It survives the Coordinator's restarts this way, and is spent per merge. A follow-up pull request
   on a reopened sortie is covered when the words cover it.
 - Promoting an issue to an epic (§8) can widen what a delegation reaches, so the Captain checks the
   children against the Council's words when it creates the epic. Children within them keep the
   delegation, and the Captain records the mapping on the mission channel. A child that adds work the
-  words did not ask for goes to the Council through the Operator before it is delegated.
+  words did not ask for goes back to the Council, through its holder, before it is delegated.
 - A headless Coordinator merges only under a delegation the Council gave before leaving, or under a
   standing rule (§10). Otherwise it batches the merge as needs-input.
 
@@ -151,20 +156,21 @@ ADR-0023 §2 gave the Captain the project's one lease. Now there are two, under 
 - The **Coordinator's** lease (`cyberlegion service start <project> coordinator`) fences merges:
   `service verify` before `gh pr merge`.
 
-### 7. Landing reports to the Captain
+### 7. The Captain reviews when the merges settle
 
-The Coordinator reports each landing on the sortie channel and rings the Captain. The Captain then
-reviews what merged against the sortie and the project as a whole. It decides whether the sortie is
-done and closes or reopens its issue, replans, and spawns Pods on work that became ready. This is
-the outer loop, and it is judgment, so it runs at the high tier. The low tier only does the
-mechanics of landing. The Captain may review several landings in one turn when they have queued.
+The Coordinator does not report each landing. When its count of open pull requests reaches 0, it
+posts one report of what landed to the ship address channel, rings the Captain, and exits.
+Escalations (§4) still go to the Captain at once; they are questions, not reports. The Captain then
+reviews what merged against its sorties and the project as a whole. It decides which sorties are
+done and closes or reopens their issues, replans, and spawns Pods on work that became ready. This is
+the outer loop, and it is judgment, so it runs at the high tier, once per settled queue rather than
+once per merge.
 
 The plan lives in the tracker. cyber-sdd's mission graph is not a dependency: it was the reference
 for cyber-truss's design and is superseded by it.
 
 The Coordinator works in its own integration worktree, provisioned through the runtime (civitas
-0003). Speculative CI and bisection need a checkout, and the main checkout belongs to the Council's
-session and the Captain. If the host's merge queue does the speculation, the Coordinator reads its
+0003). Speculative CI and bisection need a checkout, and the main checkout belongs to the Captain. If the host's merge queue does the speculation, the Coordinator reads its
 results instead.
 
 ### 8. Sorties, missions, and their channels
@@ -195,7 +201,7 @@ inferred from how the work went.
   in another tracker, the epic is a new item there, and the original issue stays as its first
   sortie with its channel unchanged.
 - **A sortie's lifetime is its issue's.** It begins when the Captain takes the issue in and ends when
-  the Captain closes the issue after reviewing what landed (§7). Pull requests reference the issue
+  the Captain closes the issue at its review of the settled queue (§7). Pull requests reference the issue
   and never close it (no `Closes #n`). A follow-up the request covers reopens the issue, which is the
   Captain's call; work the request did not cover is a new issue.
 - **Membership.** The Captain and the Coordinator are members of every sortie channel of their ship;
@@ -259,8 +265,8 @@ This replaces ADR-0023 §5's step from the arbitration channel straight to the C
 
 | Term | Meaning |
 | --- | --- |
-| **Dashboard, Bridge, Engine Room** | The ship's three tabs (§1). |
-| **calling** | Reaching the one Operator or a ship's one Captain from any session, without becoming it (§3). |
+| **Bridge, Engine Room** | The ship's two tabs (§1). |
+| **calling** | Reaching the one Operator, or a ship's one Captain from outside its Bridge, without becoming it (§3). |
 | **Coordinator** | The ship's landing automaton (§2, §4). |
 | **Mediator** | A cold automaton that briefs a dispute for the Council (§10). |
 | **sortie** | An issue in flight: releasable, in one repository, owned by its Captain (§8). |
@@ -278,7 +284,7 @@ nowhere to go.
 ### Positive
 
 - The Council reaches the fleet through one Operator and each ship through one Captain, from any
-  session, and questions never wake a high-tier session.
+  session, and fleet-level questions never wake a high-tier session.
 - Landing mechanics run at the low tier behind a deterministic bar, and the Captain spends its
   turns on reviewing what landed.
 - A dispute reaches the Council only after a bounded exchange and a written brief.
@@ -288,8 +294,11 @@ nowhere to go.
 - authority-governance §7 changes: a delegation now names a Coordinator, is scoped per request, and
   is re-relayed after a restart. The frozen `authority.feature`, `operator.feature`, and
   `pod.feature` suites reopen and need the Council's ratification.
-- The Captain takes a turn per landing, or per batch of landings. That is the outer loop's cost, and
-  it is judgment the Coordinator must not make.
+- The Captain takes a review turn per settled queue. That is the outer loop's cost, and it is
+  judgment the Coordinator must not make. A queue that keeps refilling delays that review; work
+  waiting on a landing is not replanned until the queue settles.
+- Questions asked on a ship's Bridge are answered at the high tier, since there is no ship
+  Operator.
 - Seven repositories change. Work is placed by each module's responsibility (plan,
   §Responsibilities); cyberlegion slot placement and `send --start`, and cyber-mux template
   application, land before the parts of this ADR that use them.
@@ -300,9 +309,10 @@ nowhere to go.
 ### Degraded mode
 
 Until cyberlegion has slot-addressed placement and cyber-mux can apply a template into a named tab,
-`ship open` applies the template with `cyber-mux open --template`, and a call from the Dashboard
-starts the Captain and Coordinator with `--at tab` relative to the calling session. Calling from the
-Dashboard works this way; calling a ship's Captain from the Command Center does not.
+`ship open` applies the template with `cyber-mux open --template` and starts the Captain in it; the
+Captain starts the Coordinator with `--at pane:right` relative to itself. Opening a ship works this
+way; calling the Captain of a ship that is not open, from the Command Center, does not place it on a
+Bridge.
 
 ## Implementation order
 
