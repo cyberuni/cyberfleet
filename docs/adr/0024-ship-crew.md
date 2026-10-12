@@ -115,7 +115,7 @@ a low-tier Coordinator safe: no Coordinator merges before `pr clean` exists.
 The Coordinator handles mechanical failures itself. A text conflict means ordering a rebase, and a
 red CI caused by the pull request goes back to its Pod. Only judgment goes to the Captain:
 scope-changing reviews, semantic conflicts between pull requests, a red that survives the Pod's
-fixes, a bisect culprit, a stuck Pod.
+fixes, a bisect culprit, a stuck Pod. Where each escalation lives is in §8.
 
 The Captain's ruling never overrides red. Accepting decides the question that held the pull request
 (for example, "that review is out of scope; file a follow-up"), then sends it back through the
@@ -255,8 +255,50 @@ inferred from how the work went.
   sub-issues can live in another repository with the same owner, but not across owners: the REST
   endpoint that adds a sub-issue requires the parent's and the child's repositories to share one. A
   mission spanning organizations (cyberuni and cyber-civitas, for one) keeps its epic in a tracker
-  that spans them, such as Asana, or links its children with a cynapse relation (cynapse
-  ADR-0010).
+  that spans them, or links its children with a cynapse relation (cynapse ADR-0010). Asana spans
+  them. A GitHub Projects board may too, if a Project can hold issues from another organization;
+  that is to verify.
+
+#### Escalations
+
+An escalation runs up a level: a unit reaches the limit of what it may decide and asks the one who
+may, and it ends in a ruling. It is not a dispute, which runs sideways between peer Captains and
+ends in mediation, then the Council (§10).
+
+| # | Raised by | When | Why | Decided by | Scope |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Pod | During work | The fix outgrows the sortie, or the spec is wrong | Captain | Sortie |
+| 2 | Pod | During work | A design choice beyond its brief | Captain | Sortie |
+| 3 | Pod | After a gate | The judge keeps failing it, or the verdict points at the spec | Captain | Sortie |
+| 4 | Coordinator | At landing | A review asks for a change of scope | Captain | Sortie |
+| 5 | Coordinator | At landing | Red after the Pod's fixes, or a bisect names a culprit | Captain | Sortie, or every sortie in the culprit's batch |
+| 6 | Coordinator | At landing | Two pull requests conflict in meaning | Captain | Two sorties, possibly in no shared mission |
+| 7 | Coordinator | At landing | A Pod is stuck | Captain | Sortie |
+| 8 | Fleet Coordinator | Keeping an epic | The epic request is underspecified, or a release never comes | The creating Captain | Mission |
+| 9 | Captain | Any time | Beyond its authority: widening scope, a promotion that adds work, a ratification-class action, accepting a sortie that commits resources (ADR-0023 §6) | Council | Sortie or mission |
+| 10 | Coordinator | At landing | A clean pull request with no delegation (§5) | Council | Pull request, in its sortie |
+
+A Pod that needs another ship is not escalating: that starts a mission, through the fleet's
+Coordinator (§10).
+
+- **Who.** The raiser is the unit that hit the limit; the decider is one level up. The Council is
+  reached only for a Captain's own limits and for merges with no delegation. The thread's members
+  are the raiser, the decider, and every unit whose work the ruling changes: the Pod whose pull
+  request is held, both Pods in case 6, the Coordinator holding affected pull requests.
+- **Where.** The thread lives on the work at the escalation's scope, anchored at the entry that
+  raised it, and its ruling posts back to every affected sortie channel:
+  - one sortie: a thread in that sortie channel. One that grew out of a gate (case 3) anchors at
+    the gate's outcome entry in the sortie channel, not inside the gate thread;
+  - several sorties of one mission: a thread in the mission channel;
+  - several sorties with no shared mission (case 6): the ship address channel, the one escalation
+    whose scope is the whole ship.
+- **The address channel is the doorbell, not the room.** Every escalation posts a pointer to the
+  decider's address channel to ring it: the ship address channel for a Captain, the Operator's for
+  the Council, which the Operator puts to the Council. When the Council is on the Captain's Bridge,
+  the Captain asks it there directly. The address channel holds the conversation only in case 6.
+- **Rescoping opens a new thread.** A thread's identity comes from its anchor, so it cannot move. An
+  escalation that turns out wider (case 1 reaching the whole mission) posts "rescoped" with a
+  pointer as its outcome, and a new thread opens at the wider scope, referring back.
 
 ### 9. Addressing and waking
 
@@ -266,9 +308,8 @@ inferred from how the work went.
   address registers it, whether that is `ship open` or `send --start`. A session acts as the role
   while it holds the role's lease. The lease generation, not the participant, tells sessions apart.
 - **Channels.** The Operator's address channel takes the Council's calls. The ship address channel
-  (owner: the Captain) takes requests, landing reports, and the pointer that rings the Captain to an
-  escalation; the escalation itself is a thread in its sortie channel, so its ruling posts back
-  where the Pod and the Coordinator read (§8). A Coordinator address channel takes "PR ready". Pods
+  (owner: the Captain) takes requests, landing reports, and the pointers that ring the Captain to an
+  escalation; the escalation itself is a thread at its scope (§8, Escalations). A Coordinator address channel takes "PR ready". Pods
   report progress on their sortie channel.
 - **Waking is cyberlegion's.** ADR-0023 §4's provisional `cyberfleet hail` becomes
   `cyberlegion send --start`: post to a channel, resolve or start its owner with `service start`,

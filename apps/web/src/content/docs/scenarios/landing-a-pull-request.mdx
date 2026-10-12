@@ -162,10 +162,13 @@ The Coordinator rings the Captain at once for anything that is not a fact check:
 - a pull request that stays red after the Pod's fixes, or that a bisect isolated as the culprit;
 - a Pod that reports it is stuck.
 
-The escalation lives on the work: its entry goes on the sortie channel, and the escalation and its
-ruling form a thread anchored there, so the Captain and the Coordinator argue it without crowding the
-sortie channel, and the ruling posts back where the Pod reads it. The ship address channel gets only
-a pointer that rings the Captain.
+The escalation lives on the work at its scope: its entry goes on the sortie channel, and the
+escalation and its ruling form a thread anchored there, so the Captain and the Coordinator argue it
+without crowding the sortie channel, and the ruling posts back where the Pod reads it. A red batch
+that spans sorties of one mission goes to the mission channel instead. Two pull requests from
+unrelated sorties that conflict in meaning share no work item, so that one thread lives on the ship
+address channel, with the ruling posted back to both sorties. Otherwise the ship address channel
+gets only a pointer that rings the Captain.
 
 ```sh
 cynapse entry append <sortie-channel> --type pr.escalation --ref gh:<org>/<repo>#57 --body "<what holds it>"

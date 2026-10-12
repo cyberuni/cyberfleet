@@ -262,6 +262,13 @@ decisions they name; ADR-0024 is written to match.
   cross-ship block usually lifts at the release that carries the fix, at close only when consumed
   from source, so the in-ship queue delay rarely matters across ships.
 
+- **R15. Escalations live on the work at their scope.** (2026-10-12) ADR-0024 §8, Escalations: ten
+  cases (raiser, timing, reason, decider, scope); an escalation runs up a level and ends in a ruling,
+  unlike a dispute. The thread anchors in the sortie channel, the mission channel, or (only for a
+  ship-wide conflict between unrelated sorties) the ship address channel; the decider's address
+  channel otherwise gets only a pointer; the Council's pointer goes to the Operator. Rescoping opens
+  a new thread. GitHub Projects added as a cross-organization epic home, to verify.
+
 ### Questions settled at fine-tuning (2026-10-11)
 
 The Council locked each recommendation below as written. Each is marked load-bearing or cheap.
