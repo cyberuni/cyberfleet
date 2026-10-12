@@ -245,6 +245,16 @@ decisions they name; ADR-0024 is written to match.
   *Cheap; revisit:* the creating Captain adds the other Captain to the mission channel and asks there
   directly. Supersedes R6's "the Captain that creates it maintains its links".
 
+- **R13. A fleet Coordinator keeps epics and lands missions.** (2026-10-12) Supersedes R12's "the
+  Operator manages every epic". The Flag Bridge mirrors a ship's Bridge: the fleet's Captain left,
+  the fleet's Coordinator (low tier, on demand) right. A Captain specifies the epic change exactly;
+  the fleet Coordinator files or adjusts it, files children (including another ship's issue), opens
+  the mission channel, adds members, returns the references, and rings other Captains, through
+  `cyberfleet epic ...` verbs. It lands missions: lifts cross-ship blocks on close or release, closes
+  the epic when every child is closed, reports once to the creating Captain. The delegation record
+  stays with the relayer (authority-governance §3). It holds a lease keyed by the Command Center's
+  address. New work item: the `cyberfleet epic` verbs, beside `pr clean`.
+
 ### Questions settled at fine-tuning (2026-10-11)
 
 The Council locked each recommendation below as written. Each is marked load-bearing or cheap.

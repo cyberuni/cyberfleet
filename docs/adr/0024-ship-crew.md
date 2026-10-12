@@ -46,7 +46,7 @@ is a template slot the Council can change.
 | Ship | **Bridge** | Left: the Captain. Right: the Coordinator. Both start on demand, not with the ship. |
 | Ship | **Engine Room** | Long-running processes for the main checkout (Storybook, dev servers). No agents. A Pod that needs a preview of its own branch starts one in its own worktree. |
 | Command Center | **Dashboard** (first) | Left: the **Operator's seat**, the one Operator. Right: fleet status across ships. |
-| Command Center | **Flag Bridge** | Left: the fleet's Captain, an admiral-like role, called a Captain for simplicity. The fleet's roadmap and cross-ship decisions are made here. |
+| Command Center | **Flag Bridge** | Left: the fleet's Captain, an admiral-like role, called a Captain for simplicity; the fleet's roadmap and cross-ship decisions are made here. Right: the fleet's Coordinator. Both start on demand. |
 
 Opening a ship is the runtime's job: cyberlegion applies a cyber-mux template and starts or
 reserves role sessions in its named slots. cyberfleet supplies the template's content and the
@@ -57,9 +57,9 @@ pane).
 
 | Automaton | How many | Seat | Tier | Starts | Job |
 | --- | --- | --- | --- | --- | --- |
-| Operator | One | Command Center Dashboard, left | Mid | With the Command Center | The Council's interface to the fleet. Answers questions itself; relays work and orders to the target ship; manages every epic and its mission channel (§8). |
+| Operator | One | Command Center Dashboard, left | Mid | With the Command Center | The Council's interface to the fleet. Answers questions itself; relays work and orders to the target ship. |
 | Captain | One per ship, and one for the fleet | Bridge, left; Flag Bridge, left | High | On demand | A ship's: freshness, priority, scope; the issue tracker; the plan; spawns and manages Pods; reviews what landed; rules on escalations. The fleet's: the roadmap and cross-ship decisions. |
-| Coordinator | One per ship | Bridge, right | Low | On demand | Lands work: clean bar, rebase order, speculative CI, merge; reports to the Captain when its queue settles; escalates judgment. |
+| Coordinator | One per ship, and one for the fleet | Bridge, right; Flag Bridge, right | Low | On demand | A ship's lands pull requests: clean bar, rebase order, speculative CI, merge; reports to the Captain when its queue settles; escalates judgment. The fleet's keeps epics and lands missions (§8). |
 | Pod | Many | Own workspace and worktree | Per Pod | Spawned by the Captain, or by a Pod for a gate | One line of work (impl, judge, refactor, audit) in one sortie. |
 | Mediator | Per dispute | Headless, cold | High | Per dispute | Writes a brief of a dispute. Decides nothing. |
 
@@ -157,9 +157,12 @@ change (§3).
 cyberlegion#154 (`mail send` stamps another live unit as sender) is fixed before any authority
 travels over messages.
 
-### 6. Two leases per ship
+### 6. Two leases per ship, and two for the fleet
 
-ADR-0023 §2 gave the Captain the project's one lease. Now there are two, under civitas 0002:
+ADR-0023 §2 gave the Captain the project's one lease. Now there are two, under civitas 0002. The
+Command Center holds the same pair, keyed by its own address: the fleet's Captain's, and the fleet's
+Coordinator's, which fences epic writes. The Operator holds none; there is one, and it writes
+nothing fenced.
 
 - The **Captain's** lease fences the issue tracker and the plan: filing, scope, promotion, closing
   and reopening sorties.
@@ -203,12 +206,21 @@ inferred from how the work went.
   `project-tracker.routing`). It may be an issue in a repository, a GitHub Projects item, or an
   Asana task, which can belong to several projects at once. An epic that lives outside any
   repository belongs to no ship, matching ADR-0023's ownerless mission.
-- **The Operator manages every epic.** A Captain that creates an epic hands it to the Operator,
-  which keeps the epic item and its mission channel: the child links, the members, blockers across
-  sorties, and the delegation record. The Captain keeps the judgment: what the children are, and
-  whether they stay within the Council's words (§5). This keeps a Captain's high-tier turns on work
-  that needs them. The fleet's Captain takes no part: every Captain is equally capable, and the
-  Flag Bridge differs only if it is later given a stronger model.
+- **The fleet's Coordinator keeps every epic.** A Captain that creates or changes an epic says
+  exactly what: the epic, its children, and the issue text for another ship. The fleet's Coordinator
+  executes it: it files or adjusts the epic in the tracker, files the children, opens the mission
+  channel, adds its members, and hands the references back to the Captain. It runs these as
+  commands (`cyberfleet epic ...`), never improvises a tracker call, and sends an underspecified
+  request back rather than filling the gap. The Captain keeps the judgment: what the children are,
+  and whether they stay within the Council's words (§5). The delegation record is not bookkeeping:
+  it stays with whoever relays the Council's words (§3).
+- **The fleet's Coordinator lands missions.** It watches the children's issues. When a blocking
+  issue closes, or at the release when the dependency is consumed as a published package, it lifts
+  the block and rings the waiting Captain. When every child has closed, it closes the epic (an epic
+  is done when its children are done) and reports once to the Captain that created it. It starts on
+  demand and exits when nothing is pending.
+- **The fleet's Captain takes no part in either.** Every Captain is equally capable; the Flag Bridge
+  differs only if it is later given a stronger model.
 - **Promotion is in place when one tracker holds both levels.** The issue becomes the epic, and its
   channel becomes the mission channel, keeping its history: everything said before the split was
   about the whole request. Each child issue opens its own sortie channel. Work already in flight
@@ -264,16 +276,16 @@ inferred from how the work went.
 This replaces ADR-0023 §5's step from the arbitration channel straight to the Council.
 
 - **Cross-ship work** is an issue in the other repository, a child of the mission's epic
-  (promoting the request first if it was an issue). The requesting Captain tells the Operator what
-  it needs; the Operator files the child and rings the other ship's Captain with `send --start`,
-  and that Captain accepts, declines, or asks the Council.
+  (promoting the request first if it was an issue). The requesting Captain tells the fleet's
+  Coordinator what it needs; the Coordinator files the child and rings the other ship's Captain with
+  `send --start`, and that Captain accepts, declines, or asks the Council. The requesting Captain
+  marks its sortie blocked on that issue and keeps planning everything else. If the dependency is
+  consumed as a published package, the block lifts at the release, not the merge (§8).
 - **Asking another ship.** Any Captain can read and analyze another ship. Asking that ship's
   Captain gets a more focused, deeper answer, because it holds that ship's context, so a Captain
   asks rather than reads when the answer matters. This is the assumed process. A cheap alternative
   to try later: the Captain that creates an epic adds the other ship's Captain to the mission
-  channel and asks there directly. The requesting Captain marks its sortie blocked on
-  that issue and keeps planning everything else. If the dependency is consumed as a published
-  package, the block lifts at the release, not the merge.
+  channel and asks there directly.
 - **A dispute** climbs a ladder. First comes an arbitration channel anchored at the disputed entry,
   with one position and one rebuttal from each Captain. Then standing rules. Then a cold high-tier
   Mediator's brief. Then the Council. Only the Council's rung binds two ships.
