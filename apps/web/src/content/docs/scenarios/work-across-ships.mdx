@@ -1,106 +1,135 @@
 ---
 title: Work across ships
-description: Scenario 4. A Captain finds its work needs a change in another ship; it files the request there, rings that ship's Captain, and replans around the dependency until it lands.
+description: Scenario 4. A Captain finds its work needs a change in another ship; the fleet's Coordinator files it there and rings that ship's Captain, and the first Captain plans around the dependency until it lifts.
 ---
 
 import Mermaid from '../../../components/Mermaid.astro'
 
 :::caution[Proposed design]
-See [The ship](/cyberfleet/scenarios/the-ship/) for the layout, the crew, and what is built.
+See [The ship](/cyberfleet/scenarios/the-ship/) for the layouts, the crew, and what is built.
 :::
 
-Ship A's Captain is planning issue 42 and finds that one sortie needs a change in ship B, a library
+Ship A's Captain is planning issue 42 and finds that one part needs a change in ship B, a library
 A depends on. Neither Captain commands the other. Work crosses ships as an **invitation**: A asks, B
 decides when and whether, and A plans around the answer
 ([ADR-0023](https://github.com/cyberuni/cyberfleet/blob/main/docs/adr/0023-captain-mission-sortie.md) §5).
+
+Crossing a repository boundary forces an epic, because each repository releases on its own. Issue 42
+becomes the **mission**, and the part in B becomes a child issue there: B's **sortie**. A's Captain
+specifies this, and the fleet's Coordinator executes it.
 
 ## Who is involved
 
 | Automaton | Ship | Role in this scenario |
 | --- | --- | --- |
-| Captain A | A | Finds the dependency, files the request, and replans around it |
-| Captain B | B | Triages the request like any other, and owns B's sortie |
+| Captain A | A | Finds the dependency, specifies the epic and the issue for B, marks its sortie blocked, and replans around it |
+| Fleet's Coordinator | Fleet | Files or adjusts the epic and B's issue, opens the mission channel, rings Captain B, lifts the block, and closes the epic |
+| Captain B | B | Accepts, declines, or asks the Council, and owns B's sortie |
 | Pods and Coordinator of B | B | Do and land B's sortie, as in scenarios 1 and 3 |
-| Command Center Operator | Fleet | Carries a decision-request to the Council if the Captains cannot agree on order |
+| Operator | Fleet | Carries a decision-request to the Council if Captain B needs one or the Captains cannot agree |
 | Council | — | Decides anything that crosses ships: sequencing disputes, and B's release |
 
 ## The flow
 
 <Mermaid
-	caption="A asks; B decides. A's blocked sortie waits; its other sorties keep going."
+	caption="A asks through the fleet's Coordinator; B decides. A's blocked sortie waits; its other work keeps going."
 	code={`sequenceDiagram
   participant KA as Captain A
+  participant FC as Fleet's Coordinator
   participant TB as ship B issue tracker
-  participant SB as ship B address channel
+  participant MC as mission channel
   participant KB as Captain B
-  participant WB as work channel, B issue
+  participant SB as sortie channel, B issue
   participant XB as Coordinator B
-  KA->>TB: gh issue create in B, relates to A issue 42
-  KA->>SB: entry append, type ship.request
-  KA->>KB: service start in B, then unit nudge
+  KA->>FC: specifies the epic, its children, and the issue text for B
+  FC->>TB: file the epic and the child issue in B
+  FC->>MC: open the mission channel, add its members
+  FC->>KB: send --start in B, then the ring
+  FC->>KA: references back
   KA->>KA: mark the sortie blocked, spawn Pods on the rest
-  KB->>SB: entry list --unread
-  KB->>WB: channel create, Captain A as a member
-  KB->>SB: reply on the thread: accepted, priority, ETA
+  KB->>MC: accepts, with a priority
+  KB->>SB: opens the sortie channel on taking the issue in
   Note over KB,XB: B's Pods work and land, scenarios 1 and 3
-  XB->>WB: entry append, type landed
-  XB->>KA: unit nudge, the poster rings members
-  KA->>KA: unblock the sortie, spawn its Pod`}
+  XB->>KB: one report when its queue settles
+  KB->>TB: close the issue, after the release if consumed as a package
+  FC->>KA: lifts the block and rings
+  KA->>KA: unblock the sortie, spawn its Pod
+  FC->>FC: all children closed, close the epic
+  FC->>KA: reports once`}
 />
 
 ## Step by step
 
-### 1. Captain A files the request in B
+### 1. Captain A specifies, the fleet's Coordinator files
 
 The durable request is an **issue in B's repository**, not a message
 (authority-governance §2). The issue survives any session, and B's Captain triages it from B's own
-queue. Captain A records the relation on both issues, "A 42 is blocked by B 7", so either end shows
-it.
+queue. Captain A says exactly what it needs: the epic, its children, and the issue text for B. The
+fleet's Coordinator executes it with `cyberfleet epic ...` commands, never an improvised tracker
+call, and sends an underspecified request back rather than filling the gap.
+
+Where the epic lives follows the project's tracker routing: an issue in a repository, a GitHub
+Projects item, or an Asana task. When one tracker holds both levels, issue 42 becomes the epic in
+place and its channel becomes the **mission channel**, keeping its history. Otherwise the epic is a
+new item and issue 42 stays its first sortie, with its channel unchanged. GitHub sub-issues can
+cross repositories only within one owner. A mission that spans organizations keeps its epic in a
+tracker that spans them, such as Asana, or links its children with a cynapse relation.
+
+The mission channel carries only what crosses sorties: the plan across them, blockers, invitations,
+and the request's delegation record. Captain A and Captain B are its members.
 
 ```sh
-gh issue create -R <org>/<ship-b> --title "<what A needs>" --body "<why, and blocks <org>/<ship-a>#42>"
+cyberfleet epic file --spec <epic-spec>
 ```
 
-### 2. Captain A rings B
+### 2. The fleet's Coordinator rings B
 
-The message is only the doorbell for the issue:
+The message is only the doorbell for the issue. The fleet's Coordinator posts and rings Captain B,
+starting it in B if it is not running:
 
 ```sh
 cynapse entry append <ship-b-address> --type ship.request --ref gh:<org>/<ship-b>#7
-cyberlegion service start <ship-b> captain --agent captain --model opus
-cyberlegion unit nudge <captain-b-handle>
+cyberlegion send --start <ship-b-address> captain
 ```
 
 ### 3. Captain A replans
 
-The sortie that needs B is blocked; the rest of issue 42 is not. Captain A records the block,
-spawns Pods on the sorties that are ready, and does not spawn a Pod to work around B's code in A.
+The sortie that needs B is blocked; the rest of issue 42 is not. Captain A records the block, spawns
+Pods on the lines of work that are ready, and does not spawn a Pod to work around B's code in A. A
+Captain that needs a focused answer about B's code asks Captain B rather than reading B itself,
+because B's Captain holds that ship's context.
 
 ### 4. Captain B decides
 
 The request is content Captain B fetched, so it judges it on the merits, exactly as it would a
 request from its own Operator. Taking on the work is dispatch, and needs no Council decision. It
-answers on the request's thread with one of:
+answers on the mission channel with one of:
 
-- **Accept**, with a priority. It opens the issue's work channel with Captain A as a member, so A
-  sees B's progress and the landing.
+- **Accept**, with a priority. It takes the issue in as its sortie and opens the sortie channel.
 - **Decline**, with the reason, for example "this belongs in A, here is the extension point". Captain
   A replans.
 - **Needs the Council**, when accepting would commit more of B than its leash allows. Captain B
-  raises a decision-request through the Command Center Operator.
+  raises a decision-request through the Operator.
 
-### 5. B lands, and A is rung
+A delegation never crosses to another ship. Authority attaches to the sortie, so B's merges need
+their own delegation from the Council, and B's Captain accepts the sortie or asks the Council.
+
+### 5. B lands, and the block lifts
 
 B's sortie runs and lands as in [Landing a pull request](/cyberfleet/scenarios/landing-a-pull-request/).
-B's Coordinator posts the landing on the work channel and rings its members, including Captain A.
-Captain A unblocks the sortie and spawns its Pod.
+B's Coordinator reports once to Captain B when its queue settles, and Captain B closes the issue. The
+fleet's Coordinator watches the children's issues. Either way it lifts the block and rings Captain A,
+which unblocks the sortie and spawns its Pod. When every child has closed, the fleet's Coordinator
+closes the epic and reports once to the Captain that created it. It starts on demand and exits when
+nothing is pending.
 
-### 6. When landing is not enough
+### 6. The block usually lifts at the release
 
 If A consumes B as a published package, a merge in B does not reach A. B has to release, and
 releasing is ratification-class (authority-governance §5). Captain B asks the Council, through the
-Command Center Operator, to release. A's sortie stays blocked until the release exists, not until
-the merge.
+Operator, to release. A's sortie stays blocked until the release exists, not until the merge, so the
+block lifts when the release carries the fix. It lifts when the blocking issue closes only if A
+consumes B from source.
 
 ## When the Captains disagree
 
@@ -111,10 +140,12 @@ the other. That is [Captains in dispute](/cyberfleet/scenarios/captains-in-dispu
 
 | Step | Need | cyberlegion | cynapse | Status |
 | --- | --- | --- | --- | --- |
+| 1 | The epic verbs: file or adjust an epic, file its children | — | — | Gap: proposed `cyberfleet epic ...`; the fleet's Coordinator persona is not built |
 | 1 | File an issue in another repository | — | — | `gh`, built |
 | 1 | Record "blocked by" on both issues | — | Relations across stores | Planned (cynapse ADR-0010) |
-| 2 | Hail another ship's Captain, in that ship's Bridge | `service start`, `unit nudge` | `entry append` | Built, except placement into B's Bridge (see scenario 2) |
+| 1 | Link children across owners | — | A cynapse relation, or an Asana epic | Planned; GitHub sub-issues stop at the owner |
+| 2 | Ring another ship's Captain, in that ship's Bridge | `send --start` | `entry append` | Gap: `send --start` is not built, and placement into B's Bridge is not either (see scenario 2) |
 | 3 | Record a sortie blocked on another repository | — | A state record on the mission | Gap: cross-repository ordering has no home yet (ADR-0023, Open dependencies) |
-| 4 | Add Captain A to B's work channel | — | `channel create --member` | Built at creation only; no verb adds a member later |
-| 5 | Ring every member of a channel | Runtime doorbell for channel members | Members list | Gap: until the runtime watches channels, the poster rings, and needs the member list |
+| 4 | Add Captain B to the mission channel | — | `channel create --member` | Built at creation only; no verb adds a member later |
+| 5 | Watch the children and lift a block | — | Relations, issue state | Gap: fleet's Coordinator logic |
 | 6 | Release B on the Council's decision | — | — | Ratification-class; no fleet verb |
