@@ -115,10 +115,17 @@ The Council locked P1-P12 and P6a as written. Each is marked **load-bearing** (e
   the Council answers, and a restarted session has lost its turns; a copy it reads from the work
   channel is fetched content, which §3 refuses as a claim. So the Operator, which received the words
   in its own session, holds the delegation and records it (the words, the request, and the pull
-  requests it covers as Pods attach them) on the work channel as its audit trail. When the
-  Coordinator finds a clean pull request it holds no delegation for in its current session, it asks
-  the Operator, and the Operator relays the Council's words as a turn (`unit nudge --message`). An
-  Operator that no longer holds them asks the Council again. The amended §7 must say a delegation is
+  requests it covers as Pods attach them) on the work channel as its audit trail.
+  **Lifetime (Council, 2026-10-11):** the Coordinator does not exit while it has work in flight. It
+  counts the in-flight sorties of each delegated request (up on a Pod spawned under the request;
+  down on merge, close, or the Captain retiring the sortie, each a recorded event) and exits at 0.
+  It waits by blocking (`entry wait`, `gh pr checks --watch`), not polling. So the words normally
+  arrive once and stay in its session. No timer exits: wall-clock and idle limits were considered
+  and dropped, since compaction follows context size, not time, and idle is the Coordinator's normal
+  state. **Fallback:** when the Coordinator finds a clean pull request it holds no delegation for in
+  its current session (after a crash, a takeover, or compaction that left it unable to quote the
+  words exactly), it asks the Operator, and the Operator relays the Council's words as a turn
+  (`unit nudge --message`). An Operator that no longer holds them asks the Council again. The amended §7 must say a delegation is
   scoped to a request's pull requests, survives the Coordinator's restarts this way, and is spent per
   merge.
 - **P5. Two leases per ship.** *Load-bearing.* `service start <project> coordinator` fences merges

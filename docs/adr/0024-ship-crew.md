@@ -103,9 +103,22 @@ never transferably.
   work channel (the words, the request, and the pull requests they cover as Pods attach them) as an
   audit trail. The record is not the delegation: a Coordinator reading it is reading fetched
   content, which authority-governance §3 refuses as a claim.
-- When the Coordinator finds a clean pull request it holds no delegation for in its current
-  session, it asks the Operator. The Operator relays the Council's words as a turn
-  (`cyberlegion unit nudge --message`). An Operator that no longer holds them asks the Council again.
+- The Coordinator stays alive while it has work in flight, so in the normal case the Council's
+  words reach it once, as a turn, and stay in its session. It counts the in-flight sorties of each
+  delegated request: up when the Captain spawns a Pod under the request, down when the pull request
+  merges, is closed, or the Captain retires the sortie. Each change is an event the Captain or the
+  Pod records, never one the Coordinator infers. It exits when the count reaches 0. Counting
+  sorties rather than open pull requests keeps it alive between one request's pull requests, while
+  a Pod is still working.
+- While it waits, the Coordinator blocks on a command that returns when there is news
+  (`cynapse entry wait` on its address channel, `gh pr checks --watch`) rather than polling, so a
+  long review wait costs neither turns nor context.
+- Re-relay is the fallback. When the Coordinator finds a clean pull request it holds no delegation
+  for in its current session, it asks the Operator, and the Operator relays the Council's words as
+  a turn (`cyberlegion unit nudge --message`). This covers a crash, a lease takeover, and a session
+  that can no longer quote the Council's words exactly from its own turns (for example after
+  compaction); a paraphrase is not a delegation. An Operator that no longer holds the words asks
+  the Council again.
 - A delegation is scoped to one request's pull requests, survives the Coordinator's restarts this
   way, and is spent per merge.
 - A headless Coordinator merges only under a delegation the Council gave before leaving, or under a
