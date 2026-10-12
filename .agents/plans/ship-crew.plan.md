@@ -8,8 +8,8 @@ todos:
     status: completed
   - content: "FINE-TUNE with the Council: settle the proposed decisions P1-P12 and the open questions; mark each locked or rejected"
     status: completed
-  - content: "Phase 0 — ADR-0024 (amends ADR-0022/0023), authority-governance §7 design, civitas vocabulary; file issues and place them on a board"
-    status: pending
+  - content: "Phase 0 — ADR-0024 accepted 2026-10-12; remaining: authority-governance §7 design, civitas vocabulary; file issues and place them on a board"
+    status: in_progress
   - content: "Phase 1 — foundations in the sibling repos (cynapse, cyberlegion, cyber-mux, cyber-sdd), in parallel"
     status: pending
   - content: "Phase 2 — cyberfleet core: cynapse dependency, ship open, crew addressing, pr clean, Captain, Coordinator, Operator, Pod, missions view"
@@ -476,7 +476,7 @@ Each item names its repository and what it waits on. Items within a phase run in
 
 1. **ADR-0024** (cyberfleet): ship layout, crew tiers, the Coordinator, P1-P12 as settled; amends
    ADR-0022 d.8 and ADR-0023 §1, §2, §4, §5, §7 and its implementation order. Cites civitas 0002 and
-   0004. *Waits on:* fine-tuning.
+   0004. **Done:** accepted 2026-10-12, with the ADR-review revisions R1-R15.
 2. **authority-governance §7 amendment design** (cyberfleet): delegation to the ship's Coordinator;
    the Command Center relay; standing rules as Council-written delegations. *Waits on:* 1.
 3. **civitas vocabulary and components** (cyber-civitas): Coordinator, Mediator, cyberfleet version.
@@ -637,6 +637,7 @@ work there is owned by the cyber-civitas org itself.
 
 ## NEXT
 
-ADR-0024 is drafted (`docs/adr/0024-ship-crew.md`, Proposed) and awaits the Council's acceptance.
-Then the authority-governance §7 amendment design (item 2), then file the Phase 1 issues in each
-repository and put them on cyberuni Project #1 (item 4).
+ADR-0024 is accepted (2026-10-12). Next: the authority-governance §7 amendment design (item 2): the
+merge moves from the Operator to the ship's Coordinator, scoped per request and stopping at the ship;
+how the Council's words travel is unchanged (§3). Then the civitas vocabulary (item 3), then file the
+Phase 1 issues in each repository and put them on cyberuni Project #1 (item 4).
