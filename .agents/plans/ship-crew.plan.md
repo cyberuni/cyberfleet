@@ -517,17 +517,24 @@ cyber-sdd: items 19-22 dropped (R3). The mission graph is not a dependency.
     (degraded mode below until then).
 25. Crew addressing: which channel and role each automaton posts to, through cyberlegion's
     `send --start` (15a). *Waits on:* 15a, 23.
-26. `cyberfleet pr clean <pr>`: the clean bar as a command (P1).
+26. `cyberfleet pr clean <pr>`: the clean bar as a command (P1, R4).
+26a. `cyberfleet epic` verbs (create, adjust, link a child, file a child in another repository, open
+    the mission channel, add members, lift a block, close when every child is closed), following
+    the tracker routing (R6, R13). *Waits on:* 23.
 27. **Captain**: skill, agent, spec node; triage (freshness, priority, details), issue write,
     work-channel open, plan writes, Pod spawn with model per sortie, rulings. Continues #25 / PR #93.
 28. **Coordinator**: skill, agent, spec node; loads merge-backstop-governance; integration worktree
-    (P6a); landing moves out of `headless-operator`; asks the Operator for the delegation (P4); reports
-    each landing to the Captain (R1). *Waits on:* 2, 26.
-29. **Operator rewrite**: one Operator in the Command Center, reached by calling (R5); classify, relay, announce the merge
-    bar; reopen `operator.feature` (with #79, #12, #13). *Waits on:* 2, 25.
+    (P6a); landing moves out of `headless-operator`; holds a merge it has no delegation for and
+    asks (R11); reports once when its queue settles (R8). *Waits on:* 2, 26.
+28a. **Fleet Coordinator**: the same persona at the Command Center, keeping epics and landing
+    missions through 26a (R13). *Waits on:* 26a.
+29. **Operator rewrite**: one Operator in the Command Center Dashboard, reached from each ship's
+    remote pane or by calling (R10, R11); classify, relay, announce the merge bar; reopen `operator.feature` (with #79, #12, #13). *Waits on:* 2, 25.
 30. **Pod**: report on the work channel; "PR ready" to the Coordinator; reopen `pod.feature`.
 31. **authority-governance** implementation of item 2; reopen `authority.feature`.
 32. `missions.ts`: group by project, missions over sorties, show Bridge state (ADR-0023 step 6).
+32a. Templates: the ship (Dashboard, Bridge, Engine Room) and the Command Center (Dashboard, Flag
+    Bridge), with the remote pane and the Operator's seat (R10, R11). Part of 24.
 
 **Degraded mode** before items 11, 15b, 16, and 17 land: `ship open` applies the template with
 `cyber-mux open --template`, and the Dashboard Operator starts the Captain and Coordinator with
