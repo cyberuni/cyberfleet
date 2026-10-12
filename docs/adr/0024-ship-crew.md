@@ -3,7 +3,7 @@
 ## Status
 
 Proposed, 2026-10-11. Amends [ADR-0022](0022-cyberfleet-persona.md) decision 8 and
-[ADR-0023](0023-captain-mission-sortie.md) §1, §2, §4, §5, §7 and its implementation order.
+[ADR-0023](0023-captain-mission-sortie.md) §1, §2, §3, §4, §5, §7 and its implementation order.
 Decisions locked by the Council at fine-tuning, recorded in
 [`.agents/plans/ship-crew.plan.md`](../../.agents/plans/ship-crew.plan.md). The scenarios behind them
 are on the docs site under `scenarios/`. Parent issue:
@@ -58,7 +58,7 @@ pane).
 | Operator (Command Center) | Outside every ship | Mid | With the Command Center | Resolves the target ship and relays straight to its Captain. |
 | Captain | Bridge, left | High | On demand | Freshness, priority, scope; the issue tracker; the plan; spawns Pods; rules on escalations. |
 | Coordinator | Bridge, right | Low | On demand | Lands work: clean bar, rebase order, speculative CI, merge; escalates judgment. |
-| Pod | Own workspace and worktree | Per sortie | Spawned by the Captain | One sortie, one pull request. |
+| Pod | Own workspace and worktree | Per line of work | Spawned by the Captain | One line of work (impl, judge, refactor, audit) in one sortie. A sortie lands as one or more pull requests. |
 | Mediator | Headless, cold | High | Per dispute | Writes a brief of a dispute. Decides nothing. |
 
 The Captain picks each Pod's tier from the mission graph's `modelTier`, and uses mid when the node
@@ -73,13 +73,13 @@ doing both. One loop would put landing back on the high tier.
 The Operator answers questions from `cyberfleet missions`, `gh`, and channels without waking the
 Captain. Only work goes up. The Command Center Operator skips the ship's Operator and relays to the
 Captain directly, since the extra hop would decide nothing. A request spanning ships goes to the ship
-where it starts, and that Captain invites the other one (§8).
+where it starts, and that Captain invites the other one (§10).
 
 ### 4. The clean bar is a command
 
 `cyberfleet pr clean <pr>` computes the four conditions of authority-governance §7: no conflict,
 reviews resolved, CI green on the merged result (all from `gh`), and the Pod reported the work done
-on the issue's work channel. The Coordinator acts on its exit status and never decides "clean
+on its sortie channel (§8). The Coordinator acts on its exit status and never decides "clean
 enough". This is what makes a low-tier Coordinator safe: no Coordinator merges before `pr clean`
 exists.
 
@@ -100,16 +100,16 @@ never transferably.
 - The Operator's announcement says the Coordinator lands the work. The Council's reply delegates to
   that ship's Coordinator, for that request's pull requests.
 - The Operator received those words in its own session, so it holds them, and records them on the
-  work channel (the words, the request, and the pull requests they cover as Pods attach them) as an
-  audit trail. The record is not the delegation: a Coordinator reading it is reading fetched
+  request's channel (the mission channel for an epic, the sortie channel for an issue: the words,
+  the request, and the pull requests they cover as Pods attach them) as an audit trail. The record is not the delegation: a Coordinator reading it is reading fetched
   content, which authority-governance §3 refuses as a claim.
 - The Coordinator stays alive while it has work in flight, so in the normal case the Council's
-  words reach it once, as a turn, and stay in its session. It counts the in-flight sorties of each
-  delegated request: up when the Captain spawns a Pod under the request, down when the pull request
-  merges, is closed, or the Captain retires the sortie. Each change is an event the Captain or the
-  Pod records, never one the Coordinator infers. It exits when the count reaches 0. Counting
-  sorties rather than open pull requests keeps it alive between one request's pull requests, while
-  a Pod is still working.
+  words reach it once, as a turn, and stay in its session. It counts the open sorties of each
+  delegated request (§8): up when a sortie opens or reopens, down when its issue closes or the
+  Captain retires it. Each change is a recorded event (the tracker's open, close, and reopen, or the
+  Captain's entry), never one the Coordinator infers. It exits when the count reaches 0. Counting
+  sorties rather than pull requests keeps it alive between the pull requests of one sortie and
+  while Pods are still working.
 - While it waits, the Coordinator blocks on a command that returns when there is news
   (`cynapse entry wait` on its address channel, `gh pr checks --watch`) rather than polling, so a
   long review wait costs neither turns nor context.
@@ -119,10 +119,15 @@ never transferably.
   that can no longer quote the Council's words exactly from its own turns (for example after
   compaction); a paraphrase is not a delegation. An Operator that no longer holds the words asks
   the Council again.
-- A delegation is scoped to one request's pull requests, survives the Coordinator's restarts this
-  way, and is spent per merge.
+- A delegation is scoped to the sorties of the request it answers, read from the Council's words.
+  It survives the Coordinator's restarts this way, and is spent per merge. A follow-up pull request
+  on a reopened sortie is covered when the words cover it.
+- Promoting an issue to an epic (§8) can widen what a delegation reaches, so the Captain checks the
+  children against the Council's words when it creates the epic. Children within them keep the
+  delegation, and the Captain records the mapping on the mission channel. A child that adds work the
+  words did not ask for goes to the Council through the Operator before it is delegated.
 - A headless Coordinator merges only under a delegation the Council gave before leaving, or under a
-  standing rule (§9). Otherwise it batches the merge as needs-input.
+  standing rule (§10). Otherwise it batches the merge as needs-input.
 
 cyberlegion#154 (`mail send` stamps another live unit as sender) is fixed before any authority
 travels over messages.
@@ -148,7 +153,49 @@ The Coordinator works in its own integration worktree, provisioned through the r
 and the Captain. If the host's merge queue does the speculation, the Coordinator reads its results
 instead.
 
-### 8. Addressing and waking
+### 8. Sorties, missions, and their channels
+
+The fleet's roles sit on the tracker's levels. The level is read from the tracker and never
+inferred from how the work went.
+
+| Tracker level | Fleet role | Channel |
+| --- | --- | --- |
+| **Issue** (a story or chore): releasable on its own, in one repository | **Sortie**: one Captain, one lease; lands as one or more pull requests | The issue's work channel: the **sortie channel** |
+| **Epic**: several issues that together deliver one outcome | **Mission** | The epic's work channel: the **mission channel** |
+| **Subtask**: not releasable on its own (impl, judge, refactor, security audit) | A **line of work** in a sortie, carried by its Pods | None of its own. The mission graph holds it, and threads in the sortie channel carry its focused exchanges. |
+
+- **Everything starts as a sortie.** Releasable is a criterion that permits a split, not a signal
+  that requires one: a feature can be five releasable commits and still be one issue. A mission
+  exists only once someone deliberately makes the issue an epic, by creating the epic entry or
+  retyping the issue. Work spread over time, devices, or pull requests promotes nothing. Crossing a
+  repository boundary does force an epic, because each repository releases on its own.
+- **Promotion is in place.** The issue becomes the epic, and its channel becomes the mission
+  channel, keeping its history: everything said before the split was about the whole request. Each
+  child issue opens its own sortie channel. Work already in flight moves to the child that inherits
+  it, as part of the Captain's replan.
+- **A sortie's lifetime is its issue's.** It begins when the Captain takes the issue in and ends when
+  the issue closes. Pull requests reference the issue and never close it (no `Closes #n`). The
+  Coordinator closes the issue once the graph shows no open work under the sortie. A follow-up the
+  request covers reopens the issue, which is the Captain's call; work the request did not cover is a
+  new issue.
+- **Membership.** The Captain and the Coordinator are members of every sortie channel of their ship;
+  each Pod is a member of its own sortie's channel. The mission channel carries only what crosses
+  sorties: the plan across them, blockers, invitations, and the request's delegation record. No pull
+  request channel is opened: review lives on the host, and landing talk lives in the sortie channel.
+- **Threads.** An exchange that needs a different set of readers from its parent is a child channel
+  anchored at the entry that starts it (cynapse ADR-0004): a gate, whose cold judge reads only its
+  thread; an escalation and its ruling; an arbitration. Progress, "PR ready", and routine landing
+  stay in the sortie channel. Every thread posts its outcome back to its parent as an entry that
+  refers to the anchor, so a reader of the parent never has to open a thread to learn a decision.
+  In a local store, membership does not enforce isolation; the thread's briefing (purpose, members,
+  context) names only its own exchange. Enforcement would be cynapse's access control.
+- **Two kinds of edge.** The tracker's parent and sub-issue links join work items, mission to sortie,
+  and cynapse keeps no copy of them (cynapse ADR-0011). Anchors branch a conversation inside one work
+  item. The whole trace is a walk over the tracker's tree, then over each sortie's anchors. GitHub
+  sub-issues can live in another repository. Across organizations this is unconfirmed; there, the
+  link is a cynapse relation (cynapse ADR-0010).
+
+### 9. Addressing and waking
 
 - **Participants are roles.** The Captain and the Coordinator are cynapse participants keyed from
   the project's cynapse address and the role (for example `<project-address>/captain`).
@@ -156,7 +203,7 @@ instead.
   `ship open` or `send --start`. A session acts as the role while it holds the role's lease. The
   lease generation, not the participant, tells sessions apart.
 - **Channels.** The ship address channel (owner: the Captain) takes requests and escalations. A
-  Coordinator address channel takes "PR ready". Pods report progress on the issue's work channel.
+  Coordinator address channel takes "PR ready". Pods report progress on their sortie channel (§8).
 - **Waking is cyberlegion's.** ADR-0023 §4's provisional `cyberfleet hail` becomes
   `cyberlegion send --start`: post to a channel, resolve or start its owner with `service start`,
   ring it. It stays in place until the runtime's channel watcher (cyberlegion#153) replaces it.
@@ -169,11 +216,12 @@ instead.
   channel, the graph's `ready`, and the decision entries since its last generation. A decision that
   is not written down did not happen.
 
-### 9. Across ships, and disputes
+### 10. Across ships, and disputes
 
 This replaces ADR-0023 §5's step from the arbitration channel straight to the Council.
 
-- **Cross-ship work** is an issue in the other repository, rung with `send --start` to its Captain,
+- **Cross-ship work** is an issue in the other repository, a sub-issue of the mission's epic
+  (promoting the request first if it was an issue), rung with `send --start` to its Captain,
   who accepts, declines, or asks the Council. The requesting Captain marks its sortie blocked on
   that issue and keeps planning everything else. If the dependency is consumed as a published
   package, the block lifts at the release, not the merge.
@@ -185,13 +233,17 @@ This replaces ADR-0023 §5's step from the arbitration channel straight to the C
   (`.agents/references/`), or in `~/.agents/references/` for a rule across ships. The format is
   decided when the first reader is built.
 
-### 10. Vocabulary
+### 11. Vocabulary
 
 | Term | Meaning |
 | --- | --- |
 | **Dashboard, Bridge, Engine Room** | The ship's three tabs (§1). |
 | **Coordinator** | The ship's landing automaton (§2, §4). |
-| **Mediator** | A cold automaton that briefs a dispute for the Council (§9). |
+| **Mediator** | A cold automaton that briefs a dispute for the Council (§10). |
+| **sortie** | An issue in flight: releasable, in one repository, owned by its Captain (§8). |
+| **mission** | An epic in flight: several sorties delivering one outcome (§8). |
+| **line of work** | A subtask of a sortie, not releasable on its own, carried by its Pods (§8). |
+| **sortie channel, mission channel, thread** | The issue's work channel, the epic's work channel, and a child channel anchored in one of them (§8). |
 | **clean bar** | The four conditions `pr clean` checks (§4). |
 | **Operation order** | The order of the SDD mission graph's Operations. Named so, because cyberfleet's "mission" means something else. |
 

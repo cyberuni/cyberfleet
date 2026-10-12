@@ -117,8 +117,8 @@ The Council locked P1-P12 and P6a as written. Each is marked **load-bearing** (e
   in its own session, holds the delegation and records it (the words, the request, and the pull
   requests it covers as Pods attach them) on the work channel as its audit trail.
   **Lifetime (Council, 2026-10-11):** the Coordinator does not exit while it has work in flight. It
-  counts the in-flight sorties of each delegated request (up on a Pod spawned under the request;
-  down on merge, close, or the Captain retiring the sortie, each a recorded event) and exits at 0.
+  counts the open sorties of each delegated request (up when a sortie opens or reopens; down when
+  its issue closes or the Captain retires it, each a recorded event) and exits at 0.
   It waits by blocking (`entry wait`, `gh pr checks --watch`), not polling. So the words normally
   arrive once and stay in its session. No timer exits: wall-clock and idle limits were considered
   and dropped, since compaction follows context size, not time, and idle is the Coordinator's normal
@@ -162,6 +162,17 @@ The Council locked P1-P12 and P6a as written. Each is marked **load-bearing** (e
   nudge, and busy-state ideas are absorbed here (slot placement, ring-or-defer). Its warm SDD
   producer stations sharing one worktree under a write lease are a separate question and stay parked
   in that plan.
+
+- **P13. Sorties and missions sit on the tracker's levels.** *Load-bearing (channel keys).* Settled
+  with the Council on 2026-10-11, after fine-tuning; ADR-0024 §8. A sortie is an issue in flight
+  (releasable, one repository, lands as one or more pull requests, ends when its issue closes); a
+  mission is an epic in flight; a subtask is a line of work carried by Pods. Promotion is a
+  deliberate act (creating the epic), never inferred from work spread over pull requests, and
+  happens in place: the issue's channel becomes the mission channel. Crossing repositories forces an
+  epic. Channels: the epic's and each issue's work channels, joined by the tracker's sub-issue links
+  (no cynapse copy); focused exchanges (gate, escalation, arbitration) are anchored threads that
+  post their outcome back. A promotion that adds work outside the Council's words goes back to the
+  Council before it is delegated.
 
 ### Questions settled at fine-tuning (2026-10-11)
 
@@ -383,10 +394,13 @@ cynapse:
 
 5. CLI `channel member add|list|remove` over `Store.addMember`.
 6. Project → address recipe, idempotent (civitas 0004), documented and tested.
-7. Recipe for a work channel with no external subject.
+7. Recipe for a work channel with no external subject. Off the critical path (P13): every sortie and
+   mission is a tracker item.
 8. Land cynapse PRs #94 and #92; release 0.2.0; announce the async/CLI-rename break (#71, #72, #75).
 9. `cynapse.published` write-back entry type (ADR-0011), added to the public contract.
 10. Relations across stores for "blocked by" (ADR-0010): names, per-store spelling, a read helper.
+    Needed for mission-to-sortie links only across GitHub organizations, where sub-issues are
+    unconfirmed (P13).
 
 cyberlegion:
 
