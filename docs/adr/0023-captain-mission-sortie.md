@@ -6,6 +6,8 @@ Proposed, 2026-10-04. Amends [ADR-0022](0022-cyberfleet-persona.md) decisions 2,
 Amendment's point 5. Implements the topology of
 [cyberuni/cyberfleet#24](https://github.com/cyberuni/cyberfleet/issues/24) and scopes
 [#25](https://github.com/cyberuni/cyberfleet/issues/25).
+Amended by [ADR-0024](0024-ship-crew.md) (proposed): §1, §2, §4, §5, §7, and the implementation
+order.
 
 Builds on four cross-package decisions recorded at
 [cyber-civitas.github.io/decisions](https://cyber-civitas.github.io/decisions/):

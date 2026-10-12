@@ -517,6 +517,6 @@ work there is owned by the cyber-civitas org itself.
 
 ## NEXT
 
-Write ADR-0024 (item 1) from the locked decisions, then the authority-governance §7 amendment design
-(item 2), then file the Phase 1 issues in each repository and put them on cyberuni Project #1
-(item 4).
+ADR-0024 is drafted (`docs/adr/0024-ship-crew.md`, Proposed) and awaits the Council's acceptance.
+Then the authority-governance §7 amendment design (item 2), then file the Phase 1 issues in each
+repository and put them on cyberuni Project #1 (item 4).
