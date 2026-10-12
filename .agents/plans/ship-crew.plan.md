@@ -128,11 +128,11 @@ The Council locked P1-P12 and P6a as written. Each is marked **load-bearing** (e
   (`unit nudge --message`). An Operator that no longer holds them asks the Council again. The amended §7 must say a delegation is
   scoped to a request's pull requests, survives the Coordinator's restarts this way, and is spent per
   merge.
-- **P5. Two leases per ship.** *Load-bearing.* `service start <project> coordinator` fences merges
+- **P5. Two leases per ship.** *Load-bearing; the graph half superseded by R3.* `service start <project> coordinator` fences merges
   (`service verify` before `gh pr merge`) and the Coordinator's `retired` appends to the graph (P6);
   the Captain's lease fences the tracker and the plan events.
   ADR-0023 §2 gave both to the Captain. cyber-civitas 0002 (leases in the runtime) already allows it.
-- **P6. Split mission-graph writes by kind.** *Load-bearing; needs cyber-sdd.* The graph is
+- **P6. Split mission-graph writes by kind.** *Superseded by R3.* *Load-bearing; needs cyber-sdd.* The graph is
   single-writer by design (cyber-sdd ADR-0026; `loops.md` L90). The frontier only grows once a
   landing is retired, so a Captain-only writer means a Captain turn per merge. Recommend: the Captain
   appends plan events, the Coordinator appends `retired`, both under an append lock (git ref
@@ -173,6 +173,38 @@ The Council locked P1-P12 and P6a as written. Each is marked **load-bearing** (e
   (no cynapse copy); focused exchanges (gate, escalation, arbitration) are anchored threads that
   post their outcome back. A promotion that adds work outside the Council's words goes back to the
   Council before it is delegated.
+
+### Revised at the ADR-0024 review (2026-10-11)
+
+The Council's answers to the seven open points found in the drafted ADR. These supersede the
+decisions they name; ADR-0024 is written to match.
+
+- **R1. The Captain closes and reopens sorties.** The Coordinator reports each landing on the sortie
+  channel and rings the Captain, which reviews what merged against the sortie and the project (the
+  outer loop) and closes or reopens the issue. The Coordinator writes nothing to the tracker; its
+  lease fences merges only. Accepted cost: a Captain turn per landing, or per batch.
+- **R2. The Coordinator counts open pull requests**, up when a Pod opens one, down on merge or close
+  (host events). Supersedes the sortie count in P4. A Coordinator that exits between two pull
+  requests of one sortie gets the delegation back through re-relay.
+- **R3. cyber-sdd's mission graph is not a dependency.** It was the reference for cyber-truss's
+  design and is superseded by it; the plan lives in the tracker. Drops P6 (two graph writers) and
+  items 19-22, and the graph half of P5. Q3's "from the graph's `modelTier`" becomes "the Captain
+  picks each Pod's tier".
+- **R4. The clean bar's fourth condition** is the pull request's line of work reported done, and
+  the gate thread's pass where the sortie has a gate.
+- **R5. One Operator, one Captain per ship; calling is a phone call.** `/operator` or `/captain` in
+  any session posts the Council's words verbatim to that role's address channel and rings it; the
+  calling session becomes nothing. The per-ship Operator is gone: the Dashboard's left pane is the
+  Council's own session. The one Operator holds every merge delegation, so the Coordinator always
+  knows whom to ask. Supersedes C1's "default Operator session left", C7 and P9 (no ship Operator to
+  skip), and the Operator rows of the design table. The scenario pages still show a ship Operator
+  and need revising (Phase 4).
+- **R6. Where an epic lives follows the tracker routing** (repobuddy's `project-tracker.routing`):
+  a repository issue, a GitHub Projects item, or an Asana task (which can sit in several projects).
+  Promotion is in place only when one tracker holds both levels; otherwise the epic is a new item
+  and the original issue stays its first sortie.
+- **R7. A Pod spawns its gate's judge and opens the gate thread.** The Captain manages Pods and never
+  works inside one.
 
 ### Questions settled at fine-tuning (2026-10-11)
 
@@ -425,12 +457,7 @@ cyber-mux:
 18. Configurable nesting for new workspaces, only once headless Captains spawn Pods into panes
     (Q5). Not needed for the interactive scenarios.
 
-cyber-sdd:
-
-19. Append lock (ref compare-and-swap with retry) and a documented two-writer split by event kind (P6).
-20. External blocker on a node (`blockedOn: gh:<org>/<repo>#<n>`) that `ready` excludes.
-21. Frontier-growth output (`ready --since <token>` or a before/after diff) for the Coordinator.
-22. Fix `loops.md` L90/L143 (Operator → Captain) and the ADR-0023 citation collision.
+cyber-sdd: items 19-22 dropped (R3). The mission graph is not a dependency.
 
 ### Phase 2 — cyberfleet core
 
@@ -445,9 +472,9 @@ cyber-sdd:
 27. **Captain**: skill, agent, spec node; triage (freshness, priority, details), issue write,
     work-channel open, plan writes, Pod spawn with model per sortie, rulings. Continues #25 / PR #93.
 28. **Coordinator**: skill, agent, spec node; loads merge-backstop-governance; integration worktree
-    (P6a); landing moves out of `headless-operator`; asks the Operator for the delegation (P4); rings
-    the Captain only on escalation or frontier growth. *Waits on:* 2, 19, 21, 26.
-29. **Operator rewrite**: ship-resident and Command Center seats; classify, relay, announce the merge
+    (P6a); landing moves out of `headless-operator`; asks the Operator for the delegation (P4); reports
+    each landing to the Captain (R1). *Waits on:* 2, 26.
+29. **Operator rewrite**: one Operator in the Command Center, reached by calling (R5); classify, relay, announce the merge
     bar; reopen `operator.feature` (with #79, #12, #13). *Waits on:* 2, 25.
 30. **Pod**: report on the work channel; "PR ready" to the Coordinator; reopen `pod.feature`.
 31. **authority-governance** implementation of item 2; reopen `authority.feature`.
@@ -461,7 +488,8 @@ cyber-sdd:
 
 33. Invitations: issue in the other repository, `send --start` to its Captain, accept/decline/needs-Council replies (cyberfleet#3, cyberfleet#2).
     *Waits on:* 5, 25.
-34. Blocked sorties: graph blocker (20) plus a cynapse state record; unblock on landing or on release.
+34. Blocked sorties: the tracker's blocked-by link plus a cynapse state record; unblock on landing or
+    on release.
 35. Landing rings channel members: poster-rings using 5 until the runtime doorbell (cyberlegion#153) exists.
 36. Dispute node, arbitration channel conventions, the bound on exchanges (P11).
 37. Mediator agent (headless, cold, high tier) and its brief format.
@@ -474,8 +502,8 @@ cyber-sdd:
 
 ### Critical path
 
-ADR-0024 → authority §7 → Coordinator (28), which also waits on the cyber-sdd append lock (19) and
-`pr clean` (26) and its integration worktree (P6a). cyberlegion's cynapse stages 1-2 (15) are
+ADR-0024 → authority §7 → Coordinator (28), which also waits on `pr clean` (26) and its integration
+worktree (P6a). cyberlegion's cynapse stages 1-2 (15) are
 unblocked by cynapse 0.1.0 already; they gate `send --start` (15a), which gates crew addressing (25)
 and every scenario. cynapse 0.2.0 (8) is not a gate, but its owner-`unread` fix (#94) is needed
 before a Captain triages its address channel with `unread`. Slot placement (11, 16, 17) gates scenario 2 and the full layout, but not scenario 1.
