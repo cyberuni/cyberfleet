@@ -189,31 +189,6 @@ Each step is its own change, with its own tests:
 
 Steps 2 to 4 wait on cynapse's keying release (Open dependencies).
 
-## Amendment: Pod ownership lands first (2026-10-12)
-
-[#25](https://github.com/cyberuni/cyberfleet/issues/25) was split. Its mail half (report routing in
-work channels, the legacy `operator` mailbox) moved to
-[#92](https://github.com/cyberuni/cyberfleet/issues/92), which waits on cynapse. The ownership half
-needs no channel, so its mechanism lands now as CLI verbs. The Captain persona, the Operator
-rewrite, and the headless Captain that use them follow [ADR-0024](0024-ship-crew.md) (its plan's
-item 27), not the steps above.
-
-1. **The Captain is cyberlegion's `captain` project service.** `cyberfleet captain <project>` reads
-   its lease (home checkout, owner, generation, health) and starts nothing. Taking the lease is
-   the Captain session's own act (ADR-0024 §3); reading or calling a Captain takes nothing.
-2. **Pod ownership is a fenced record, not a label.** `cyberfleet pod bind`, `pod adopt`, and
-   `pod retire` record which Captain owns a Pod, each inside cyberlegion's `withOwnership` at the
-   generation the caller holds. A stale Captain cannot record, take over, or retire a Pod, and a
-   Pod is retired once. The record lives in the hub, beside the lease it is fenced by.
-3. **Recovery is explicit.** `cyberfleet pods` lists a Pod whose Captain session is gone as
-   `unavailable`, and one whose Captain generation was replaced as `orphaned`. Only `pod adopt` by
-   the current Captain moves it. Contacting a Captain never moves ownership.
-4. **The project key is opaque.** cyberfleet stores the key cyberlegion resolved and never parses
-   it, so a cynapse project address (decision 0004) drops in without a rewrite.
-
-This record fences Pod ownership only. Merges are fenced by the Coordinator's lease
-(ADR-0024 §6), not by the `captain` lease.
-
 ## Related Decisions
 
 - [ADR-0022](0022-cyberfleet-persona.md) — the persona layer this amends.
