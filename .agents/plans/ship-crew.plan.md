@@ -1,13 +1,13 @@
 ---
 name: ship-crew
-status: draft
+status: active
 todos:
   - content: "DESIGN drafted: ship layout (Dashboard / Bridge / Engine Room), crew tiers, Coordinator, five scenarios — apps/web/src/content/docs/scenarios/"
     status: completed
   - content: "Cross-project review of cyberfleet, cyberlegion, cyber-mux, cynapse, cyber-sdd, cyber-truss, cyber-civitas (this file, §Cross-project review)"
     status: completed
   - content: "FINE-TUNE with the Council: settle the proposed decisions P1-P12 and the open questions; mark each locked or rejected"
-    status: pending
+    status: completed
   - content: "Phase 0 — ADR-0024 (amends ADR-0022/0023), authority-governance §7 design, civitas vocabulary; file issues and place them on a board"
     status: pending
   - content: "Phase 1 — foundations in the sibling repos (cynapse, cyberlegion, cyber-mux, cyber-sdd), in parallel"
@@ -31,8 +31,8 @@ Builds on [ADR-0023](../../docs/adr/0023-captain-mission-sortie.md) (Proposed) a
 [cyber-civitas decisions](https://cyber-civitas.github.io/decisions/) 0001-0005. Parent issue:
 https://github.com/cyberuni/cyberfleet/issues/24.
 
-Status is **draft**: this file is the input to a fine-tuning pass with the Council, before the
-detailed action plan is put on a project board.
+Status is **active**: the Council locked every proposed decision and open-question recommendation
+on 2026-10-11. Next is ADR-0024 and the board.
 
 ## Problem
 
@@ -90,9 +90,9 @@ Council, then replans and spawns on what became unblocked.
 - C8. Scenarios to cover: work from the Dashboard, work from the Command Center, a Captain needing
   another ship's work, and Captains in dispute.
 
-### Proposed, to fine-tune
+### Locked at fine-tuning (2026-10-11)
 
-Each is marked **load-bearing** (expensive to unwind once built on) or **cheap** (revisit freely).
+The Council locked P1-P12 and P6a as written. Each is marked **load-bearing** (expensive to unwind once built on) or **cheap** (revisit freely).
 
 - **P1. The clean bar is a command, not a judgment.** *Load-bearing.* `cyberfleet pr clean <pr>`
   computes the four conditions of authority-governance §7, from `gh` (conflict, reviews, CI on the
@@ -156,9 +156,9 @@ Each is marked **load-bearing** (expensive to unwind once built on) or **cheap**
   producer stations sharing one worktree under a write lease are a separate question and stay parked
   in that plan.
 
-### Open questions
+### Questions settled at fine-tuning (2026-10-11)
 
-Each carries a recommendation for the fine-tuning pass, and is marked load-bearing or cheap.
+The Council locked each recommendation below as written. Each is marked load-bearing or cheap.
 
 - Q1. **Where do standing rules live?** Candidates: cyberfleet policy files, agent-harness references
   (`.agents/references/`), cyber-truss, or dna relation metadata. *Cheap; not on the critical path.*
@@ -401,7 +401,8 @@ cyber-mux:
 
 16. Apply a template into an existing workspace's named tab; target by workspace + tab label.
 17. Stable JSON apply manifest (pane ids, tab labels).
-18. Configurable nesting for new workspaces (Q5).
+18. Configurable nesting for new workspaces, only once headless Captains spawn Pods into panes
+    (Q5). Not needed for the interactive scenarios.
 
 cyber-sdd:
 
@@ -508,14 +509,14 @@ the crew can fail. Each names the pattern it exercises.
 
 The detailed action plan was meant for the cyber-civitas projects, but that org has no GitHub
 Projects yet. Either create one there (cross-package work) or extend cyberuni Project #1 "Command
-Center", which already holds most of the related issues. Decide at fine-tuning.
+Center", which already holds most of the related issues.
 
-Recommend: extend cyberuni Project #1. It already holds the parent and most related issues, and a
+Locked (2026-10-11): extend cyberuni Project #1. It already holds the parent and most related issues, and a
 second board splits one plan's tracking across two places. Create a cyber-civitas board only when
 work there is owned by the cyber-civitas org itself.
 
 ## NEXT
 
-Fine-tune with the Council: walk P1-P12 (with P6a) and Q1-Q10, mark each locked or rejected in this file, and pick
-the board. Walk the load-bearing ones first: P1, P3, P4, P5, P6, P6a, Q4, Q7, Q10; then the cheap
-ones as a batch. Then write ADR-0024 (item 1) and file the Phase 1 issues in each repository.
+Write ADR-0024 (item 1) from the locked decisions, then the authority-governance §7 amendment design
+(item 2), then file the Phase 1 issues in each repository and put them on cyberuni Project #1
+(item 4).
