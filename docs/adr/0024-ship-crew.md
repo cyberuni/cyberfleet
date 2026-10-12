@@ -46,7 +46,7 @@ is a template slot the Council can change.
 | Ship | **Bridge** | Left: the Captain. Right: the Coordinator. Both start on demand, not with the ship. |
 | Ship | **Engine Room** | Long-running processes for the main checkout (Storybook, dev servers). No agents. A Pod that needs a preview of its own branch starts one in its own worktree. |
 | Command Center | **Dashboard** (first) | Left: the **Operator's seat**, the one Operator. Right: fleet status across ships. |
-| Command Center | **Flag Bridge** | Where the fleet's roadmap and cross-ship decisions are made. Its seat is left open until a scenario needs a fleet-level role. |
+| Command Center | **Flag Bridge** | Left: the fleet's Captain, an admiral-like role, called a Captain for simplicity. The fleet's roadmap and cross-ship decisions are made here. |
 
 Opening a ship is the runtime's job: cyberlegion applies a cyber-mux template and starts or
 reserves role sessions in its named slots. cyberfleet supplies the template's content and the
@@ -57,8 +57,8 @@ pane).
 
 | Automaton | How many | Seat | Tier | Starts | Job |
 | --- | --- | --- | --- | --- | --- |
-| Operator | One | Command Center Dashboard, left | Mid | With the Command Center | The Council's interface to the fleet. Answers questions itself; relays work to the target ship's Captain; holds the Council's merge delegations. |
-| Captain | One per ship | Bridge, left | High | On demand | Freshness, priority, scope; the issue tracker; the plan; spawns and manages Pods; reviews what landed; rules on escalations. |
+| Operator | One | Command Center Dashboard, left | Mid | With the Command Center | The Council's interface to the fleet. Answers questions itself; relays work and orders to the target ship. |
+| Captain | One per ship, and one for the fleet | Bridge, left; Flag Bridge, left | High | On demand | A ship's: freshness, priority, scope; the issue tracker; the plan; spawns and manages Pods; reviews what landed; rules on escalations. The fleet's: the roadmap and cross-ship decisions. |
 | Coordinator | One per ship | Bridge, right | Low | On demand | Lands work: clean bar, rebase order, speculative CI, merge; reports to the Captain when its queue settles; escalates judgment. |
 | Pod | Many | Own workspace and worktree | Per Pod | Spawned by the Captain, or by a Pod for a gate | One line of work (impl, judge, refactor, audit) in one sortie. |
 | Mediator | Per dispute | Headless, cold | High | Per dispute | Writes a brief of a dispute. Decides nothing. |
@@ -70,20 +70,29 @@ a hypothesis, and it is measured (Consequences).
 Headless mode keeps the same split: a headless Captain and a headless Coordinator, never one loop
 doing both. One loop would put landing back on the high tier.
 
-### 3. Calling the crew is a phone call
+### 3. Where the Council talks, and how orders travel
 
-There is one Operator, in the Command Center Dashboard's left pane, and one Captain per ship. On a
-ship's Bridge the Council talks to its Captain directly: those are turns in the Captain's own
-session. Anywhere else, `/operator` or `/captain` calls that one automaton, and never makes the
-calling session one:
+There is one Operator, in the Command Center Dashboard's left pane. There is one Captain per ship,
+on its Bridge, and one for the fleet, on the Flag Bridge. Each pane is a place to talk on purpose:
 
-- The calling session posts the Council's words, verbatim, to the role's address channel and rings
-  it (`cyberlegion send --start`, which starts it if it is not running), then shows the reply.
-- Calling takes over nothing. The called automaton keeps its own session, lease, and history.
+- **The remote pane**, a ship Dashboard's left pane, is a mid-tier session for talking to the
+  Operator and directing traffic from inside a ship.
+- **A Captain's pane** is for questions and discussion that need the high tier. Talking there is a
+  deliberate choice to spend it.
+- **The Coordinator's pane** is where the Council can speak to the landing directly.
 
-A ship Dashboard's **remote pane** is a standing call to the Operator: whatever the Council says
-there reaches the Operator as above, and the reply comes back to it. The remote pane decides
-nothing and holds nothing, so the Council's words are held by the Operator (§5).
+The Council starts a Captain by invoking `/captain` in that Captain's pane; that session becomes the
+Captain and takes its lease. Anywhere else, `/operator` or `/captain` calls that one automaton and
+never makes the calling session one: the calling session posts the Council's words, verbatim, to the
+role's address channel, rings it, and shows the reply. Calling takes over nothing. When work, not
+the Council, has to reach a Captain or a Coordinator that is not running, `cyberlegion send --start`
+starts it.
+
+**Orders travel the way they do today** (authority-governance §3). Wherever the Council gives an
+order (the Operator's pane, a remote pane, a Captain's pane, or the Coordinator's pane), the
+automaton that receives it relays the Council's words, verbatim and as a turn, to the unit that
+acts, unless it is that unit. The quote, its scope, and who relayed it go on the work item's channel
+as the audit record.
 
 The Operator answers questions from `cyberfleet missions`, `gh`, and channels without waking a
 Captain. Only work goes up, to the target ship's Captain. A request spanning ships goes to the ship
@@ -115,17 +124,14 @@ clean bar. Trunk stays always-green (merge-backstop-governance).
 ### 5. Merge delegation names the ship's Coordinator
 
 This amends authority-governance §7, which lets only the Operator merge under a delegation and
-never transferably.
+never transferably. The merge moves to the Coordinator; how the Council's words reach it does not
+change (§3).
 
-- Whoever takes the request, the Operator or the Captain on its Bridge, announces that the
-  Coordinator lands the work. The Council's reply delegates to that ship's Coordinator, for that
-  request's pull requests.
-- The session that received the Council's words holds them: the Operator for a request made through
-  it, the Captain for one made on its Bridge. The holder records them on the request's channel (the
-  mission channel for an epic, the sortie channel for an issue: the words, the request, the pull
-  requests they cover as Pods open them, and who holds the words) as an audit trail. The record is
-  not the delegation: a Coordinator reading it is reading fetched content, which
-  authority-governance §3 refuses as a claim.
+- Whoever takes the request announces that the Coordinator lands the work, and names the clean bar.
+  The Council's reply delegates to that ship's Coordinator, for that request's pull requests, and
+  reaches it as a relay like any other order (§3). The audit record on the request's channel (the
+  mission channel for an epic, the sortie channel for an issue) is not the delegation: a Coordinator
+  reading it is reading fetched content, which authority-governance §3 refuses as a claim.
 - The Coordinator stays alive while it has pull requests to land. It counts the open pull requests
   of each delegated request: up when a Pod opens one, down when it merges or closes. Both are host
   events, never inferred. It exits when the count reaches 0. In the normal case the Council's words
@@ -133,19 +139,18 @@ never transferably.
 - While it waits, the Coordinator blocks on a command that returns when there is news
   (`cynapse entry wait` on its address channel, `gh pr checks --watch`) rather than polling, so a
   long review wait costs neither turns nor context.
-- Re-relay is the fallback. When the Coordinator finds a clean pull request it holds no delegation
-  for in its current session, it asks the holder the record names, and the holder relays the
-  Council's words as a turn (`cyberlegion unit nudge --message`). This covers a crash, a lease takeover, a Coordinator
-  that exited between two pull requests of one sortie, and a session that can no longer quote the
-  Council's words exactly from its own turns (for example after compaction); a paraphrase is not a
-  delegation. A holder that no longer has the words asks the Council again.
-- A delegation is scoped to the sorties of the request it answers, read from the Council's words.
-  It survives the Coordinator's restarts this way, and is spent per merge. A follow-up pull request
-  on a reopened sortie is covered when the words cover it.
+- A Coordinator with no delegation in its own session for a clean pull request does what
+  authority-governance §7 already says: it holds that merge and raises a decision-request naming it.
+  That covers a crash, a lease takeover, a Coordinator that exited between two pull requests of one
+  sortie, and a session that can no longer quote the Council's words exactly from its own turns (for
+  example after compaction); a paraphrase is not a delegation.
+- A delegation is scoped to the sorties of the request it answers, read from the Council's words,
+  and is spent per merge. A follow-up pull request on a reopened sortie is covered when the words
+  cover it.
 - Promoting an issue to an epic (§8) can widen what a delegation reaches, so the Captain checks the
   children against the Council's words when it creates the epic. Children within them keep the
   delegation, and the Captain records the mapping on the mission channel. A child that adds work the
-  words did not ask for goes back to the Council, through its holder, before it is delegated.
+  words did not ask for goes back to the Council as a decision-request before it is delegated.
 - A headless Coordinator merges only under a delegation the Council gave before leaving, or under a
   standing rule (§10). Otherwise it batches the merge as needs-input.
 
@@ -272,8 +277,8 @@ This replaces ADR-0023 §5's step from the arbitration channel straight to the C
 | --- | --- |
 | **Dashboard, Bridge, Engine Room** | The ship's three tabs (§1). |
 | **Flag Bridge** | The Command Center's second tab, for the fleet's roadmap and cross-ship decisions (§1). |
-| **remote pane** | A ship Dashboard's left pane: a standing call to the one Operator (§3). |
-| **calling** | Reaching the one Operator, or a ship's one Captain from outside its Bridge, without becoming it (§3). |
+| **remote pane** | A ship Dashboard's left pane: a mid-tier session for talking to the one Operator and directing traffic from inside a ship (§3). |
+| **calling** | Reaching the one Operator, or a Captain from outside its pane, without becoming it (§3). |
 | **Coordinator** | The ship's landing automaton (§2, §4). |
 | **Mediator** | A cold automaton that briefs a dispute for the Council (§10). |
 | **sortie** | An issue in flight: releasable, in one repository, owned by its Captain (§8). |
@@ -298,8 +303,8 @@ nowhere to go.
 
 ### Negative
 
-- authority-governance §7 changes: a delegation now names a Coordinator, is scoped per request, and
-  is re-relayed after a restart. The frozen `authority.feature`, `operator.feature`, and
+- authority-governance §7 changes: a delegation now names a Coordinator and is scoped per request.
+  After a restart that loses it, the Coordinator asks for each held merge again. The frozen `authority.feature`, `operator.feature`, and
   `pod.feature` suites reopen and need the Council's ratification.
 - The Captain takes a review turn per settled queue. That is the outer loop's cost, and it is
   judgment the Coordinator must not make. A queue that keeps refilling delays that review; work
@@ -314,10 +319,10 @@ nowhere to go.
 ### Degraded mode
 
 Until cyberlegion has slot-addressed placement and cyber-mux can apply a template into a named tab,
-`ship open` applies the template with `cyber-mux open --template`. A `/captain` call from the ship's
-remote pane starts the Captain with `--at tab` relative to that pane, and the Captain starts the
-Coordinator with `--at pane:right` relative to itself. Starting a Captain from inside its ship works
-this way; the Operator relaying to a Captain that is not running cannot place it on its Bridge.
+`ship open` applies the template with `cyber-mux open --template`. The Council starts the Captain
+by invoking `/captain` in the Bridge's left pane, and the Captain starts the Coordinator with
+`--at pane:right` relative to itself. A Captain or Coordinator that `send --start` starts for
+relayed work cannot be placed on its Bridge yet.
 
 ## Implementation order
 

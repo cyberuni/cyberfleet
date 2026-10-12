@@ -185,7 +185,7 @@ decisions they name; ADR-0024 is written to match.
   lease fences merges only. Accepted cost: a Captain turn per landing, or per batch.
 - **R2. The Coordinator counts open pull requests**, up when a Pod opens one, down on merge or close
   (host events). Supersedes the sortie count in P4. A Coordinator that exits between two pull
-  requests of one sortie gets the delegation back through re-relay.
+  requests of one sortie asks for each held merge (R11).
 - **R3. cyber-sdd's mission graph is not a dependency.** It was the reference for cyber-truss's
   design and is superseded by it; the plan lives in the tracker. Drops P6 (two graph writers) and
   items 19-22, and the graph half of P5. Q3's "from the graph's `modelTier`" becomes "the Captain
@@ -225,6 +225,16 @@ decisions they name; ADR-0024 is written to match.
   Bridge**, where the fleet's roadmap and cross-ship decisions are made; its seat is open until a
   scenario needs a fleet-level role. The remote pane decides and holds nothing, so the Operator
   holds words given through it; words given to a Captain on its Bridge are the Captain's. R8 stands.
+
+- **R11. The Flag Bridge seats the fleet's Captain; orders travel as today.** (2026-10-12) The
+  Flag Bridge's left pane is the fleet's Captain, admiral-like, called a Captain for simplicity. An
+  order the Council gives in any pane (Operator, remote, Captain, Coordinator) is relayed verbatim
+  as a turn by the automaton that receives it to the unit that acts (authority-governance §3).
+  This drops P4's holder-and-re-relay mechanism: a Coordinator that has lost its delegation holds
+  the merge and raises a decision-request, as §7 already says. The remote pane is a mid-tier session
+  for talking to the Operator and directing traffic, not a pass-through. Talking to a Captain is a
+  deliberate choice of the high tier. The Council starts a Captain by invoking `/captain` in its
+  pane; elsewhere `/captain` and `/operator` call.
 
 ### Questions settled at fine-tuning (2026-10-11)
 
@@ -562,8 +572,8 @@ the crew can fail. Each names the pattern it exercises.
 - **Haiku drift.** If P1 is not built first, the Coordinator ends up judging cleanliness. Mitigation:
   no Coordinator merges before `pr clean` exists.
 - **Authority laundering through the Coordinator.** A merge delegation that reaches the Coordinator
-  as fetched content instead of a turn is a claim, and §3 refuses it. Mitigation: the Operator holds
-  and re-relays it (P4); cyberlegion#154 fixed first.
+  as fetched content instead of a turn is a claim, and §3 refuses it. Mitigation: orders reach the
+  Coordinator only as relayed turns, as today (R11); cyberlegion#154 fixed first.
 - **cynapse churn.** The async `Store` and CLI renames will break call shapes. Mitigation: one adapter
   module in cyberfleet; pin `^0.1.0` → `^0.2.0` deliberately.
 - **Two Opus sessions arguing.** Mitigation: the bound in P11, enforced in persona logic.
