@@ -236,6 +236,15 @@ decisions they name; ADR-0024 is written to match.
   deliberate choice of the high tier. The Council starts a Captain by invoking `/captain` in its
   pane; elsewhere `/captain` and `/operator` call.
 
+- **R12. The Operator manages every epic.** (2026-10-12) A Captain that creates an epic hands the
+  epic item and its mission channel to the Operator (links, members, cross-sortie blockers, the
+  delegation record) and keeps the judgment (what the children are, and whether they stay within
+  the Council's words). Cross-ship requests go through the Operator, which files the child and
+  rings the other Captain. The fleet's Captain takes no part; Captains are equally capable. A
+  Captain asks another ship's Captain rather than reading that ship itself when depth matters.
+  *Cheap; revisit:* the creating Captain adds the other Captain to the mission channel and asks there
+  directly. Supersedes R6's "the Captain that creates it maintains its links".
+
 ### Questions settled at fine-tuning (2026-10-11)
 
 The Council locked each recommendation below as written. Each is marked load-bearing or cheap.

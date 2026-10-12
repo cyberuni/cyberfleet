@@ -57,7 +57,7 @@ pane).
 
 | Automaton | How many | Seat | Tier | Starts | Job |
 | --- | --- | --- | --- | --- | --- |
-| Operator | One | Command Center Dashboard, left | Mid | With the Command Center | The Council's interface to the fleet. Answers questions itself; relays work and orders to the target ship. |
+| Operator | One | Command Center Dashboard, left | Mid | With the Command Center | The Council's interface to the fleet. Answers questions itself; relays work and orders to the target ship; manages every epic and its mission channel (§8). |
 | Captain | One per ship, and one for the fleet | Bridge, left; Flag Bridge, left | High | On demand | A ship's: freshness, priority, scope; the issue tracker; the plan; spawns and manages Pods; reviews what landed; rules on escalations. The fleet's: the roadmap and cross-ship decisions. |
 | Coordinator | One per ship | Bridge, right | Low | On demand | Lands work: clean bar, rebase order, speculative CI, merge; reports to the Captain when its queue settles; escalates judgment. |
 | Pod | Many | Own workspace and worktree | Per Pod | Spawned by the Captain, or by a Pod for a gate | One line of work (impl, judge, refactor, audit) in one sortie. |
@@ -202,8 +202,13 @@ inferred from how the work went.
 - **Where an epic lives** follows the project's tracker routing (repobuddy's
   `project-tracker.routing`). It may be an issue in a repository, a GitHub Projects item, or an
   Asana task, which can belong to several projects at once. An epic that lives outside any
-  repository belongs to no ship, matching ADR-0023's ownerless mission. The Captain that creates
-  it, or that adds a sortie to it, maintains its links.
+  repository belongs to no ship, matching ADR-0023's ownerless mission.
+- **The Operator manages every epic.** A Captain that creates an epic hands it to the Operator,
+  which keeps the epic item and its mission channel: the child links, the members, blockers across
+  sorties, and the delegation record. The Captain keeps the judgment: what the children are, and
+  whether they stay within the Council's words (§5). This keeps a Captain's high-tier turns on work
+  that needs them. The fleet's Captain takes no part: every Captain is equally capable, and the
+  Flag Bridge differs only if it is later given a stronger model.
 - **Promotion is in place when one tracker holds both levels.** The issue becomes the epic, and its
   channel becomes the mission channel, keeping its history: everything said before the split was
   about the whole request. Each child issue opens its own sortie channel. Work already in flight
@@ -259,8 +264,14 @@ inferred from how the work went.
 This replaces ADR-0023 §5's step from the arbitration channel straight to the Council.
 
 - **Cross-ship work** is an issue in the other repository, a child of the mission's epic
-  (promoting the request first if it was an issue), rung with `send --start` to its Captain,
-  who accepts, declines, or asks the Council. The requesting Captain marks its sortie blocked on
+  (promoting the request first if it was an issue). The requesting Captain tells the Operator what
+  it needs; the Operator files the child and rings the other ship's Captain with `send --start`,
+  and that Captain accepts, declines, or asks the Council.
+- **Asking another ship.** Any Captain can read and analyze another ship. Asking that ship's
+  Captain gets a more focused, deeper answer, because it holds that ship's context, so a Captain
+  asks rather than reads when the answer matters. This is the assumed process. A cheap alternative
+  to try later: the Captain that creates an epic adds the other ship's Captain to the mission
+  channel and asks there directly. The requesting Captain marks its sortie blocked on
   that issue and keeps planning everything else. If the dependency is consumed as a published
   package, the block lifts at the release, not the merge.
 - **A dispute** climbs a ladder. First comes an arbitration channel anchored at the disputed entry,
