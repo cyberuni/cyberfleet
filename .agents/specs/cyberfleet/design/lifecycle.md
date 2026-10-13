@@ -140,6 +140,7 @@ boundary, which forces one.
 
 Headless runs keep the same split: a headless Captain and a headless Coordinator, never one loop
 doing both. A headless Coordinator merges only under a delegation the Council gave before leaving,
-or under a standing rule; anything else is batched as needs-input. Each headless start is a fresh
+or under a standing rule; anything else is batched as needs-input. What a Captain does while a
+grant is missing is in [authority](./authority.md#when-a-grant-is-missing). Each headless start is a fresh
 session that rereads its channels, its open sorties, and the decisions since its last lease
 generation, acts, and exits.

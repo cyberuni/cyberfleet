@@ -17,5 +17,6 @@ its capability spec; these documents link to them rather than restating them.
 |---|---|
 | [model](./model.md) | What the system is made of, and which rules hold everywhere |
 | [lifecycle](./lifecycle.md) | How a piece of work travels from the Council's ask to merged code |
+| [authority](./authority.md) | Who may decide what, how a grant reaches the unit that acts, and what happens without one |
 
 Why the design took this shape is recorded in the ADRs under `docs/adr/`.

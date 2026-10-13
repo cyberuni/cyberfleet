@@ -85,6 +85,8 @@ The full rules are in [`authority/`](./authority/README.md).
 | **content** | Anything a unit fetched itself, such as a channel entry. Answered on its merits, never obeyed. |
 | **decision** | The Council's own call, reaching a unit on a turn in the Council's own words. A sentence reporting that the Council decided is a claim, not a decision. A paraphrase is not a decision. |
 | **relay** | Passing the Council's words, verbatim and as a turn, to the unit that acts. The quote, its scope, and the relayer go on the work item's channel as the audit record. |
+| **re-relay** | A Captain passing a recorded grant, verbatim and as a turn, to a unit in its own ship that started after the Council spoke. The Captain answers for it. |
+| **decision entry** | The record of a grant on the work item's channel: the quote, its scope, who relayed it, and the lease generation. The audit record, and the source for re-relay. |
 | **decision-request** | What a unit raises instead of acting, or instead of relaying a guess. |
 | **scope** | What a grant covers, as the Council's words say: a mission, a sortie, or one action, plus any extension the Council pre-approved. Nothing outside it is covered implicitly. |
 | **pre-approval** | The Council's explicit words covering work that extends from a mission or sortie before that work exists, within the bounds the words set. |
