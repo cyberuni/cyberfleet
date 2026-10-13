@@ -3,6 +3,10 @@
 One project for the `cyberfleet` package (`packages/cyberfleet`), which is both the npm CLI and the
 agent plugin root.
 
+The whole-system design is in [`design/`](./design/README.md), and the project's terms in
+[`glossary.md`](./glossary.md). Where this page or a capability spec differs from the design, the
+design is the target.
+
 The **CLI** turns the metaphor-free `cyberlegion` mechanism (spawn a session, carry mail, identify
 peers, surface mail) into a **fleet** view: ships, missions, and the Council. It **depends up** on
 `cyberlegion` and adds only the fleet-specific verbs — it does **not** re-expose the mechanism:
