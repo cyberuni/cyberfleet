@@ -12,10 +12,13 @@ behind a term, the entry links to it.
 | **automaton** | Any working agent in the fleet. Distinct from SDD's `sdd-automaton`, a specific headless conductor role. "Commander" is never used: SDD's Oracle owns that name. |
 | **persona** | An automaton realized as a gateway skill with its own voice. Its mechanics are commands; its voice lives only in what it says around them. |
 | **crew** | The automatons that work a ship or the Command Center: Operator, Captain, Coordinator, Pod, and Mediator. |
-| **Operator** | The one automaton the Council talks to about the whole fleet. Answers questions itself and relays work to the target ship's Captain. Seated in the Command Center. |
+| **Operator** | The Council's interface to the fleet. It talks only with the Council: it answers questions itself and relays the Council's work to the target ship's Captain. It coordinates nothing; coordination is the Coordinators'. There is one Operator seat, in the Command Center, and the session in it need not stay running. |
 | **Captain** | The automaton that owns a ship's work: freshness, priority, scope, the tracker, the plan, spawning and managing Pods, reviewing what landed, ruling on escalations. One per ship, plus the fleet's Captain on the Flag Bridge for the roadmap and cross-ship decisions. High tier. |
 | **Coordinator** | The low-tier automaton that does a Captain's mechanics. A ship's Coordinator lands pull requests; the fleet's Coordinator keeps epics and lands missions. |
-| **Pod** | A worker automaton carrying one line of work in one sortie, in its own workspace and worktree. Spawned by the Captain, or by a Pod for a gate. |
+| **Pod** | A worker automaton carrying one line of work in one sortie, in its own workspace and worktree. Spawned and owned by the Captain. |
+| **owned Pod** | A Pod with a binding record under its ship's Captain role. Owned Pods are the ones the Captain lists, directs, and retires, and the next Captain session inherits them. |
+| **binding** | Writing a Pod's ownership record when the Captain spawns it. **Retiring** marks the record done; a retired Pod is never bound again. |
+| **gate judge** | A cold automaton a Pod spawns into a gate thread to judge its line of work. Not an owned Pod: it takes no direction from the Captain, and it ends with its gate. |
 | **Mediator** | A cold, headless, high-tier automaton that writes a brief of a dispute for the Council. Decides nothing. |
 | **specialist crew** | A recruited specialist automaton with its own face (aced, quill, Warden, Scanner), installed as a persona gateway skill. |
 | **Crimp** | The persona that recruits specialist crew types from the Tavern and discharges them. Spec: [`recruitment/`](./recruitment/README.md). |
@@ -41,10 +44,10 @@ behind a term, the entry links to it.
 | Term | Meaning |
 |---|---|
 | **sortie** | An issue in flight: releasable on its own, in one repository, owned by its ship's Captain. Lands as one or more pull requests. Lives as long as its issue. |
-| **mission** | An epic in flight: several sorties delivering one outcome. Belongs to no ship. |
+| **mission** | An epic in flight: several sorties delivering one outcome. No ship holds it: the Captain that created it decides its children, the fleet's Coordinator keeps its tracker record behind its own lease, and each sortie in it belongs to its own ship's Captain. |
 | **line of work** | A subtask of a sortie, not releasable on its own (impl, judge, refactor, audit), carried by its Pods. |
 | **promotion** | Deliberately making an issue an epic. The only way a mission comes into being, apart from work that crosses a repository boundary, which forces one. |
-| **SDD-mission** | How a line of work is carried out today, through SDD's mission engine. Named apart from a mission. |
+| **SDD-mission** | One run of SDD's change-request loop (`start-mission`), which is how a Pod carries out a line of work today. SDD calls it a mission; the fleet's mission is an epic, so this name keeps the two apart. The line of work stays when the engine under it changes. |
 | **gate** | A check a cold judge runs on a line of work, in its own thread. |
 | **clean bar** | The four conditions `cyberfleet pr clean` checks: no conflict with trunk, reviews resolved, CI green on the merged result, and the line of work reported done (with a passing gate where the sortie has one). |
 | **merge backstop** | The landing discipline that keeps trunk green: Operation order, speculative CI, bisection of a red batch. Lives in `merge-backstop-governance`. |
@@ -66,6 +69,7 @@ behind a term, the entry links to it.
 | **thread** | A child channel anchored at the entry that starts it, for an exchange with a different set of readers: a gate, an escalation, an arbitration. Posts its outcome back to its parent. |
 | **calling** | Reaching the Operator, or a Captain from outside its pane, without becoming it. The calling session posts the Council's words verbatim, rings the role, and shows the reply. |
 | **ring** | Waking a channel's owner after posting to it. The runtime's job (`cyberlegion send --start`). |
+| **fenced write** | A write that succeeds only when the writer holds the role's current lease generation. A session whose lease was taken over is refused, so two sessions never both act as one role. |
 | **lease** | The fenced right to act as a role, held in the runtime. A ship has two: the Captain's (sorties and plan) and the Coordinator's (merges). The Command Center holds the same pair. |
 | **lease generation** | The number that tells two sessions holding one role apart over time. |
 | **project address** | The cynapse address of a project, used by the runtime as an opaque key. Roles are keyed from it (`<project-address>/captain`). |

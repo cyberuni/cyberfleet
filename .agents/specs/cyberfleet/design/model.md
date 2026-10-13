@@ -57,7 +57,7 @@ sessions in its slots; cyberfleet supplies the template's content and which role
 
 | Automaton | How many | Tier | Starts | Owns |
 |---|---|---|---|---|
-| Operator | One | Mid | With the Command Center | The Council's fleet-level questions; relaying work to the right Captain |
+| Operator | One seat | Mid | When called; need not stay running | Talking with the Council: answering its questions, relaying its work to the right Captain |
 | Captain | One per ship, one for the fleet | High | On demand | A ship's sorties, plan, Pods, and rulings; the fleet's roadmap and cross-ship decisions |
 | Coordinator | One per ship, one for the fleet | Low | On demand | A ship's landing; the fleet's epics and mission landing |
 | Pod | Many | Set by the Captain | Spawned | One line of work in one sortie |
@@ -66,8 +66,8 @@ sessions in its slots; cyberfleet supplies the template's content and which role
 The split follows cost. Judgment runs at the high tier, and only the Captain and the Mediator make
 it. Mechanics run at the low tier, and the Coordinator does them behind deterministic commands
 (`cyberfleet pr clean`, `cyberfleet epic ...`) whose exit status it acts on. The Operator sits
-between: it answers questions from `cyberfleet missions`, `gh`, and channels without waking a
-Captain, and sends only work up. Headless mode keeps the same split, a headless Captain and a
+apart from both: it talks only with the Council, answers questions from `cyberfleet missions`,
+`gh`, and channels without waking a Captain, and sends only work up. It coordinates nothing. Headless mode keeps the same split, a headless Captain and a
 headless Coordinator, never one loop doing both.
 
 ### Pod ownership
@@ -76,14 +76,18 @@ Every Pod has exactly one owner: its ship's Captain role, never one Captain sess
 session holds the Captain's lease owns every Pod of that ship, so a Captain restart or a lease
 takeover inherits the Pods without a handover.
 
-- Binding a Pod and retiring it are writes fenced by the Captain's lease, made at the caller's lease
-  generation. The record keeps the session and generation that bound or retired it as an audit
-  stamp, not as the owner.
-- A Pod's ship is fixed by its worktree. There is no adoption: a Pod never moves to another ship,
-  and work another ship needs is a new issue there.
+- Binding a Pod and retiring it are fenced writes: only the session holding the Captain's current
+  lease generation can make them. A Captain session that lost its lease to a newer one cannot spawn,
+  bind, or retire Pods. The record keeps the session and generation that wrote it as an audit stamp,
+  not as the owner.
+- There is no adoption. Because the owner is the role, a Captain restart needs no step to take the
+  Pods over, and a Pod's ship is fixed by its worktree, so it can never move to another ship. Work
+  another ship needs is a new issue there, under that ship's Captain.
 - A retired Pod is never bound again. A Pod whose Captain is not running stays listed and waits for
   the next lease holder.
-- A gate judge a Pod spawns is not an owned Pod. It belongs to the gate and is torn down with it.
+- A gate judge a Pod spawns is not an owned Pod. It does not appear in the Captain's list, takes no
+  direction from the Captain, and is torn down with its gate. This keeps the judge cold: the
+  Captain takes no part in a gate.
 - The Captain's home is the project's main checkout. Sortie work never happens there; each Pod works
   in its own worktree.
 
@@ -95,7 +99,7 @@ specialist crew types, **Mechanic** builds and reconfigures automatons, and the 
 
 | Tracker level | Fleet role | Owner | Channel |
 |---|---|---|---|
-| Epic | Mission | No ship. The fleet's Coordinator keeps it. | Mission channel |
+| Epic | Mission | No ship. Its creating Captain decides its children; the fleet's Coordinator writes its record. | Mission channel |
 | Issue | Sortie | That repository's Captain | Sortie channel |
 | Subtask | Line of work | The Pods carrying it | None; threads in the sortie channel |
 
@@ -103,7 +107,9 @@ The level is read from the tracker, never inferred from how the work went. Every
 sortie; a mission exists only once someone promotes an issue to an epic, or the work crosses a
 repository boundary, which forces one. Writes to a repository are never ownerless: trunk, merge
 order, and the sortie's issue belong to that repository's Captain and Coordinator, behind their
-leases. A mission has members and no owner.
+leases. A mission is not a repository, so no ship's Captain holds it. Deciding what it contains is
+the creating Captain's, within the Council's words; writing its tracker record is the fleet
+Coordinator's, fenced by that Coordinator's lease; and each sortie in it stays with its own ship.
 
 The full flow of a piece of work is in [lifecycle](./lifecycle.md).
 
@@ -131,7 +137,10 @@ decision that is not written down did not happen.
 1. **Authority comes from the Council, travels as its own words, and attaches to the sortie.** A
    turn in a unit's own session is an order; anything it fetched is content. The Council's words
    reach the unit that acts verbatim and as a turn; the channel holds the audit record, never the
-   authority. A ratification covers only the sortie it was given for. Full rules:
+   authority. A ratification covers only the sortie it was given for: approving a merge in ship A's
+   sortie does not cover ship B's sortie in the same mission, even though both report in one
+   mission channel. Each ship's Captain answers for its own ship's resources, so ship B's work
+   needs the Council's words for ship B. Full rules:
    [`authority/`](../authority/README.md).
 2. **Judgment and mechanics are separate roles.** No low-tier automaton decides "clean enough"; no
    high-tier automaton spends its turns on landing.
@@ -148,8 +157,11 @@ decision that is not written down did not happen.
    The console is cold; the voice is in the plugin.
 8. **No server, no harness assumed.** Coordination runs through files, shell commands, and skills.
    Claude Code, Cursor, and Codex sessions join the same fleet.
-9. **Nothing probes its location.** A skill description names the work a persona does, never where
-   it runs. There is no ship marker; a ship exists because its workspace was opened.
+9. **Nothing probes its location.** A harness picks which skill to load from the skill's
+   description alone. A description such as "use inside a ship" would make the harness decide where
+   it is, which it can only do by probing for a marker. So each description names the work its
+   persona does ("land a ship's pull requests"), never where it runs, and there is no ship marker to
+   probe; a ship exists because its workspace was opened.
 10. **Dependencies point one way, by intent.** Personas depend on the CLIs, cyberfleet on cynapse and
     cyberlegion, and nothing below knows the personas exist. A persona names what it needs done,
     never a command slug.
