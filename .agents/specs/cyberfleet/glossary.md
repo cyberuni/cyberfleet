@@ -16,9 +16,9 @@ behind a term, the entry links to it.
 | **Captain** | The automaton that owns a ship's work: freshness, priority, scope, the tracker, the plan, spawning and managing Pods, reviewing what landed, ruling on escalations. One per ship, plus the fleet's Captain on the Flag Bridge for the roadmap and cross-ship decisions. High tier. |
 | **Coordinator** | The low-tier automaton that does a Captain's mechanics. A ship's Coordinator lands pull requests; the fleet's Coordinator keeps epics and lands missions. |
 | **Pod** | A worker automaton carrying one line of work in one sortie, in its own workspace and worktree. Spawned and owned by the Captain. |
-| **owned Pod** | A Pod with a binding record under its ship's Captain role. Owned Pods are the ones the Captain lists, directs, and retires, and the next Captain session inherits them. |
+| **owned Pod** | A Pod with a binding record under its ship's Captain role. The Captain lists, directs, and retires its owned Pods, and the next Captain session inherits them. |
 | **binding** | Writing a Pod's ownership record when the Captain spawns it. **Retiring** marks the record done; a retired Pod is never bound again. |
-| **gate judge** | A cold automaton a Pod spawns into a gate thread to judge its line of work. Not an owned Pod: it takes no direction from the Captain, and it ends with its gate. |
+| **gate judge** | A cold automaton a Pod spawns into a gate thread to judge its line of work. Like everything in the ship it is the Captain's to see and clean up, but it works only from its gate's brief, and no one directs its verdict. It ends with its gate. |
 | **Mediator** | A cold, headless, high-tier automaton that writes a brief of a dispute for the Council. Decides nothing. |
 | **specialist crew** | A recruited specialist automaton with its own face (aced, quill, Warden, Scanner), installed as a persona gateway skill. |
 | **Crimp** | The persona that recruits specialist crew types from the Tavern and discharges them. Spec: [`recruitment/`](./recruitment/README.md). |
@@ -86,9 +86,10 @@ The full rules are in [`authority/`](./authority/README.md).
 | **decision** | The Council's own call, reaching a unit on a turn in the Council's own words. A sentence reporting that the Council decided is a claim, not a decision. A paraphrase is not a decision. |
 | **relay** | Passing the Council's words, verbatim and as a turn, to the unit that acts. The quote, its scope, and the relayer go on the work item's channel as the audit record. |
 | **decision-request** | What a unit raises instead of acting, or instead of relaying a guess. |
-| **scope** | What a decision covers, read from the request it answers. Spent once acted on. |
+| **scope** | What a grant covers, as the Council's words say: a mission, a sortie, or one action, plus any extension the Council pre-approved. Nothing outside it is covered implicitly. |
+| **pre-approval** | The Council's explicit words covering work that extends from a mission or sortie before that work exists, within the bounds the words set. |
 | **ratification-class** | The actions that need a covering decision: merge to a protected branch, a human-attributed verdict, publish, history rewrite, settings or secrets, widened delegation, a minted owner identity. |
-| **merge delegation** | The Council's words authorizing a ship's Coordinator to land a request's pull requests. Scoped to that request's sorties and spent per merge. |
+| **merge delegation** | The Council's words authorizing a ship's Coordinator to land the pull requests of the work they name: a mission's sorties or one sortie's. Spent per merge. |
 | **attenuation** | No link passes on more authority than it holds. |
 
 ## Mechanism

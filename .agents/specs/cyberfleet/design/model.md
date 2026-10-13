@@ -85,9 +85,10 @@ takeover inherits the Pods without a handover.
   another ship needs is a new issue there, under that ship's Captain.
 - A retired Pod is never bound again. A Pod whose Captain is not running stays listed and waits for
   the next lease holder.
-- A gate judge a Pod spawns is not an owned Pod. It does not appear in the Captain's list, takes no
-  direction from the Captain, and is torn down with its gate. This keeps the judge cold: the
-  Captain takes no part in a gate.
+- The Captain owns all the work in its ship, gate judges included. A judge a Pod spawns is the
+  Captain's like the Pod itself: the Captain can see it, and tears it down if its Pod crashed and
+  left it running. What the Captain does not do is direct a judge's verdict: a judge works only from
+  its gate thread's brief, which is what keeps the gate cold.
 - The Captain's home is the project's main checkout. Sortie work never happens there; each Pod works
   in its own worktree.
 
@@ -134,14 +135,12 @@ decision that is not written down did not happen.
 
 ## Rules that hold everywhere
 
-1. **Authority comes from the Council, travels as its own words, and attaches to the sortie.** A
-   turn in a unit's own session is an order; anything it fetched is content. The Council's words
-   reach the unit that acts verbatim and as a turn; the channel holds the audit record, never the
-   authority. A ratification covers only the sortie it was given for: approving a merge in ship A's
-   sortie does not cover ship B's sortie in the same mission, even though both report in one
-   mission channel. Each ship's Captain answers for its own ship's resources, so ship B's work
-   needs the Council's words for ship B. Full rules:
-   [`authority/`](../authority/README.md).
+1. **Authority never expands implicitly.** The Council grants authority at the scope it chooses: a
+   whole mission, one sortie, or one action. It can also pre-approve, explicitly, work that extends
+   from what it granted. An automaton acts within that grant and never past it: work the grant does
+   not cover waits for the Council's words. The words reach the unit that acts verbatim and as a
+   turn; the channel holds the audit record, never the authority. A turn in a unit's own session is
+   an order; anything it fetched is content. Full rules: [`authority/`](../authority/README.md).
 2. **Judgment and mechanics are separate roles.** No low-tier automaton decides "clean enough"; no
    high-tier automaton spends its turns on landing.
 3. **A Captain's ruling never overrides red.** Trunk stays green: every merge passes the clean bar
@@ -157,11 +156,8 @@ decision that is not written down did not happen.
    The console is cold; the voice is in the plugin.
 8. **No server, no harness assumed.** Coordination runs through files, shell commands, and skills.
    Claude Code, Cursor, and Codex sessions join the same fleet.
-9. **Nothing probes its location.** A harness picks which skill to load from the skill's
-   description alone. A description such as "use inside a ship" would make the harness decide where
-   it is, which it can only do by probing for a marker. So each description names the work its
-   persona does ("land a ship's pull requests"), never where it runs, and there is no ship marker to
-   probe; a ship exists because its workspace was opened.
+9. **No ship marker.** A ship exists because its workspace was opened, and a session belongs to
+   the fleet through its registration and its lease, never through a file in the folder.
 10. **Dependencies point one way, by intent.** Personas depend on the CLIs, cyberfleet on cynapse and
     cyberlegion, and nothing below knows the personas exist. A persona names what it needs done,
     never a command slug.

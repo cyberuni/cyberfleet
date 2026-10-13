@@ -49,7 +49,8 @@ and never works inside one.
 ### 3. The delegation
 
 Whoever takes the request announces that the ship's Coordinator will land its pull requests, and
-names the clean bar. The Council's reply is the merge delegation. It reaches the Coordinator as a
+names the clean bar. The Council's reply is the merge delegation, for the sortie or for the whole
+mission, as its words say. It reaches the Coordinator as a
 relay, verbatim and as a turn, like any other order. The audit record on the sortie channel is not
 the delegation: a Coordinator that reads it there is reading content.
 
@@ -122,8 +123,9 @@ boundary, which forces one.
   words. Children in its own ship within those words keep the delegation; a child that adds work goes
   back to the Council first. The fleet's Coordinator executes the tracker changes as commands
   (`cyberfleet epic ...`) and sends an underspecified request back rather than filling the gap.
-- **Another ship.** A child in another ship never inherits the delegation. That ship's Captain
-  accepts the sortie, declines it, or asks the Council, and its merges need their own delegation.
+- **Another ship.** A child in another ship is covered when the Council's grant names the mission
+  and the child's work is within its words or a pre-approval. Otherwise that ship's Captain accepts
+  the sortie, declines it, or asks the Council, and its merges wait for the Council's words.
 - **Blocks.** The requesting Captain marks its sortie blocked on the other ship's issue and keeps
   planning everything else. The fleet's Coordinator lifts the block and rings the waiting Captain,
   usually at the release that carries the fix, because ships consume each other as published
