@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - 'apps/web/**'
+      - '.agents/specs/cyberfleet/design/**'
+      - '.agents/specs/cyberfleet/glossary.md'
       - '.github/workflows/deploy-docs.yml'
   workflow_dispatch:
 
