@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-10-12 (proposed 2026-10-11). Amends [ADR-0022](0022-cyberfleet-persona.md) decision 8 and
+Accepted, 2026-10-12 (proposed 2026-10-11). §5 amended by [ADR-0025](0025-authority-never-expands-implicitly.md). Amends [ADR-0022](0022-cyberfleet-persona.md) decision 8 and
 [ADR-0023](0023-captain-mission-sortie.md) §1, §2, §3, §4, §5, §7 and its implementation order.
 Decisions locked by the Council at fine-tuning, recorded in
 [`.agents/plans/ship-crew.plan.md`](../../.agents/plans/ship-crew.plan.md). The scenarios behind them
