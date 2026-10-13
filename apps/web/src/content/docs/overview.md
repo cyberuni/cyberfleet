@@ -20,7 +20,7 @@ A **ship** is a workspace: a folder, a repository, or a worktree. Your fleet is 
 
 ## The console
 
-Under the automatons sits the `cyberfleet` **console** — the CLI. It's cold and deterministic: identity, messaging, spawning sessions, worktrees, and nothing more. The plugin adds the **automaton** layer on top — Pod, Operator, and the crew are the agents that reason about the situation and reach for the right `cyberfleet` command underneath. Two artifacts, one name: the console is the mechanics, the automatons are the agency that drives them.
+Under the automatons sits the `cyberfleet` **console** — the CLI. It's cold and deterministic, and it carries only the verbs with fleet logic, listed below. Identity, messaging, and spawning sessions belong to the `cyberlegion` console underneath, which the automatons call directly. The plugin adds the **automaton** layer on top — Pod, Operator, and the crew are the agents that reason about the situation and reach for the right command. Two artifacts, one name: the console is the mechanics, the automatons are the agency that drives them.
 
 | Command | What it does |
 |---|---|
@@ -31,7 +31,11 @@ Under the automatons sits the `cyberfleet` **console** — the CLI. It's cold an
 
 ## The control panel
 
-Each ship runs live in its own terminal pane, and cyberfleet drives your multiplexer to manage them — opening a pane per ship, reading what's happening inside, and closing it when the work is done. The whole fleet lays out as panes you can see and jump between. Two multiplexers work today: **tmux**, and **herdr** — an agent-aware one that also reports whether each ship is working, idle, or blocked. cyberfleet detects which you're running and drives it.
+Each ship runs live in its own terminal pane, and the automatons drive your multiplexer through `cyberlegion` to manage them — opening a pane per ship, reading what's happening inside, and closing it when the work is done. The whole fleet lays out as panes you can see and jump between. Two multiplexers work today: **tmux**, and **herdr** — an agent-aware one that also reports whether each ship is working, idle, or blocked. cyberfleet detects which you're running and drives it.
+
+## Where it's going
+
+The [design](/cyberfleet/design/) describes the fleet cyberfleet is building toward: a Captain and a Coordinator on each ship's Bridge, work tracked as sorties and missions on your issue tracker, and one Operator for the whole fleet. The [scenarios](/cyberfleet/scenarios/the-ship/) walk through it. This page covers what you can install today.
 
 ## Why no MCP
 
