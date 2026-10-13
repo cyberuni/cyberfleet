@@ -89,6 +89,11 @@ takeover inherits the Pods without a handover.
   Captain's like the Pod itself: the Captain can see it, and tears it down if its Pod crashed and
   left it running. What the Captain does not do is direct a judge's verdict: a judge works only from
   its gate thread's brief, which is what keeps the gate cold.
+- Two roles direct a Pod. The Captain directs its work: what to build, and its rulings on
+  escalations. The Coordinator directs its landing: rebase, fix a red check the pull request caused,
+  address a review comment within the sortie's scope. Both send their instructions into the Pod's
+  session as turns, through the runtime (`cyberlegion` send, or the multiplexer's send-keys), so a
+  Pod acts on them as orders. Neither works inside a Pod.
 - The Captain's home is the project's main checkout. Sortie work never happens there; each Pod works
   in its own worktree.
 

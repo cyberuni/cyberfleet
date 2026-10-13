@@ -16,7 +16,7 @@ behind a term, the entry links to it.
 | **Captain** | The automaton that owns a ship's work: freshness, priority, scope, the tracker, the plan, spawning and managing Pods, reviewing what landed, ruling on escalations. One per ship, plus the fleet's Captain on the Flag Bridge for the roadmap and cross-ship decisions. High tier. |
 | **Coordinator** | The low-tier automaton that does a Captain's mechanics. A ship's Coordinator lands pull requests; the fleet's Coordinator keeps epics and lands missions. |
 | **Pod** | A worker automaton carrying one line of work in one sortie, in its own workspace and worktree. Spawned and owned by the Captain. |
-| **owned Pod** | A Pod with a binding record under its ship's Captain role. The Captain lists, directs, and retires its owned Pods, and the next Captain session inherits them. |
+| **owned Pod** | A Pod with a binding record under its ship's Captain role. The Captain lists, directs, and retires its owned Pods, and the next Captain session inherits them. The Coordinator also directs a Pod while it lands that Pod's pull request. |
 | **binding** | Writing a Pod's ownership record when the Captain spawns it. **Retiring** marks the record done; a retired Pod is never bound again. |
 | **gate judge** | A cold automaton a Pod spawns into a gate thread to judge its line of work. Like everything in the ship it is the Captain's to see and clean up, but it works only from its gate's brief, and no one directs its verdict. It ends with its gate. |
 | **Mediator** | A cold, headless, high-tier automaton that writes a brief of a dispute for the Council. Decides nothing. |

@@ -79,8 +79,9 @@ What goes wrong splits by kind:
 
 | Failure | Handled by |
 |---|---|
-| A text conflict | The Coordinator orders a rebase |
-| Red CI the pull request caused | Back to its Pod |
+| A text conflict | The Coordinator tells the Pod to rebase |
+| Red CI the pull request caused | The Coordinator tells the Pod to fix it |
+| A review comment within the sortie's scope | The Coordinator tells the Pod to address it |
 | A review asking for a change of scope, red that survives the Pod's fixes, a bisect culprit, two pull requests that conflict in meaning, a stuck Pod | Escalated to the Captain |
 | A clean pull request with no delegation in the Coordinator's own session | A decision-request to the Council, through the Operator |
 
