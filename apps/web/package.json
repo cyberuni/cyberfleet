@@ -4,10 +4,10 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "astro build",
-		"dev": "astro dev",
+		"build": "node scripts/sync-design.mjs && astro build",
+		"dev": "node scripts/sync-design.mjs && astro dev",
 		"preview": "astro preview",
-		"test": "vitest run src"
+		"test": "node scripts/sync-design.mjs && vitest run src"
 	},
 	"dependencies": {
 		"@astrojs/starlight": "0.42.6",

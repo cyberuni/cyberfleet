@@ -8,5 +8,7 @@ node_modules/
 *.tsbuildinfo
 TODO.local.md
 apps/web/.astro
+# Generated from .agents/specs/cyberfleet/design by apps/web/scripts/sync-design.mjs
+apps/web/src/content/docs/design/
 .turbo/
 .cyberfleet/

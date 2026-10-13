@@ -29,6 +29,10 @@ export default defineConfig({
 					],
 				},
 				{
+					label: 'Design',
+					items: [{ autogenerate: { directory: 'design' } }],
+				},
+				{
 					label: 'Scenarios',
 					items: [
 						{ label: 'The ship', link: '/scenarios/the-ship/' },
