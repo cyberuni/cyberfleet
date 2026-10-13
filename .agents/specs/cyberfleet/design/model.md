@@ -57,9 +57,9 @@ sessions in its slots; cyberfleet supplies the template's content and which role
 
 | Automaton | How many | Tier | Starts | Owns |
 |---|---|---|---|---|
-| Operator | One seat | Mid | When called; need not stay running | Talking with the Council: answering its questions, relaying its work to the right Captain |
+| Operator | One seat | Mid | By the Council; need not stay running | Talking with the Council: answering its questions, relaying its work to the right Captain |
 | Captain | One per ship, one for the fleet | High | On demand | A ship's sorties, plan, Pods, and rulings; the fleet's roadmap and cross-ship decisions |
-| Coordinator | One per ship, one for the fleet | Low | On demand | A ship's landing; the fleet's epics and mission landing |
+| Coordinator | One per ship, one for the fleet | Low | On demand | A ship's landing, unless the ship gives it to Pods; the fleet's epics and mission landing |
 | Pod | Many | Set by the Captain | Spawned | One line of work in one sortie |
 | Mediator | One per dispute | High | Per dispute | A brief of a dispute, and nothing else |
 
@@ -69,6 +69,15 @@ it. Mechanics run at the low tier, and the Coordinator does them behind determin
 apart from both: it talks only with the Council, answers questions from `cyberfleet missions`,
 `gh`, and channels without waking a Captain, and sends only work up. It coordinates nothing. Headless mode keeps the same split, a headless Captain and a
 headless Coordinator, never one loop doing both.
+
+### Who lands
+
+Each ship has a landing setting, and the Council can override it for a request. By default the
+ship's Coordinator lands every pull request. A ship can instead let each Pod land its own, which
+saves starting a Coordinator where the queue is small. Whichever unit lands follows the same rules:
+the clean bar passes, the merge is fenced by the ship's merge lease, and the Council's grant covers
+it. Which setting costs less in a given repository is measurable but not yet measured, so the
+setting stays open and each user finds out what works.
 
 ### Pod ownership
 
@@ -85,10 +94,13 @@ takeover inherits the Pods without a handover.
   another ship needs is a new issue there, under that ship's Captain.
 - A retired Pod is never bound again. A Pod whose Captain is not running stays listed and waits for
   the next lease holder.
-- The Captain owns all the work in its ship, gate judges included. A judge a Pod spawns is the
-  Captain's like the Pod itself: the Captain can see it, and tears it down if its Pod crashed and
-  left it running. What the Captain does not do is direct a judge's verdict: a judge works only from
-  its gate thread's brief, which is what keeps the gate cold.
+- The Captain owns all the work in its ship, gate judges included. A judge has no binding record
+  of its own: the Pod that spawns it is not the lease holder, so it cannot write one. The Captain
+  finds a judge through its gate thread instead, since the judge is a member of the thread and the
+  thread hangs off a sortie channel the Captain belongs to. A gate thread with no outcome whose Pod
+  is gone is abandoned: the Captain closes its judge and posts the outcome. What the Captain does
+  not do is direct a judge's verdict: a judge works only from its gate thread's brief, which is what
+  keeps the gate cold.
 - Two roles direct a Pod. The Captain directs its work: what to build, and its rulings on
   escalations. The Coordinator directs its landing: rebase, fix a red check the pull request caused,
   address a review comment within the sortie's scope. Both send their instructions into the Pod's
@@ -157,8 +169,11 @@ decision that is not written down did not happen.
 5. **Roles are addresses; sessions come and go.** A role is keyed from its project's address and
    held by whichever session holds its lease. The project address is an opaque key to the runtime
    ([civitas 0004](https://cyber-civitas.github.io/decisions/0004-opaque-service-keys/)).
-6. **Waking belongs to the runtime.** Whoever posts rings. Nothing polls; a waiting automaton blocks
-   on a command that returns when there is news.
+6. **Start or wake is transparent.** Addressing an automaton starts it if it is not running and
+   wakes it if it is. cyberfleet and cyberlegion do this for every automaton, so a sender never
+   checks first. The Operator is started by the Council in practice, since the Council is nearly
+   always the one talking to it. Nothing polls; a waiting automaton blocks on a command that returns
+   when there is news.
 7. **Personas offload every mechanic.** What a persona says is the only thing it produces itself.
    The console is cold; the voice is in the plugin.
 8. **No server, no harness assumed.** Coordination runs through files, shell commands, and skills.

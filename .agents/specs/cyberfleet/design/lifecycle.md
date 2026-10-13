@@ -48,8 +48,8 @@ and never works inside one.
 
 ### 3. The delegation
 
-Whoever takes the request announces that the ship's Coordinator will land its pull requests, and
-names the clean bar. The Council's reply is the merge delegation, for the sortie or for the whole
+Whoever takes the request announces who will land its pull requests (the ship's Coordinator, or
+each Pod under the ship's landing setting), and names the clean bar. The Council's reply is the merge delegation, for the sortie or for the whole
 mission, as its words say. It reaches the Coordinator as a
 relay, verbatim and as a turn, like any other order. The audit record on the sortie channel is not
 the delegation: a Coordinator that reads it there is reading content.
@@ -73,7 +73,9 @@ of each delegated request, up when a Pod opens one and down when it merges or cl
 The Coordinator lands each pull request when `cyberfleet pr clean` passes, in rebase order, behind
 speculative CI and its lease (`service verify` before `gh pr merge`). It acts on the command's exit
 status and never judges "clean enough". Between events it blocks on a command that returns when
-there is news, rather than polling.
+there is news, rather than polling. In a ship whose landing setting gives landing to Pods, each Pod
+does the same for its own pull request, under the same lease and the same bar, and no Coordinator
+starts.
 
 What goes wrong splits by kind:
 

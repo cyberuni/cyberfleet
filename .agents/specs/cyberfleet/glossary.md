@@ -14,7 +14,8 @@ behind a term, the entry links to it.
 | **crew** | The automatons that work a ship or the Command Center: Operator, Captain, Coordinator, Pod, and Mediator. |
 | **Operator** | The Council's interface to the fleet. It talks only with the Council: it answers questions itself and relays the Council's work to the target ship's Captain. It coordinates nothing; coordination is the Coordinators'. There is one Operator seat, in the Command Center, and the session in it need not stay running. |
 | **Captain** | The automaton that owns a ship's work: freshness, priority, scope, the tracker, the plan, spawning and managing Pods, reviewing what landed, ruling on escalations. One per ship, plus the fleet's Captain on the Flag Bridge for the roadmap and cross-ship decisions. High tier. |
-| **Coordinator** | The low-tier automaton that does a Captain's mechanics. A ship's Coordinator lands pull requests; the fleet's Coordinator keeps epics and lands missions. |
+| **Coordinator** | The low-tier automaton that does a Captain's mechanics. A ship's Coordinator lands pull requests, unless the ship's landing setting gives landing to Pods; the fleet's Coordinator keeps epics and lands missions. |
+| **landing setting** | A ship's choice of who lands its pull requests: the Coordinator (the default) or each Pod its own. The Council can override it for a request. |
 | **Pod** | A worker automaton carrying one line of work in one sortie, in its own workspace and worktree. Spawned and owned by the Captain. |
 | **owned Pod** | A Pod with a binding record under its ship's Captain role. The Captain lists, directs, and retires its owned Pods, and the next Captain session inherits them. The Coordinator also directs a Pod while it lands that Pod's pull request. |
 | **binding** | Writing a Pod's ownership record when the Captain spawns it. **Retiring** marks the record done; a retired Pod is never bound again. |
@@ -68,9 +69,9 @@ behind a term, the entry links to it.
 | **mission channel** | The epic's work channel. Carries only what crosses sorties: the plan, blockers, invitations, the delegation record. |
 | **thread** | A child channel anchored at the entry that starts it, for an exchange with a different set of readers: a gate, an escalation, an arbitration. Posts its outcome back to its parent. |
 | **calling** | Reaching the Operator, or a Captain from outside its pane, without becoming it. The calling session posts the Council's words verbatim, rings the role, and shows the reply. |
-| **ring** | Waking a channel's owner after posting to it. The runtime's job (`cyberlegion send --start`). |
+| **ring** | Starting or waking a channel's owner after posting to it, transparently: the sender never checks whether it is running. The runtime's job (`cyberlegion send --start`). |
 | **fenced write** | A write that succeeds only when the writer holds the role's current lease generation. A session whose lease was taken over is refused, so two sessions never both act as one role. |
-| **lease** | The fenced right to act as a role, held in the runtime. A ship has two: the Captain's (sorties and plan) and the Coordinator's (merges). The Command Center holds the same pair. |
+| **lease** | The fenced right to act as a role, held in the runtime. A ship has two: the Captain's (sorties and plan) and the merge lease, held by whichever unit lands. The Command Center holds the same pair. |
 | **lease generation** | The number that tells two sessions holding one role apart over time. |
 | **project address** | The cynapse address of a project, used by the runtime as an opaque key. Roles are keyed from it (`<project-address>/captain`). |
 

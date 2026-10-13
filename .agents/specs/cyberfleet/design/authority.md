@@ -34,8 +34,8 @@ beyond. A merge grant covers each pull request of the work it names and is spent
 **Pre-approval.** The Council can also cover work that does not exist yet, by setting a bound:
 "follow-ups under this epic that don't change the public API", or "any child the epic needs in
 cyberlegion". When new work appears, the Captain decides whether it falls inside the bound. That is
-judgment, so it stays with the Captain at the high tier. Each use is recorded with the work item and
-the bound it fell under, so the Council can review every one. Work outside the bound goes to the
+judgment, so it stays with the Captain at the high tier. Each use is recorded in the channel's
+metadata with the work item and the bound it fell under, so the Council can review every one. Work outside the bound goes to the
 Council as a decision-request.
 
 ## How a grant travels
@@ -54,11 +54,16 @@ flowchart LR
 2. **Record.** The receiver writes a decision entry on the work item's channel: the quote, its scope,
    who relayed it, and the lease generation. A mission grant goes on the mission channel; a sortie
    grant on the sortie channel. The entry is the audit record, and the source for re-relay.
+   Authority records live in cynapse, in the channel and its metadata, never on a public tracker
+   such as GitHub Issues or Asana.
 3. **Re-relay.** A grant often has to reach a unit that did not exist when the Council spoke: a
    Coordinator started for the next pull request, a session restarted after a crash or a lease
    takeover, a session whose context was compacted and can no longer quote the words from its own
    turns. The Captain re-relays the grant to that unit, verbatim from the decision entry and as a
-   turn. The Captain answers for the re-relay, and the re-relay is itself recorded.
+   turn. The Captain answers for the re-relay, and the re-relay is itself recorded. What triggers
+   it: a unit that reaches a step needing a grant it does not hold asks its Captain first, with a
+   decision-request. If a recorded grant covers the step, the Captain re-relays it; if none does,
+   the Captain adds the request to its list for the Council.
 
 Re-relay has limits:
 
@@ -84,8 +89,9 @@ possible.
 **The work is in scope, but one step needs a grant.** Typically a merge with no delegation, or a
 publish. The Captain lets everything up to that step proceed: the Pods implement, gate, open the
 pull request, and get it clean. The step itself is held. Work that depends on the held step keeps
-moving by stacking on the held branch, so when the grant comes, everything lands in order through
-the Coordinator's clean bar.
+moving where it makes sense, for example by stacking on the held branch so that everything lands
+in order through the clean bar when the grant comes. How stacking interacts with merge order and
+the clean bar is still to be investigated; until then, the Captain judges case by case.
 
 **The work itself is outside every grant.** New work the Council did not ask for, or a pre-approval
 bound it does not fit. The Captain files the issue, so the work is visible and ready to take in, but
