@@ -1,0 +1,20 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"build": {
+			"inputs": [
+				"$TURBO_DEFAULT$",
+				"$TURBO_ROOT$/.agents/specs/cyberfleet/design/**",
+				"$TURBO_ROOT$/.agents/specs/cyberfleet/glossary.md"
+			]
+		},
+		"test": {
+			"inputs": [
+				"$TURBO_DEFAULT$",
+				"$TURBO_ROOT$/.agents/specs/cyberfleet/design/**",
+				"$TURBO_ROOT$/.agents/specs/cyberfleet/glossary.md"
+			]
+		}
+	}
+}
