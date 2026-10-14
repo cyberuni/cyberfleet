@@ -49,8 +49,8 @@ flowchart LR
   B --> P
 ```
 
-A ship is a project, opened as a herdr workspace from a template on its main checkout. The Command
-Center has the same shape at fleet level. The runtime applies the template and starts or reserves
+A ship is a project, opened as a multiplexer workspace (herdr or tmux) from a template on its main
+checkout. The Command Center has the same shape at fleet level. The runtime applies the template and starts or reserves
 sessions in its slots; cyberfleet supplies the template's content and which role sits in which slot
 (`cyberfleet ship open`). Every slot is the Council's to change.
 

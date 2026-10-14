@@ -31,7 +31,7 @@ behind a term, the entry links to it.
 
 | Term | Meaning |
 |---|---|
-| **ship** | A project. A herdr workspace opened from a template on the project's main checkout, holding the Dashboard, Bridge, and Engine Room tabs. |
+| **ship** | A project. A multiplexer workspace (herdr or tmux) opened from a template on the project's main checkout, holding the Dashboard, Bridge, and Engine Room tabs. |
 | **Command Center** | The fleet's own workspace, with a Dashboard and a Flag Bridge. Not a ship. |
 | **Dashboard** | The first tab of a ship or the Command Center. In a ship: the remote pane and the ship's status. In the Command Center: the Operator's seat and fleet status. |
 | **Bridge** | A ship's second tab: the Captain (left) and the Coordinator (right). |
