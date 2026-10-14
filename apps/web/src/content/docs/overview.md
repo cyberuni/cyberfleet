@@ -3,7 +3,7 @@ title: cyberfleet Overview
 description: "A harness-agnostic, MCP-free way to direct a fleet of AI agents across your projects: the Operator, Captain, Coordinator, and Pod crew over the cyberfleet console."
 ---
 
-**cyberfleet** is a harness-agnostic, MCP-free way to direct a fleet of AI agents across your projects. It is the fleet layer of [cyber-civitas](https://cyber-civitas.github.io): it supplies the roles, the work model, and the rules. Sessions, spawning, and leases come from [cyberlegion](https://cyberuni.github.io/cyberlegion/), the runtime underneath. Conversations travel over cynapse channels. Mission state comes from [SDD](https://cyberuni.github.io/cyber-sdd/sdd/overview/).
+**cyberfleet** is a harness-agnostic, MCP-free way to direct a fleet of AI agents across your projects. [cyber-civitas](https://cyber-civitas.github.io) is a civilization of AI agents, and cyberfleet is a corporation that does work in it. It brings the roles, the work model, and the rules, and uses services other members of the civilization provide. Sessions, spawning, and leases come from [cyberlegion](https://cyberuni.github.io/cyberlegion/), the runtime underneath. Conversations travel over cynapse channels. Mission state comes from [SDD](https://cyberuni.github.io/cyber-sdd/sdd/overview/).
 
 You're the **Council**: the human. You give directions and make decisions. The fleet carries them out, and authority comes from you and nowhere else.
 

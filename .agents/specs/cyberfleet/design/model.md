@@ -3,11 +3,12 @@
 What cyberfleet is made of, who owns what, and the rules that hold across the whole system. Every
 other design document builds on this one. Terms are defined in the [glossary](../glossary.md).
 
-## Layers
+## What it builds on
 
-cyberfleet lets one human, the Council, direct agent sessions across many projects. It is the fleet
-layer of [cyber-civitas](https://cyber-civitas.github.io): it supplies the roles, the work model,
-and the rules, and leaves sessions, messages, and terminals to the packages below it.
+cyberfleet lets one human, the Council, direct agent sessions across many projects.
+[cyber-civitas](https://cyber-civitas.github.io) is a civilization of AI agents, and cyberfleet is a
+corporation that does work in it. It brings the roles, the work model, and the rules, and leaves
+sessions, messages, and terminals to the packages that provide those services.
 
 ```mermaid
 flowchart TD
