@@ -57,7 +57,7 @@ sessions in its slots; cyberfleet supplies the template's content and which role
 
 | Automaton | How many | Tier | Starts | Owns |
 |---|---|---|---|---|
-| Operator | One seat | Mid | By the Council; need not stay running | Talking with the Council: answering its questions, relaying its work to the right Captain |
+| Operator | One seat | Mid | By the Council; need not stay running | Talking with the Council: answering its questions, relaying its work to the right Captain; it never spawns a Pod |
 | Captain | One per ship, one for the fleet | High | On demand | A ship's sorties, plan, Pods, and rulings; the fleet's roadmap and cross-ship decisions |
 | Coordinator | One per ship, one for the fleet | Low | On demand | A ship's landing, unless the ship gives it to Pods; the fleet's epics and mission landing |
 | Pod | Many | Set by the Captain | Spawned | One line of work in one sortie |
@@ -89,6 +89,9 @@ takeover inherits the Pods without a handover.
   lease generation can make them. A Captain session that lost its lease to a newer one cannot spawn,
   bind, or retire Pods. The record keeps the session and generation that wrote it as an audit stamp,
   not as the owner.
+- Writes outside the runtime cannot be fenced: the tracker and the forge do not know the lease.
+  Before each one (claiming an issue, recording a ruling, merging), the unit checks that it still
+  holds its lease, so a session that lost the role stops at its next write instead of acting on.
 - There is no adoption. Because the owner is the role, a Captain restart needs no step to take the
   Pods over, and a Pod's ship is fixed by its worktree, so it can never move to another ship. Work
   another ship needs is a new issue there, under that ship's Captain.
@@ -106,8 +109,9 @@ takeover inherits the Pods without a handover.
   address a review comment within the sortie's scope. Both send their instructions into the Pod's
   session as turns, through the runtime (`cyberlegion` send, or the multiplexer's send-keys), so a
   Pod acts on them as orders. Neither works inside a Pod.
-- The Captain's home is the project's main checkout. Sortie work never happens there; each Pod works
-  in its own worktree.
+- The Captain's home is the project's main checkout, on its default branch. Sortie work never
+  happens there, and the Captain never switches its branch; each Pod works in its own worktree.
+  Binding refuses a Pod whose workspace is the home or a worktree of another project.
 
 Three personas sit outside the crew and are unchanged by it: **Crimp** recruits and discharges
 specialist crew types, **Mechanic** builds and reconfigures automatons, and the specialist crew
