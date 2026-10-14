@@ -83,7 +83,7 @@ The [design](/cyberfleet/design/) is the target the project is building to, as d
 
 - The Operator spawns ships and lands their pull requests itself, because the Captain and the Coordinator are not shipped.
 - The Operator spawns Pods, not a Captain. A Pod also serves as the bridge companion of the session you work in on a project.
-- Ships run as tmux or herdr panes that the personas open through `cyberlegion`. The template layout above is not shipped.
+- Ships run as tmux or herdr panes that the personas open through `cyberlegion`. The template layout above is not shipped, and outside a multiplexer the Operator cannot spawn a Pod yet ([cyberfleet#113](https://github.com/cyberuni/cyberfleet/issues/113)).
 
 Each automaton's page says where its shipped skill differs from the design. The [scenarios](/cyberfleet/scenarios/the-ship/) walk through the design, and each one lists the features it still needs.
 

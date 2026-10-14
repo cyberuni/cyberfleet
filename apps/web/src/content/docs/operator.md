@@ -43,6 +43,9 @@ The Captain and the Coordinator are not shipped, so the shipped `operator` skill
   a home (`--home`) so that, once your `cyberlegion` release supports it, mail arriving with no
   holder spawns one there.
 - Routes messages between ships and sweeps away the dead ones.
+- Needs a multiplexer to spawn. Outside tmux or herdr the spawn fails and Operator reports it.
+  Dispatching the Pod as a sub-agent instead is tracked in
+  [cyberfleet#113](https://github.com/cyberuni/cyberfleet/issues/113).
 - Relays what the Council decided, never an approval of its own: the ship receives your own words
   (just "Approve", or your sentence nearly verbatim) with nothing added, and Operator records your
   words, who relayed them, and what they cover on the work's thread. Operator can pass on no more
