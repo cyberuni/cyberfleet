@@ -14,7 +14,7 @@ The **Command Center** is the fleet's own workspace, with two tabs:
 - **Dashboard**: the Operator's seat, and status across the fleet.
 - **Flag Bridge**: the fleet's Captain and Coordinator.
 
-A **ship** is a project. It opens as one herdr workspace on the project's main checkout, with three tabs:
+A **ship** is a project. It opens as one multiplexer workspace (in herdr or tmux) on the project's main checkout, with three tabs:
 
 - **Dashboard**: a remote pane for calling the Operator in the Command Center, and the ship's status.
 - **Bridge**: the ship's Captain and Coordinator.
