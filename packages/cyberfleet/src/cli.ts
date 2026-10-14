@@ -11,11 +11,13 @@ import {
 	realExec,
 	resolveAgent,
 	resolveRoot,
+	resolveSelfId,
 	selectSessionAdapter,
 	toonList,
 	toonObject,
 	touch,
 } from 'cyberlegion'
+import { bindPod, listPods, type PodAct, retirePod, showCaptain } from './captain.ts'
 import { buildMissions, resolveAgentsRoot } from './missions.ts'
 
 // cyberfleet — the fleet layer on top of cyberlegion's mechanism. It carries ONLY fleet-specific
@@ -137,6 +139,78 @@ rootOpts(program.command('pause'))
 				"SDD's pause-mission checkpoint (which rewrites the plan brief's todos/## NEXT anchor). " +
 				'Run `sdd:pause-mission` in-session for the actual mission checkpoint (flagged gap).\n',
 		)
+	})
+
+rootOpts(program.command('captain'))
+	.description(
+		"show a project's Captain — its home checkout, owner, generation, and health (read-only; starts nothing)",
+	)
+	.argument('[project]', 'project key, a path in any of its checkouts, or its unique name (default: here)')
+	.action((project, opts) => {
+		const ctx = ctxOf(opts)
+		const view = showCaptain(ctx, project ?? process.cwd())
+		emit(formatOf(opts), { toon: toonObject({ ...view }), json: view })
+	})
+
+rootOpts(program.command('pods'))
+	.description(
+		"list the pods each project's Captain role owns, and whether a Captain holds the role now (current/unavailable/retired)",
+	)
+	.argument('[project]', 'project key, a path in any of its checkouts, or its unique name (default: here)')
+	.option('--all', 'list the pods of every project')
+	.action((project, opts) => {
+		if (opts.all && project) throw new Error('pass a project or --all, not both')
+		const rows = listPods(ctxOf(opts), opts.all ? undefined : (project ?? process.cwd()))
+		emit(formatOf(opts), {
+			toon: toonList(
+				'pods',
+				rows,
+				[
+					{ key: 'pod', get: (r) => r.handle ?? r.pod },
+					{ key: 'branch', get: (r) => r.branch ?? '-' },
+					{ key: 'live', get: (r) => (r.live ? 'yes' : 'no') },
+					{ key: 'owner', get: (r) => r.owner },
+					{ key: 'sortie', get: (r) => r.sortie ?? '-' },
+				],
+				`${rows.length} pods`,
+			),
+			json: rows,
+		})
+	})
+
+const podCmd = program
+	.command('pod')
+	.description("the Captain role's record of the pods it owns — every change fenced by the caller's lease generation")
+const podAct = (cmd: Command) =>
+	rootOpts(cmd)
+		.argument('<pod>', 'the pod unit (handle or id)')
+		.requiredOption('--generation <n>', 'the Captain lease generation the caller holds (from `cyberfleet captain`)')
+		.option('--project <ref>', 'project key, path, or unique name (default: here)')
+		.option('--captain <ref>', 'the acting Captain session (default: this session)')
+
+function actOf(ctx: IdContext, pod: string, opts: { generation: string; project?: string; captain?: string }): PodAct {
+	const captain = opts.captain ? resolveAgent(ctx.store, opts.captain).id : resolveSelfId(ctx)
+	if (!captain) throw new Error('no session identity — run as a registered unit, or pass --captain')
+	const generation = Number(opts.generation)
+	if (!Number.isInteger(generation) || generation < 0) throw new Error('--generation must be a non-negative integer')
+	return { project: opts.project ?? process.cwd(), captain, generation, pod: resolveAgent(ctx.store, pod).id }
+}
+
+podAct(podCmd.command('bind'))
+	.description("record the project's Captain role as the one owner of a pod in its own project worktree")
+	.option('--sortie <issue-ref>', 'the sortie (issue) the pod carries')
+	.action((pod, opts) => {
+		const ctx = ctxOf(opts)
+		const binding = bindPod(ctx, { ...actOf(ctx, pod, opts), ...(opts.sortie ? { sortie: opts.sortie } : {}) })
+		emit(formatOf(opts), { toon: toonObject({ ...binding }), json: binding })
+	})
+
+podAct(podCmd.command('retire'))
+	.description('retire a pod once — only the session holding the Captain lease can; close its unit separately')
+	.action((pod, opts) => {
+		const ctx = ctxOf(opts)
+		const binding = retirePod(ctx, actOf(ctx, pod, opts))
+		emit(formatOf(opts), { toon: toonObject({ ...binding }), json: binding })
 	})
 
 const gateCmd = program.command('gate').description('SDD gate operations')

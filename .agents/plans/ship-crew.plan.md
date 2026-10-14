@@ -538,6 +538,9 @@ cyber-sdd: items 19-22 dropped (R3). The mission graph is not a dependency.
     the tracker routing (R6, R13). *Waits on:* 23.
 27. **Captain**: skill, agent, spec node; triage (freshness, priority, details), issue write,
     work-channel open, plan writes, Pod spawn with model per sortie, rulings. Continues #25 / PR #93.
+    *Landed early:* the Pod-ownership mechanism (`cyberfleet captain`, `pods`, `pod bind|retire`,
+    PR #107), described in the design's model (`.agents/specs/cyberfleet/design/model.md`, Pod
+    ownership). The persona and the rest of this item remain.
 28. **Coordinator**: skill, agent, spec node; loads merge-backstop-governance; integration worktree
     (P6a); landing moves out of `headless-operator`; holds a merge it has no delegation for and
     asks (R11); reports once when its queue settles (R8). *Waits on:* 2, 26.

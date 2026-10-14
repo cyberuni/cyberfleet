@@ -126,9 +126,20 @@ cyberlegion spawn --agent pod --model sonnet --branch <branch> --base main \
   --brief-file <brief> --at workspace
 ```
 
+Then the Captain records its role as the Pod's owner, at the lease generation it holds:
+
+```sh
+cyberfleet pod bind <pod> --generation <n> --sortie <issue-ref>
+```
+
+The owner is the Captain role, not this session, so the next Captain session has the Pod without
+adopting it.
+
 The brief names the sortie channel, so the Pod reports there, and names the Coordinator's address,
 so it knows where to say its pull request is ready. A Pod that needs a gate opens the gate thread
-and spawns the judge itself. The Captain manages Pods and never works inside one.
+and spawns the judge itself. The judge has no Pod record of its own, but like everything in the
+ship it is the Captain's: the Captain finds it through its gate thread, and closes it if its Pod is
+gone. The Captain never directs its verdict. The Captain manages Pods and never works inside one.
 
 ### 5. The Captain replies, and the Operator reports
 
@@ -192,6 +203,7 @@ From here the work is landed as described in
 | 3 | Open a work channel keyed by the issue | — | `channel create --kind work --store --native-id` | Built |
 | 3 | Write the decision back to the issue | — | `cynapse.published` write-back | Planned (cynapse ADR-0011) |
 | 4 | Spawn a Pod in a worktree with a chosen model | `spawn --agent --model --branch --base` | — | Built |
+| 4 | Record the Captain role as the Pod's owner, fenced by its lease | `withOwnership`, through `cyberfleet pod bind` | — | Built |
 | 7 | Tell the Coordinator a pull request is ready | `unit nudge` | `entry send` | Built |
 | — | A `captain` and a `coordinator` agent definition | `agent resolve` | — | Gap: neither persona exists |
 | — | cyberfleet depends on cynapse | — | — | Gap: no dependency yet |
