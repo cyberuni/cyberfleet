@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="cyberfleet">
+  <!-- Family frame: the cyber-* command reticle. Identical in every cyber-* package. -->
+  <path class="s" d="M17 63V17h46"/>
+  <path class="s" d="M111 65v46H65"/>
+  <!-- Glyph slot (32..96): cyberfleet sails a formation, three sails in echelon. -->
+  <path class="f" d="M64 30 78 58H50Z"/>
+  <path class="f" d="M42 62 55 88H29Z"/>
+  <path class="f" d="M86 62 99 88H73Z"/>
+  <style>.f{fill:#000}.s{fill:none;stroke:#000;stroke-width:10;stroke-linecap:round;stroke-linejoin:round}@media (prefers-color-scheme:dark){.f{fill:#fff}.s{stroke:#fff}}</style>
+</svg>

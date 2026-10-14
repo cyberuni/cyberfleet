@@ -7,6 +7,16 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: 'cyberfleet',
+			// The cyber-* icon system (cyberuni/cyber-mux docs/design/icon-system.md). The favicon self-themes; the header
+			// logo ships as a light/dark pair because Starlight picks its theme by `data-theme`,
+			// which `prefers-color-scheme` never sees.
+			favicon: '/img/logo.svg',
+			logo: {
+				light: './src/assets/logo-light.svg',
+				dark: './src/assets/logo-dark.svg',
+				alt: 'cyberfleet',
+			},
+			customCss: ['./src/styles/global.css'],
 			social: [
 				{
 					icon: 'github',

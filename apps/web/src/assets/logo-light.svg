@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="cyberfleet">
+  <g fill="none" stroke="#17191c" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 63V17h46"/>
+    <path d="M111 65v46H65"/>
+  </g>
+  <g fill="#17191c">
+    <path d="M64 30 78 58H50Z"/>
+    <path d="M42 62 55 88H29Z"/>
+    <path d="M86 62 99 88H73Z"/>
+  </g>
+</svg>
