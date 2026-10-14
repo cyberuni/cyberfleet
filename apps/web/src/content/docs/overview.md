@@ -7,15 +7,20 @@ description: "A harness-agnostic, MCP-free way to direct a fleet of AI agents ac
 
 You're the **Council**: the human. You give directions and make decisions. The fleet carries them out, and authority comes from you and nowhere else.
 
-## Ships and the Command Center
+## The Command Center and ships
+
+The **Command Center** is the fleet's own workspace, with two tabs:
+
+- **Dashboard**: the Operator's seat, and status across the fleet.
+- **Flag Bridge**: the fleet's Captain and Coordinator.
 
 A **ship** is a project. It opens as one herdr workspace on the project's main checkout, with three tabs:
 
-- **Dashboard**: a remote pane for calling the Operator, and the ship's status.
+- **Dashboard**: a remote pane for calling the Operator in the Command Center, and the ship's status.
 - **Bridge**: the ship's Captain and Coordinator.
 - **Engine Room**: dev servers for the main checkout. No agents.
 
-The **Command Center** is the fleet's own workspace. Its Dashboard holds the Operator's seat, and its Flag Bridge holds the fleet's Captain and Coordinator. Every slot in either layout is yours to change. [The ship](/cyberfleet/scenarios/the-ship/) walks through both layouts.
+Every slot in either layout is yours to change. [The ship](/cyberfleet/scenarios/the-ship/) walks through both layouts.
 
 ## The crew
 
