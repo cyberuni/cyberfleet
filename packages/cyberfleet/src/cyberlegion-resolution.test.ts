@@ -35,16 +35,23 @@ describe.each(ENTRY_POINTS)('%s', (file) => {
 	it('names the resolution order: PATH, installed plugin, pinned npx', () => {
 		const path = section.indexOf('on `PATH`')
 		const plugin = section.indexOf('~/.claude/plugins/installed_plugins.json')
-		const npx = section.indexOf('npx -y cyberlegion@<pin>')
+		const npx = section.indexOf('npx -y cyberlegion@')
 		expect(path).toBeGreaterThan(-1)
 		expect(plugin).toBeGreaterThan(path)
 		expect(npx).toBeGreaterThan(plugin)
 		expect(section).toContain('<installPath>/bin/cyberlegion.mjs')
 	})
 
-	it('reads the pin from the bundled pins map and checks the version', () => {
-		expect(section).toContain('.plugin/pins.json')
+	it('stamps the pinned version in its own text and checks the version', () => {
+		const pins = JSON.parse(read('.plugin/pins.json'))
+		expect(section).toContain(`npx -y cyberlegion@${pins.cyberlegion}`)
+		expect(section).toContain(`The pin is \`${pins.cyberlegion}\``)
 		expect(section).toContain('--version')
+	})
+
+	it('reaches nothing outside its own folder', () => {
+		expect(text).not.toContain('pins.json')
+		expect(text).not.toMatch(/npx -y cyberlegion(?!@)/)
 	})
 
 	it('re-resolves rather than caching a versioned path, and fails with an install hint', () => {

@@ -27,3 +27,22 @@ for (const file of MANIFESTS) {
 	writeFileSync(file, after)
 	console.info(`${file} -> ${version}`)
 }
+
+// Skills must be self-contained, so the cyberlegion pin is written into the text of each entry
+// point instead of read from `.plugin/pins.json` at run time. Keep those literals in step with it.
+const PIN_FILES = [
+	'skills/operator/SKILL.md',
+	'skills/pod/SKILL.md',
+	'skills/crimp/SKILL.md',
+	'agents/headless-operator.md',
+].map((f) => `packages/cyberfleet/${f}`)
+const pin = JSON.parse(readFileSync('packages/cyberfleet/.plugin/pins.json', 'utf8')).cyberlegion
+if (pin) {
+	for (const file of PIN_FILES) {
+		const before = readFileSync(file, 'utf8')
+		const after = before
+			.replace(/cyberlegion@\d+\.\d+\.\d+[\w.-]*/g, `cyberlegion@${pin}`)
+			.replace(/The pin is `[^`]*`/g, `The pin is \`${pin}\``)
+		if (after !== before) writeFileSync(file, after)
+	}
+}
