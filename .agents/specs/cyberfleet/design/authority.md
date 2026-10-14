@@ -77,7 +77,8 @@ Re-relay has limits:
 Re-relay is a deliberate loosening. A recorded entry is content, and elsewhere content never carries
 authority. Here a Captain turns a recorded grant back into a turn, on its own judgment and its own
 name. That makes a wrong re-relay attributable, not impossible: nothing in the fleet yet stores a
-grant that an agent cannot edit (cyberlegion#10). When such a store exists, units can verify a grant
+grant that an agent cannot edit, and none is planned: cyberlegion#10 was closed in favour of relaying
+the Council's own words (cyberfleet#62). If such a store is ever built, units can verify a grant
 themselves and re-relay becomes unnecessary.
 
 ## When a grant is missing
