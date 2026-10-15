@@ -28,7 +28,7 @@ step from the arbitration channel straight to the Council.
 | Automaton | Tier | Role in this scenario |
 | --- | --- | --- |
 | Captain A and Captain B | Opus | State their positions, and apply standing rules |
-| Mediator | Opus, headless, cold | Writes a brief of both positions with a recommendation. Decides nothing. |
+| Mediator | Opus, cold | Writes a brief of both positions with a recommendation. Decides nothing. |
 | Operator | Sonnet | Starts the mediator, puts the brief to the Council, and relays the answer |
 | Council | — | Decides any dispute the rules do not settle |
 
@@ -93,7 +93,7 @@ is widening it. A rule lives as a reference in the repository it binds (`.agents
 ### 4. Mediate, then put it to the Council
 
 If no rule settles it, either Captain asks the Operator for mediation. The Operator starts a
-**mediator**: a fresh, headless Opus session that has worked for neither ship. It reads the
+**mediator**: a fresh Opus session that has worked for neither ship. It reads the
 arbitration channel and both issues, and writes a brief: each position in its own words, the
 options, what each option costs each ship, and a recommendation.
 
@@ -126,5 +126,5 @@ the high tier is for.
 | 1 | Hold the disputed sorties while the rest continue | — | A state record on the mission | Gap: shared with cross-repository ordering |
 | 2 | Bound the exchange | — | Channel conventions (`--convention`) | Built in cynapse; the bound is persona logic |
 | 3 | Standing rules the Council writes | — | — | Gap: the file format is decided when the first reader is built |
-| 4 | Start a headless mediator | `spawn --agent mediator --model opus` | — | Spawn built; no mediator agent |
+| 4 | Start a mediator | `spawn --agent mediator --model opus` | — | Spawn built; no mediator agent |
 | 5 | Relay the Council's words to two ships | `send --start --message` | `entry append` | Gap: `send --start` is not built; `unit nudge --message` works today |
