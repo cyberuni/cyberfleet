@@ -32,7 +32,7 @@ section all happen on these layouts:
 | **Captain** | A ship's Bridge, left pane. One per ship, plus one for the fleet on the Flag Bridge. | High (Opus) | On demand | Decides. Judges a request's freshness, priority, and scope, owns the issue tracker and the plan, spawns and manages Pods, reviews what landed, and rules on escalations. The fleet's Captain makes the roadmap and cross-ship decisions. |
 | **Coordinator** | A ship's Bridge, right pane. One per ship, plus one for the fleet on the Flag Bridge. | Low (Haiku) | On demand | A ship's lands pull requests: it applies the clean bar, orders rebases, merges clean work, and escalates judgment. The fleet's keeps epics and lands missions. |
 | **Pod** | Its own herdr workspace and git worktree | Set per Pod by the Captain | Spawned by the Captain, or by a Pod for a gate | Carries one line of work (implementation, judge, refactor, audit) in one sortie. |
-| **Mediator** | Headless, cold | High | Per dispute | Writes a brief of a dispute. Decides nothing. |
+| **Mediator** | Cold | High | Per dispute | Writes a brief of a dispute. Decides nothing. |
 
 A ship has no Operator. The Dashboard's left pane is the **remote pane**, a mid-tier session for
 talking to the one Operator and directing traffic from inside the ship. The fleet's Captain is
