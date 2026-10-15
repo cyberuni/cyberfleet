@@ -1,6 +1,6 @@
 ---
 title: Work across ships
-description: Scenario 4. A Captain finds its work needs a change in another ship; the fleet's Coordinator files it there and rings that ship's Captain, and the first Captain plans around the dependency until it lifts.
+description: Scenario 4. A Captain finds its work needs a change in another ship; A's ship Coordinator files it there as a mission that blocks the first, B's Captain decides, and the first Captain plans around it until it lifts.
 ---
 
 import Mermaid from '../../../components/Mermaid.astro'
@@ -14,37 +14,37 @@ A depends on. Neither Captain commands the other. Work crosses ships as an **inv
 decides when and whether, and A plans around the answer
 ([ADR-0023](https://github.com/cyberuni/cyberfleet/blob/main/docs/adr/0023-captain-mission-sortie.md) §5).
 
-Crossing a repository boundary makes the part in B a **child mission**, because each repository
-releases on its own. Issue 42 stays A's mission and becomes the parent. The part in B is a child
-issue there, a mission under B's Captain. A's Captain specifies this, and the fleet's Coordinator
-executes it.
+The part in B is a **dependency**: a mission in B that **blocks** issue 42, because each repository
+releases on its own. Issue 42 stays A's mission and is *blocked by* the new one. The mission in B
+belongs to B's Captain, who holds its issue. A's Captain specifies it, and A's ship Coordinator
+files it in B.
 
 ## Who is involved
 
 | Automaton | Ship | Role in this scenario |
 | --- | --- | --- |
-| Captain A | A | Finds the dependency, specifies the child mission for B, marks its mission blocked, and replans around it |
-| Fleet's Coordinator | Fleet | Files B's issue as a child of issue 42, opens B's mission channel, rings Captain B, lifts the block, and closes the parent mission |
-| Captain B | B | Accepts, declines, or asks the Council, and owns the child mission in B |
-| Pods and Coordinator of B | B | Do and land the child mission in B, as in scenarios 1 and 3 |
+| Captain A | A | Finds the dependency, specifies the dependency for B, marks its mission blocked, and replans around it |
+| Coordinator A | A | Files B's issue, blocks issue 42 on it, rings Captain B, and unblocks issue 42 when the fix is released |
+| Captain B | B | Accepts, declines, or asks the Council, and owns the mission in B |
+| Pods and Coordinator of B | B | Do and land the mission in B, as in scenarios 1 and 3 |
 | Operator | Fleet | Carries a decision-request to the Council if Captain B needs one or the Captains cannot agree |
 | Council | — | Decides anything that crosses ships: sequencing disputes, and B's release |
 
 ## The flow
 
 <Mermaid
-	caption="A asks through the fleet's Coordinator; B decides. A's blocked mission waits; its other work keeps going."
+	caption="A asks through its Coordinator; B decides. A's blocked mission waits; its other work keeps going."
 	code={`sequenceDiagram
   participant KA as Captain A
-  participant FC as Fleet's Coordinator
+  participant FC as Coordinator A
   participant TB as ship B issue tracker
   participant MC as mission channel, issue 42
   participant KB as Captain B
   participant SB as mission channel, B issue
   participant XB as Coordinator B
-  KA->>FC: specifies the child for B and its issue text
-  FC->>TB: file the child issue in B
-  FC->>MC: record the child on issue 42's channel, add Captain B
+  KA->>FC: specifies the dependency for B and its issue text
+  FC->>TB: file the issue in B
+  FC->>MC: block issue 42 on it, add Captain B to issue 42's channel
   FC->>KB: send --start in B, then the ring
   FC->>KA: references back
   KA->>KA: mark the mission blocked, spawn Pods on the rest
@@ -53,38 +53,35 @@ executes it.
   Note over KB,XB: B's Pods work and land, scenarios 1 and 3
   XB->>KB: one report when its queue settles
   KB->>TB: close the issue, after the release if consumed as a package
-  FC->>KA: lifts the block and rings
-  KA->>KA: unblock the mission, spawn its Pod
-  FC->>FC: all children closed, close the parent mission
+  FC->>KA: unblocks issue 42 and rings
+  KA->>KA: spawn its Pod
   FC->>KA: reports once`}
 />
 
 ## Step by step
 
-### 1. Captain A specifies, the fleet's Coordinator files
+### 1. Captain A specifies, its Coordinator files
 
 The durable request is an **issue in B's repository**, not a message
 (authority-governance §2). The issue survives any session, and B's Captain triages it from B's own
-queue. Captain A says exactly what it needs: the child and the issue text for B. The
-fleet's Coordinator executes it with `cyberfleet mission ...` commands, never an improvised tracker
+queue. Captain A says exactly what it needs: the dependency and the issue text for B. Coordinator A
+executes it with `cyberfleet mission ...` commands, never an improvised tracker
 call, and sends an underspecified request back rather than filling the gap.
 
-Where the parent and child live follows the project's tracker routing: an issue in a repository, a
-GitHub Projects item, or an Asana task. GitHub sub-issues can cross repositories only within one
-owner. A mission that spans organizations keeps its children in a tracker that spans them, such as
-Asana, or links them with a cynapse relation.
+Where the two missions live follows the project's tracker routing: an issue in a repository, a
+GitHub Projects item, or an Asana task. A block across owners is recorded with a cynapse relation,
+or in a tracker that spans them, such as Asana.
 
-Issue 42's mission channel keeps its history. Now that issue 42 has a child, it carries only what
-crosses its children: the plan across them, blockers, invitations, and the request's delegation
-record. Captain A and Captain B are its members.
+Issue 42's mission channel keeps its history. Captain B joins it, and it carries what crosses the
+two missions: blockers, invitations, and the request's delegation record.
 
 ```sh
-cyberfleet mission add-child 42 --spec <child-spec>
+cyberfleet mission block 42 --on gh:<org>/<ship-b>#7
 ```
 
-### 2. The fleet's Coordinator rings B
+### 2. Coordinator A rings B
 
-The message is only the doorbell for the issue. The fleet's Coordinator posts and rings Captain B,
+The message is only the doorbell for the issue. Coordinator A posts and rings Captain B,
 starting it in B if it is not running:
 
 ```sh
@@ -105,24 +102,24 @@ The request is content Captain B fetched, so it judges it on the merits, exactly
 request from its own Operator. Taking on the work is dispatch, and needs no Council decision. It
 answers on the mission channel with one of:
 
-- **Accept**, with a priority. It takes the issue in as a mission and opens its mission channel.
+- **Accept**, with a priority. The issue is B's own mission, and it opens its mission channel.
 - **Decline**, with the reason, for example "this belongs in A, here is the extension point". Captain
   A replans.
 - **Needs the Council**, when accepting would commit more of B than its leash allows. Captain B
   raises a decision-request through the Operator.
 
-A grant on issue 42 covers the child in B when its words name issue 42 and the child's work is within
-them, or within a pre-approval. Otherwise B's merges need their own words from the Council, and B's
-Captain accepts the child or asks the Council.
+A grant on issue 42 does not cover the mission in B. It needs the Council's words naming it, or a
+pre-approval such as "any fix #42 needs in B". Otherwise B's merges wait for the Council's words, and
+B's Captain accepts the mission or asks the Council. To grant once over the whole effort, make it a
+mission with sub-missions.
 
 ### 5. B lands, and the block lifts
 
 B's mission runs and lands as in [Landing a pull request](/cyberfleet/scenarios/landing-a-pull-request/).
-B's Coordinator reports once to Captain B when its queue settles, and Captain B closes the issue. The
-fleet's Coordinator watches the children's issues. Either way it lifts the block and rings Captain A,
-which unblocks the mission and spawns its Pod. When every child has closed, the fleet's Coordinator
-closes the parent mission and reports once to the Captain that created it. It starts on demand and exits when
-nothing is pending.
+B's Coordinator reports once to Captain B when its queue settles, and Captain B closes the issue.
+Coordinator A watches the blocking issue, then unblocks issue 42 and rings Captain A, which spawns its
+Pod. Captain A closes issue 42, as the holder of that issue. Coordinator A starts on demand and exits
+when nothing is pending.
 
 ### 6. The block usually lifts at the release
 
@@ -141,12 +138,12 @@ the other. That is [Captains in dispute](/cyberfleet/scenarios/captains-in-dispu
 
 | Step | Need | cyberlegion | cynapse | Status |
 | --- | --- | --- | --- | --- |
-| 1 | The mission verbs: add a child, block, unblock, close | — | — | Gap: proposed `cyberfleet mission add-child\|block --on <issue>\|unblock\|close`; the fleet's Coordinator persona is not built |
+| 1 | The mission verbs: add a sub-mission, block, unblock, close | — | — | Gap: proposed `cyberfleet mission add-sub\|block --on <issue>\|unblock\|close`; the Coordinator persona is not built |
 | 1 | File an issue in another repository | — | — | `gh`, built |
 | 1 | Record "blocked by" on both issues | — | Relations across stores | Planned (cynapse ADR-0010) |
-| 1 | Link children across owners | — | A cynapse relation, or a tracker that spans owners such as Asana | Planned; GitHub sub-issues stop at the owner |
+| 1 | Link a blocking mission across owners | — | A cynapse relation, or a tracker that spans owners such as Asana | Planned |
 | 2 | Ring another ship's Captain, in that ship's Bridge | `send --start` | `entry append` | Gap: `send --start` is not built, and placement into B's Bridge is not either (see scenario 2) |
 | 3 | Record a mission blocked on another repository | — | A state record on the mission | Gap: cross-repository ordering has no home yet (ADR-0023, Open dependencies) |
 | 4 | Add Captain B to issue 42's mission channel | — | `channel create --member` | Built at creation only; no verb adds a member later |
-| 5 | Watch the children and lift a block | — | Relations, issue state | Gap: fleet's Coordinator logic |
+| 5 | Watch the blocking issue and lift a block | — | Relations, issue state | Gap: Coordinator logic |
 | 6 | Release B on the Council's decision | — | — | Ratification-class; no fleet verb |

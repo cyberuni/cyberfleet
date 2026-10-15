@@ -60,7 +60,7 @@ sessions in its slots; cyberfleet supplies the template's content and which role
 |---|---|---|---|---|
 | Operator | One seat | Mid | By the Council; need not stay running | Talking with the Council: answering its questions, relaying its work to the right Captain; it never spawns a Pod |
 | Captain | One per ship, one for the fleet | High | On demand | A ship's missions, plan, Pods, and rulings; the fleet's roadmap and cross-ship decisions |
-| Coordinator | One per ship, one for the fleet | Low | On demand | A ship's landing, unless the ship gives it to Pods; the fleet's children in other ships, and the close of a mission whose children span ships |
+| Coordinator | One per ship, one for the fleet | Low | On demand | A ship's landing, unless the ship gives it to Pods; the mechanics of a mission in the fleet's tracker; a ship's Coordinator does the mechanics of its Captain's missions, including filing in another repository |
 | Pod | Many | Set by the Captain | Spawned | One line of work in one mission |
 | Mediator | One per dispute | High | Per dispute | A brief of a dispute, and nothing else |
 
@@ -122,18 +122,17 @@ specialist crew types, **Mechanic** builds and reconfigures automatons, and the 
 
 | Tracker level | Fleet role | Owner | Channel |
 |---|---|---|---|
-| Issue, with any sub-issues | Mission, with any child missions | That repository's Captain; each child, its own repository's Captain | Mission channel |
+| Issue, with any sub-issues | Mission, with any sub-missions | The Captain of the repository that holds the issue (the fleet's Captain for the fleet's tracker); each sub-mission, whoever holds its issue | Mission channel |
 | Subtask | Line of work | The Pods carrying it | None; threads in the mission channel |
 
 The level is read from the tracker, never inferred from how the work went. Everything is a mission;
-a mission has children when its Captain adds them, or when the work crosses a repository boundary,
-which makes the work a child in the other repository. Writes to a repository are never ownerless:
-trunk, merge order, and the mission's issue belong to that repository's Captain and Coordinator,
-behind their leases. A parent mission with children in several ships has no ship that holds all of
-it. Deciding what its children are is the creating Captain's, within the Council's words; writing
-the tracker record of a mission whose children span ships is the fleet Coordinator's, fenced by that
-Coordinator's lease; and each child stays with its own ship. A parent's channel carries only what
-crosses its children.
+a mission has sub-missions when its Captain adds them to break the work down. Work that needs another
+ship is a dependency instead: a mission in that ship that blocks the requesting mission, owned by
+that ship's Captain. A mission belongs to whoever holds its issue, and its Captain's Coordinator does
+the mechanics: filing an issue in another repository, blocking, unblocking, closing. Writes to a
+repository are never ownerless: trunk, merge order, and the mission's issue belong to that
+repository's Captain and Coordinator, behind their leases. A mission's channel carries only what
+crosses its sub-missions and the missions that block it.
 
 The full flow of a piece of work is in [lifecycle](./lifecycle.md).
 
@@ -143,7 +142,7 @@ Each fact has one home, and anything else is derived from it on demand.
 
 | Fact | Home |
 |---|---|
-| The plan: missions and their children, scope, open and closed | The tracker |
+| The plan: missions and their sub-missions, scope, open and closed | The tracker |
 | Pull requests, reviews, CI | The forge |
 | Conversation, reports, escalations, the delegation audit record | cynapse channels and threads |
 | A Captain's rulings | A comment on the issue (rationale) and a decision entry on the ship address channel (ruling, issue, lease generation) |
@@ -159,7 +158,7 @@ decision that is not written down did not happen.
 ## Rules that hold everywhere
 
 1. **Authority never expands implicitly.** The Council grants authority at the scope it chooses: a
-   mission with its children, or one action. It can also pre-approve, explicitly, work that extends
+   mission with its sub-missions, or one action. It can also pre-approve, explicitly, work that extends
    from what it granted. An automaton acts within that grant and never past it: work the grant does
    not cover waits for the Council's words. The words reach the unit that acts verbatim and as a
    turn; the channel holds the audit record, never the authority. A turn in a unit's own session is

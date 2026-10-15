@@ -49,7 +49,7 @@ and never works inside one.
 ### 3. The delegation
 
 Whoever takes the request announces who will land its pull requests (the ship's Coordinator, or
-each Pod under the ship's landing setting), and names the clean bar. The Council's reply is the merge delegation, for the mission and its children as its words say. It reaches the Coordinator as a
+each Pod under the ship's landing setting), and names the clean bar. The Council's reply is the merge delegation, for the mission and its sub-missions as its words say. It reaches the Coordinator as a
 relay, verbatim and as a turn, like any other order. The audit record on the mission channel is not
 the delegation: a Coordinator that reads it there is reading content.
 
@@ -100,41 +100,43 @@ that became ready. The mission ends when the Captain closes its issue.
 This review is the outer loop. It runs once per settled queue, not once per merge, because it is
 judgment and judgment runs at the high tier.
 
-## When a mission has children
+## When a mission has sub-missions or dependencies
 
 ```mermaid
 sequenceDiagram
   participant KA as Captain, ship A
-  participant FD as Fleet Coordinator
+  participant CA as Coordinator, ship A
   participant KB as Captain, ship B
   participant C as Council
-  KA->>FD: add children: the parent, the child for ship B, its issue text
-  FD->>FD: file the children, open their mission channels
-  FD->>KB: file the child in B, ring B's Captain
+  KA->>CA: the dependency for ship B, its issue text
+  CA->>KB: file the issue in B, block the mission on it, ring B's Captain
   KB-->>C: accept, decline, or ask the Council
-  KA->>KA: mark its mission blocked, keep planning the rest
-  KB->>KB: run the child mission, under its own delegation
-  FD->>KA: release carries the fix: lift the block, ring
-  FD->>KA: every child closed: close the parent, report once
+  KA->>KA: keep planning the rest
+  KB->>KB: run its mission, under its own delegation
+  CA->>KA: release carries the fix: unblock, ring
 ```
 
-A Captain adds child missions to break work down or to reach another ship. Work that crosses a
-repository boundary is a child mission in the other repository.
+A Captain adds sub-missions to break work down: the mission is done when its sub-missions are done.
+Work that needs another ship is a dependency: a mission in that ship that blocks the requesting
+mission. A mission belongs to whoever holds its issue.
 
-- **Adding children.** The Captain decides what the children are and checks them against the
-  Council's words. Children in its own ship within those words keep the delegation; a child that
-  adds work goes back to the Council first. The fleet's Coordinator executes the tracker changes as
-  commands (`cyberfleet mission add-child`) and sends an underspecified request back rather than
-  filling the gap.
-- **Another ship.** A child in another ship is covered when the Council's grant names the parent
-  mission and the child's work is within its words or a pre-approval. Otherwise that ship's Captain
-  accepts the child, declines it, or asks the Council, and its merges wait for the Council's words.
+- **Adding sub-missions.** The Captain decides what they are and checks them against the Council's
+  words. A grant on a mission covers its sub-missions in any ship, within its words or a
+  pre-approval; a sub-mission that adds work goes back to the Council first. The ship's Coordinator
+  executes the tracker changes as commands (`cyberfleet mission add-sub`) and sends an
+  underspecified request back rather than filling the gap.
+- **Another ship.** A blocking mission in another ship is not covered by the grant on the mission it
+  blocks. It needs the Council's words naming it, or a pre-approval such as "any fix #42 needs in
+  cyberlegion". The other ship's Captain accepts it as its own mission, declines it, or asks the
+  Council, and its merges wait for the Council's words. To grant once over a cross-ship effort,
+  make it a mission with sub-missions.
 - **Blocks.** The requesting Captain marks its mission blocked on the other ship's issue
-  (`cyberfleet mission block --on <issue>`) and keeps planning everything else. The fleet's Coordinator lifts the block and rings the waiting Captain,
+  (`cyberfleet mission block --on <issue>`) and keeps planning everything else. The requesting ship's Coordinator lifts the block and rings the waiting Captain,
   usually at the release that carries the fix, because ships consume each other as published
   packages; at the issue's close only when the dependency is consumed from source.
-- **Closing.** When every child has closed, the fleet's Coordinator closes the parent mission and reports once
-  to the Captain that created it (`cyberfleet mission close`).
+- **Closing.** When a mission's sub-missions have closed, its Captain's Coordinator closes it and
+  reports once to the Captain (`cyberfleet mission close`). A blocking mission is closed by its own
+  ship's Captain, never by the requesting ship.
 - **Disputes.** Two Captains that disagree settle it themselves on a dispute thread: one position
   and one rebuttal each, then standing rules, then a Mediator's brief. A dispute they cannot settle
   escalates to the Council, and only the Council binds two ships.

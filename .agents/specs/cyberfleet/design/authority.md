@@ -24,14 +24,14 @@ The Council grants at the scope it chooses:
 
 | Scope | Example | Covers |
 |---|---|---|
-| Mission | "Land everything in the retry mission." | The mission's pull requests and its children's, within the words, in any ship |
+| Mission | "Land everything in the retry mission." | The mission's pull requests and its sub-missions', within the words, in any ship |
 | Action | "Approve." in answer to one decision-request | The one action, target, and revision the request named |
 
 A grant covers what its words cover, read from the request they answer, and nothing implicitly
 beyond. A merge grant covers each pull request of the work it names and is spent per merge.
 
 **Pre-approval.** The Council can also cover work that does not exist yet, by setting a bound:
-"follow-ups under this mission that don't change the public API", or "any child the mission needs
+"follow-ups under this mission that don't change the public API", or "any fix the mission needs
 in cyberlegion". When new work appears, the Captain decides whether it falls inside the bound. That is
 judgment, so it stays with the Captain at the high tier. Each use is recorded in the channel's
 metadata with the work item and the bound it fell under, so the Council can review every one. Work outside the bound goes to the

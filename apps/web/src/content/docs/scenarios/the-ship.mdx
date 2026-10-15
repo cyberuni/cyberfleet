@@ -30,7 +30,7 @@ section all happen on these layouts:
 | **Council** | Wherever you are | Human | — | Gives directions and makes decisions. All authority starts here. |
 | **Operator** | Command Center Dashboard, left pane. There is one. | Mid (Sonnet) | With the Command Center | Your voice to the fleet. Answers status itself and relays work and orders to the target ship. |
 | **Captain** | A ship's Bridge, left pane. One per ship, plus one for the fleet on the Flag Bridge. | High (Opus) | On demand | Decides. Judges a request's freshness, priority, and scope, owns the issue tracker and the plan, spawns and manages Pods, reviews what landed, and rules on escalations. The fleet's Captain makes the roadmap and cross-ship decisions. |
-| **Coordinator** | A ship's Bridge, right pane. One per ship, plus one for the fleet on the Flag Bridge. | Low (Haiku) | On demand | A ship's lands pull requests: it applies the clean bar, orders rebases, merges clean work, and escalates judgment. The fleet's files children in other ships and closes a mission whose children span ships. |
+| **Coordinator** | A ship's Bridge, right pane. One per ship, plus one for the fleet on the Flag Bridge. | Low (Haiku) | On demand | A ship's lands pull requests: it applies the clean bar, orders rebases, merges clean work, and escalates judgment. The fleet's does the mechanics for the fleet's Captain, for issues in the fleet's tracker. |
 | **Pod** | Its own herdr workspace and git worktree | Set per Pod by the Captain | Spawned by the Captain, or by a Pod for a gate | Carries one line of work (implementation, judge, refactor, audit) in one mission. |
 | **Mediator** | Cold | High | Per dispute | Writes a brief of a dispute. Decides nothing. |
 
@@ -142,12 +142,12 @@ The fleet's roles sit on the tracker's levels, read from the tracker and never i
 
 | Tracker level | Fleet role | Channel |
 | --- | --- | --- |
-| Issue, with any sub-issues | **Mission**: an issue in flight. One Captain, one lease. It may land several pull requests and ends when the Captain closes the issue. It may have **child missions**, in any ship. | The **mission channel** |
+| Issue, with any sub-issues | **Mission**: an issue in flight. One Captain, one lease. It may land several pull requests and ends when the Captain closes the issue. It may have **sub-missions**, and may be blocked by a mission in another ship. | The **mission channel** |
 | Subtask: not releasable on its own | A **line of work** in a mission, carried by Pods | None of its own |
 
-Everything is a mission. A Captain adds child missions to break work down, and crossing a repository
-boundary makes the work a child in the other repository, because each repository releases on its
-own.
+Everything is a mission. A Captain adds sub-missions to break work down. Crossing a repository
+boundary makes the work a dependency: a mission in the other repository that blocks this one, because
+each repository releases on its own.
 
 The automatons talk over [cynapse](https://github.com/cyberuni/cynapse) channels. An **address
 channel** belongs to whoever receives on it. A **work channel** belongs to a mission and has
@@ -189,7 +189,7 @@ its parent, so a reader of the parent never has to open it.
 | Operator address | Address | Operator | The Council's calls |
 | Ship address | Address | Captain | Requests to the ship, pointers that ring the Captain to an escalation, and the Coordinator's one landing report |
 | Coordinator address | Address | Coordinator | "Pull request ready" notices from Pods |
-| Mission, one per issue | Work | None | The plan, the Pods' progress and done reports, decisions, and landing talk. For a parent, only what crosses its children: the plan, blockers, invitations, and the delegation record |
+| Mission, one per issue | Work | None | The plan, the Pods' progress and done reports, decisions, and landing talk. For a mission with sub-missions or blockers, only what crosses them: the plan, blockers, invitations, and the delegation record |
 | Thread | Work, anchored | None | A gate, an escalation and its ruling, or a dispute |
 
 No pull request channel is opened. Review lives on the host, and landing talk lives in the mission

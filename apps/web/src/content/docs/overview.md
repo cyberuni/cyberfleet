@@ -30,7 +30,7 @@ Work is split by cost. Judgment runs on the high model tier and mechanics on the
 |---|---|---|---|---|
 | [**Operator**](/cyberfleet/operator/) | One seat | Mid | Talks with you. Answers your questions, and relays your work to the right ship's Captain. | Yes, in an earlier shape |
 | [**Captain**](/cyberfleet/captain/) | One per ship, one for the fleet | High | Owns a ship's work: takes issues in, plans, spawns and directs Pods, rules on escalations, reviews what landed | Ownership commands only |
-| [**Coordinator**](/cyberfleet/coordinator/) | One per ship, one for the fleet | Low | Lands pull requests behind the clean bar. The fleet's Coordinator files children in other ships. | No |
+| [**Coordinator**](/cyberfleet/coordinator/) | One per ship, one for the fleet | Low | Lands pull requests behind the clean bar and does its Captain's tracker mechanics. | No |
 | [**Pod**](/cyberfleet/pod/) | Many | Set by the Captain | Carries one line of work in its own worktree, and opens its pull request | Yes, in an earlier shape |
 | **Mediator** | One per dispute | High | Writes a brief of a dispute between Captains for you. Decides nothing. | No |
 
@@ -45,7 +45,7 @@ Two more personas sit outside the crew:
 
 ## How work flows
 
-An issue in flight is a **mission**. It belongs to its repository's Captain. A mission may have **child missions**, in any ship, as the tracker's sub-issues; each child belongs to its own ship's Captain.
+An issue in flight is a **mission**. It belongs to the Captain of the repository that holds its issue. A mission may have **sub-missions**, its parts. Work that needs another ship is a **dependency**: a mission in that ship that blocks yours, which that ship's Captain accepts as its own, declines, or asks the Council about.
 
 1. You ask anywhere. The session that hears you posts your words, verbatim, to the ship's Captain.
 2. The Captain takes the issue in, plans its lines of work, and spawns a Pod for each.
@@ -59,7 +59,7 @@ The full path, including work that crosses ships, is in [lifecycle](/cyberfleet/
 
 Most work needs no approval. Planning, spawning, writing code, and opening pull requests happen on an order. A merge to a protected branch, a publish, or a history rewrite needs your words.
 
-You choose how far your words reach: one action, or a mission with its children across ships. A grant covers what its words cover and nothing beyond. Your words reach the automaton that acts verbatim, never paraphrased. When a grant is missing, the work moves up to the step that needs it and waits there for you. The rules are in [authority](/cyberfleet/design/authority/).
+You choose how far your words reach: one action, or a mission with its sub-missions across ships. A grant covers what its words cover and nothing beyond. Your words reach the automaton that acts verbatim, never paraphrased. When a grant is missing, the work moves up to the step that needs it and waits there for you. The rules are in [authority](/cyberfleet/design/authority/).
 
 ## The console
 
@@ -75,7 +75,7 @@ Under the personas sits the `cyberfleet` **console**: the CLI. It is determinist
 | `cyberfleet pods [project]` | List the Pods a project's Captain role owns, and whether a Captain holds that role now (`--all` for every project) |
 | `cyberfleet pod bind\|retire <pod>` | Record the Captain role as a Pod's one owner, or retire the Pod once. Fenced by the caller's Captain lease generation |
 
-The design adds `cyberfleet ship board` (open a ship from its template, or focus it), `cyberfleet pr check` (the clean bar), and `cyberfleet mission` (`add-child`, `block`, `unblock`, `close`). None of them ship yet. The design also renames the shipped commands to noun-verb form (`missions` becomes `status`, `captain` becomes `captain show`, `pods` becomes `pod list`, `jump` folds into `ship board`, and `pause` is removed) per [ADR-0027](https://github.com/cyberuni/cyberfleet/blob/main/docs/adr/0027-cli-commands-are-noun-verb.md).
+The design adds `cyberfleet ship board` (open a ship from its template, or focus it), `cyberfleet pr check` (the clean bar), and `cyberfleet mission` (`add-sub`, `block`, `unblock`, `close`). None of them ship yet. The design also renames the shipped commands to noun-verb form (`missions` becomes `status`, `captain` becomes `captain show`, `pods` becomes `pod list`, `jump` folds into `ship board`, and `pause` is removed) per [ADR-0027](https://github.com/cyberuni/cyberfleet/blob/main/docs/adr/0027-cli-commands-are-noun-verb.md).
 
 ## What ships today
 
