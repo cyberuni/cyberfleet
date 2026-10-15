@@ -15,12 +15,12 @@ flowchart TD
   C["Council"] --> CF["cyberfleet: personas, governances, console"]
   CF --> CY["cynapse: channels, threads, state records"]
   CF --> CL["cyberlegion: sessions, spawn, placement, leases, waking"]
-  CF --> T["tracker and forge: issues, epics, pull requests, CI"]
+  CF --> T["tracker and forge: issues, sub-issues, pull requests, CI"]
   CL --> CY
   CL --> MX["cyber-mux: tmux or herdr templates"]
 ```
 
-- **cyberfleet** owns the crew, the sortie and mission model, the authority rules, and the console
+- **cyberfleet** owns the crew, the mission model, the authority rules, and the console
   verbs with fleet logic. Its personas ship as gateway skills in the plugin; the console ships as
   the `cyberfleet` CLI in the same package.
 - **cynapse** carries every conversation. cyberfleet calls it directly for channels and state
@@ -29,7 +29,7 @@ flowchart TD
   a session or open a workspace, and reaches worktrees and the multiplexer only through it
   (civitas [0001](https://cyber-civitas.github.io/decisions/0001-runtime-depends-on-communication/),
   [0003](https://cyber-civitas.github.io/decisions/0003-worktrees-through-the-runtime/)).
-- **The tracker** holds the plan. Issues and epics are the work items; the forge holds pull
+- **The tracker** holds the plan. Issues and their sub-issues are the work items; the forge holds pull
   requests, reviews, and CI.
 
 ## Places
@@ -52,22 +52,22 @@ flowchart LR
 A ship is a project, opened as a multiplexer workspace (herdr or tmux) from a template on its main
 checkout. The Command Center has the same shape at fleet level. The runtime applies the template and starts or reserves
 sessions in its slots; cyberfleet supplies the template's content and which role sits in which slot
-(`cyberfleet ship open`). Every slot is the Council's to change.
+(`cyberfleet ship board`). Every slot is the Council's to change.
 
 ## The crew
 
 | Automaton | How many | Tier | Starts | Owns |
 |---|---|---|---|---|
 | Operator | One seat | Mid | By the Council; need not stay running | Talking with the Council: answering its questions, relaying its work to the right Captain; it never spawns a Pod |
-| Captain | One per ship, one for the fleet | High | On demand | A ship's sorties, plan, Pods, and rulings; the fleet's roadmap and cross-ship decisions |
-| Coordinator | One per ship, one for the fleet | Low | On demand | A ship's landing, unless the ship gives it to Pods; the fleet's epics and mission landing |
-| Pod | Many | Set by the Captain | Spawned | One line of work in one sortie |
+| Captain | One per ship, one for the fleet | High | On demand | A ship's missions, plan, Pods, and rulings; the fleet's roadmap and cross-ship decisions |
+| Coordinator | One per ship, one for the fleet | Low | On demand | A ship's landing, unless the ship gives it to Pods; the fleet's children in other ships, and the close of a mission whose children span ships |
+| Pod | Many | Set by the Captain | Spawned | One line of work in one mission |
 | Mediator | One per dispute | High | Per dispute | A brief of a dispute, and nothing else |
 
 The split follows cost. Judgment runs at the high tier, and only the Captain and the Mediator make
 it. Mechanics run at the low tier, and the Coordinator does them behind deterministic commands
-(`cyberfleet pr clean`, `cyberfleet epic ...`) whose exit status it acts on. The Operator sits
-apart from both: it talks only with the Council, answers questions from `cyberfleet missions`,
+(`cyberfleet pr check`, `cyberfleet mission ...`) whose exit status it acts on. The Operator sits
+apart from both: it talks only with the Council, answers questions from `cyberfleet status`,
 `gh`, and channels without waking a Captain, and sends only work up. It coordinates nothing. Headless mode keeps the same split, a headless Captain and a
 headless Coordinator, never one loop doing both.
 
@@ -101,16 +101,16 @@ takeover inherits the Pods without a handover.
 - The Captain owns all the work in its ship, gate judges included. A judge has no binding record
   of its own: the Pod that spawns it is not the lease holder, so it cannot write one. The Captain
   finds a judge through its gate thread instead, since the judge is a member of the thread and the
-  thread hangs off a sortie channel the Captain belongs to. A gate thread with no outcome whose Pod
+  thread hangs off a mission channel the Captain belongs to. A gate thread with no outcome whose Pod
   is gone is abandoned: the Captain closes its judge and posts the outcome. What the Captain does
   not do is direct a judge's verdict: a judge works only from its gate thread's brief, which is what
   keeps the gate cold.
 - Two roles direct a Pod. The Captain directs its work: what to build, and its rulings on
   escalations. The Coordinator directs its landing: rebase, fix a red check the pull request caused,
-  address a review comment within the sortie's scope. Both send their instructions into the Pod's
+  address a review comment within the mission's scope. Both send their instructions into the Pod's
   session as turns, through the runtime (`cyberlegion` send, or the multiplexer's send-keys), so a
   Pod acts on them as orders. Neither works inside a Pod.
-- The Captain's home is the project's main checkout, on its default branch. Sortie work never
+- The Captain's home is the project's main checkout, on its default branch. Mission work never
   happens there, and the Captain never switches its branch; each Pod works in its own worktree.
   Binding refuses a Pod whose workspace is the home or a worktree of another project.
 
@@ -122,17 +122,18 @@ specialist crew types, **Mechanic** builds and reconfigures automatons, and the 
 
 | Tracker level | Fleet role | Owner | Channel |
 |---|---|---|---|
-| Epic | Mission | No ship. Its creating Captain decides its children; the fleet's Coordinator writes its record. | Mission channel |
-| Issue | Sortie | That repository's Captain | Sortie channel |
-| Subtask | Line of work | The Pods carrying it | None; threads in the sortie channel |
+| Issue, with any sub-issues | Mission, with any child missions | That repository's Captain; each child, its own repository's Captain | Mission channel |
+| Subtask | Line of work | The Pods carrying it | None; threads in the mission channel |
 
-The level is read from the tracker, never inferred from how the work went. Everything starts as a
-sortie; a mission exists only once someone promotes an issue to an epic, or the work crosses a
-repository boundary, which forces one. Writes to a repository are never ownerless: trunk, merge
-order, and the sortie's issue belong to that repository's Captain and Coordinator, behind their
-leases. A mission is not a repository, so no ship's Captain holds it. Deciding what it contains is
-the creating Captain's, within the Council's words; writing its tracker record is the fleet
-Coordinator's, fenced by that Coordinator's lease; and each sortie in it stays with its own ship.
+The level is read from the tracker, never inferred from how the work went. Everything is a mission;
+a mission has children when its Captain adds them, or when the work crosses a repository boundary,
+which makes the work a child in the other repository. Writes to a repository are never ownerless:
+trunk, merge order, and the mission's issue belong to that repository's Captain and Coordinator,
+behind their leases. A parent mission with children in several ships has no ship that holds all of
+it. Deciding what its children are is the creating Captain's, within the Council's words; writing
+the tracker record of a mission whose children span ships is the fleet Coordinator's, fenced by that
+Coordinator's lease; and each child stays with its own ship. A parent's channel carries only what
+crosses its children.
 
 The full flow of a piece of work is in [lifecycle](./lifecycle.md).
 
@@ -142,23 +143,23 @@ Each fact has one home, and anything else is derived from it on demand.
 
 | Fact | Home |
 |---|---|
-| The plan: sorties, missions, scope, open and closed | The tracker |
+| The plan: missions and their children, scope, open and closed | The tracker |
 | Pull requests, reviews, CI | The forge |
 | Conversation, reports, escalations, the delegation audit record | cynapse channels and threads |
 | A Captain's rulings | A comment on the issue (rationale) and a decision entry on the ship address channel (ruling, issue, lease generation) |
 | Which session holds a role | The role's lease in cyberlegion |
 | Which Pods a ship has, and their state | The Pod binding records in the runtime's hub, beside the Captain's lease |
-| Mission, gate, and leash state of a line of work | SDD, in the repository |
+| SDD-mission, gate, and leash state of a line of work | SDD, in the repository |
 | A ship or fleet report | Nowhere: composed when read, so it cannot drift |
 
 A Captain keeps nothing in memory between starts. Each start is a fresh session that rereads its
-address channel, its open sorties, and the decision entries since its last lease generation. A
+address channel, its open missions, and the decision entries since its last lease generation. A
 decision that is not written down did not happen.
 
 ## Rules that hold everywhere
 
 1. **Authority never expands implicitly.** The Council grants authority at the scope it chooses: a
-   whole mission, one sortie, or one action. It can also pre-approve, explicitly, work that extends
+   mission with its children, or one action. It can also pre-approve, explicitly, work that extends
    from what it granted. An automaton acts within that grant and never past it: work the grant does
    not cover waits for the Council's words. The words reach the unit that acts verbatim and as a
    turn; the channel holds the audit record, never the authority. A turn in a unit's own session is
@@ -192,9 +193,9 @@ decision that is not written down did not happen.
 ## Deliberately absent
 
 - **A fleet grouping.** Which ships form a fleet is undefined until an operation needs it.
-- **A stored dashboard.** The view is query-first (`cyberfleet missions`), until the mission TUI
+- **A stored dashboard.** The view is query-first (`cyberfleet status`), until the mission TUI
   (cyberfleet#4) replaces the Dashboard's status pane.
 - **A real `gate approve`.** A human ratification cannot be relayed safely through a CLI.
 - **Unforgeable authority.** The rules make a wrong relay attributable and bounded, not impossible.
   Injected text carries no verified caller identity.
-- **A pull request channel.** Review lives on the forge, and landing talk in the sortie channel.
+- **A pull request channel.** Review lives on the forge, and landing talk in the mission channel.

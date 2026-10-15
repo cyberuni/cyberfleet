@@ -12,7 +12,7 @@ The **Operator** is your interface to the fleet. It talks with you, and with no 
 ## In the design
 
 - **One seat.** The Operator sits on the Command Center's Dashboard. The session in that seat need not stay running; you start it when you want to talk.
-- **Answers questions itself.** It reads `cyberfleet missions`, `gh`, and channels, and never wakes a Captain to answer a question.
+- **Answers questions itself.** It reads `cyberfleet status`, `gh`, and channels, and never wakes a Captain to answer a question.
 - **Relays work up.** It posts your words, verbatim, to the target ship's address channel and rings that ship's Captain, which starts the Captain if it is not running.
 - **Coordinates nothing.** It never spawns a Pod and never lands a pull request. Planning belongs to the [Captain](/cyberfleet/captain/), and landing to the [Coordinator](/cyberfleet/coordinator/).
 - **Calling takes over nothing.** Invoking `/operator` outside the Operator's seat reaches the one Operator. It never makes the calling session an Operator.
@@ -24,7 +24,7 @@ The full path a request travels is in [lifecycle](/cyberfleet/design/lifecycle/)
 The Captain and the Coordinator are not shipped, so the shipped `operator` skill also does their work:
 
 - Spawns every ship: your first, a new peer session, or a parallel worktree-ship on a project that's already a ship. Pod never spawns.
-- Lists the live ships and, via `cyberfleet missions`, which need the Council's hands: ships × mission × gate × leash, derived from [SDD](https://cyberuni.github.io/cyber-sdd/sdd/overview/) state.
+- Lists the live ships and, via `cyberfleet missions`, which need the Council's hands: ships × SDD-mission × gate × leash, derived from [SDD](https://cyberuni.github.io/cyber-sdd/sdd/overview/) state.
 - Watches the ships it spawns and lands their work. Each ship opens a pull request and reports back
   to the session that spawned it, not to whichever session opened Operator most recently.
   When it dispatches, Operator tells you it will merge each of those pull requests once it is clean

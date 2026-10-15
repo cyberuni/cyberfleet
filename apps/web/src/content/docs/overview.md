@@ -3,7 +3,7 @@ title: cyberfleet Overview
 description: "A harness-agnostic, MCP-free way to direct a fleet of AI agents across your projects: the Operator, Captain, Coordinator, and Pod crew over the cyberfleet console."
 ---
 
-**cyberfleet** is a harness-agnostic, MCP-free way to direct a fleet of AI agents across your projects. [cyber-civitas](https://cyber-civitas.github.io) is a civilization of AI agents, and cyberfleet is a corporation that does work in it. It brings the roles, the work model, and the rules, and uses services other members of the civilization provide. Sessions, spawning, and leases come from [cyberlegion](https://cyberuni.github.io/cyberlegion/), the runtime underneath. Conversations travel over cynapse channels. Mission state comes from [SDD](https://cyberuni.github.io/cyber-sdd/sdd/overview/).
+**cyberfleet** is a harness-agnostic, MCP-free way to direct a fleet of AI agents across your projects. [cyber-civitas](https://cyber-civitas.github.io) is a civilization of AI agents, and cyberfleet is a corporation that does work in it. It brings the roles, the work model, and the rules, and uses services other members of the civilization provide. Sessions, spawning, and leases come from [cyberlegion](https://cyberuni.github.io/cyberlegion/), the runtime underneath. Conversations travel over cynapse channels. SDD-mission state comes from [SDD](https://cyberuni.github.io/cyber-sdd/sdd/overview/).
 
 You're the **Council**: the human. You give directions and make decisions. The fleet carries them out, and authority comes from you and nowhere else.
 
@@ -30,7 +30,7 @@ Work is split by cost. Judgment runs on the high model tier and mechanics on the
 |---|---|---|---|---|
 | [**Operator**](/cyberfleet/operator/) | One seat | Mid | Talks with you. Answers your questions, and relays your work to the right ship's Captain. | Yes, in an earlier shape |
 | [**Captain**](/cyberfleet/captain/) | One per ship, one for the fleet | High | Owns a ship's work: takes issues in, plans, spawns and directs Pods, rules on escalations, reviews what landed | Ownership commands only |
-| [**Coordinator**](/cyberfleet/coordinator/) | One per ship, one for the fleet | Low | Lands pull requests behind the clean bar. The fleet's Coordinator keeps epics. | No |
+| [**Coordinator**](/cyberfleet/coordinator/) | One per ship, one for the fleet | Low | Lands pull requests behind the clean bar. The fleet's Coordinator files children in other ships. | No |
 | [**Pod**](/cyberfleet/pod/) | Many | Set by the Captain | Carries one line of work in its own worktree, and opens its pull request | Yes, in an earlier shape |
 | **Mediator** | One per dispute | High | Writes a brief of a dispute between Captains for you. Decides nothing. | No |
 
@@ -45,7 +45,7 @@ Two more personas sit outside the crew:
 
 ## How work flows
 
-An issue in flight is a **sortie**. It belongs to its repository's Captain. An epic in flight is a **mission**: several sorties, possibly across ships, that deliver one outcome.
+An issue in flight is a **mission**. It belongs to its repository's Captain. A mission may have **child missions**, in any ship, as the tracker's sub-issues; each child belongs to its own ship's Captain.
 
 1. You ask anywhere. The session that hears you posts your words, verbatim, to the ship's Captain.
 2. The Captain takes the issue in, plans its lines of work, and spawns a Pod for each.
@@ -59,7 +59,7 @@ The full path, including work that crosses ships, is in [lifecycle](/cyberfleet/
 
 Most work needs no approval. Planning, spawning, writing code, and opening pull requests happen on an order. A merge to a protected branch, a publish, or a history rewrite needs your words.
 
-You choose how far your words reach: one action, one sortie, or a whole mission across ships. A grant covers what its words cover and nothing beyond. Your words reach the automaton that acts verbatim, never paraphrased. When a grant is missing, the work moves up to the step that needs it and waits there for you. The rules are in [authority](/cyberfleet/design/authority/).
+You choose how far your words reach: one action, or a mission with its children across ships. A grant covers what its words cover and nothing beyond. Your words reach the automaton that acts verbatim, never paraphrased. When a grant is missing, the work moves up to the step that needs it and waits there for you. The rules are in [authority](/cyberfleet/design/authority/).
 
 ## The console
 
@@ -67,7 +67,7 @@ Under the personas sits the `cyberfleet` **console**: the CLI. It is determinist
 
 | Command | What it does |
 |---|---|
-| `cyberfleet missions` | Who needs the Council's hands: ships × mission × gate × leash, derived from SDD state |
+| `cyberfleet missions` | Who needs the Council's hands: ships × SDD-mission × gate × leash, derived from SDD state |
 | `cyberfleet jump <peer>` | Select or focus a ship's session, or print its worktree path to `cd` into |
 | `cyberfleet pause <peer>` | Flip a ship's status marker (**not** the SDD `pause-mission` checkpoint) |
 | `cyberfleet gate approve <cr> <gate>` | Council ratification. **Stubbed**: a human-attributed gate write can't be safely relayed through a CLI |
@@ -75,7 +75,7 @@ Under the personas sits the `cyberfleet` **console**: the CLI. It is determinist
 | `cyberfleet pods [project]` | List the Pods a project's Captain role owns, and whether a Captain holds that role now (`--all` for every project) |
 | `cyberfleet pod bind\|retire <pod>` | Record the Captain role as a Pod's one owner, or retire the Pod once. Fenced by the caller's Captain lease generation |
 
-The design adds `cyberfleet ship open` (open a ship from its template), `cyberfleet pr clean` (the clean bar), and `cyberfleet epic` (mission records). None of them ship yet.
+The design adds `cyberfleet ship board` (open a ship from its template, or focus it), `cyberfleet pr check` (the clean bar), and `cyberfleet mission` (`add-child`, `block`, `unblock`, `close`). None of them ship yet. The design also renames the shipped commands to noun-verb form (`missions` becomes `status`, `captain` becomes `captain show`, `pods` becomes `pod list`, `jump` folds into `ship board`, and `pause` is removed) per [ADR-0027](https://github.com/cyberuni/cyberfleet/blob/main/docs/adr/0027-cli-commands-are-noun-verb.md).
 
 ## What ships today
 
@@ -112,4 +112,4 @@ npm install -g cyberfleet
 - [cyberfleet design](/cyberfleet/design/): the model, lifecycle, and authority rules
 - [cyberlegion Overview](https://cyberuni.github.io/cyberlegion/): the runtime cyberfleet builds on
 - [Tavern](https://cyberuni.github.io/cyberplace/tavern/): the storefront of specialist crew the Crimp recruits from
-- [SDD Overview](https://cyberuni.github.io/cyber-sdd/sdd/overview/): the mission state `cyberfleet missions` reads
+- [SDD Overview](https://cyberuni.github.io/cyber-sdd/sdd/overview/): the SDD-mission state `cyberfleet missions` reads

@@ -24,16 +24,15 @@ The Council grants at the scope it chooses:
 
 | Scope | Example | Covers |
 |---|---|---|
-| Mission | "Land everything in the retry epic." | Every sortie of the epic within the words, in any ship |
-| Sortie | "Merge the uploader fix when it's clean." | That sortie's pull requests |
+| Mission | "Land everything in the retry mission." | The mission's pull requests and its children's, within the words, in any ship |
 | Action | "Approve." in answer to one decision-request | The one action, target, and revision the request named |
 
 A grant covers what its words cover, read from the request they answer, and nothing implicitly
 beyond. A merge grant covers each pull request of the work it names and is spent per merge.
 
 **Pre-approval.** The Council can also cover work that does not exist yet, by setting a bound:
-"follow-ups under this epic that don't change the public API", or "any child the epic needs in
-cyberlegion". When new work appears, the Captain decides whether it falls inside the bound. That is
+"follow-ups under this mission that don't change the public API", or "any child the mission needs
+in cyberlegion". When new work appears, the Captain decides whether it falls inside the bound. That is
 judgment, so it stays with the Captain at the high tier. Each use is recorded in the channel's
 metadata with the work item and the bound it fell under, so the Council can review every one. Work outside the bound goes to the
 Council as a decision-request.
@@ -52,8 +51,7 @@ flowchart LR
 1. **Relay.** The unit that receives the Council's words passes them, verbatim and as a turn, to the
    unit that acts, unless it is that unit.
 2. **Record.** The receiver writes a decision entry on the work item's channel: the quote, its scope,
-   who relayed it, and the lease generation. A mission grant goes on the mission channel; a sortie
-   grant on the sortie channel. The entry is the audit record, and the source for re-relay.
+   who relayed it, and the lease generation. A grant goes on the channel of the mission it names. The entry is the audit record, and the source for re-relay.
    Authority records live in cynapse, in the channel and its metadata, never on a public tracker
    such as GitHub Issues or Asana.
 3. **Re-relay.** A grant often has to reach a unit that did not exist when the Council spoke: a
@@ -67,7 +65,7 @@ flowchart LR
 
 Re-relay has limits:
 
-- **Only a Captain re-relays**, and only to units in its own ship. For a mission grant, each ship's
+- **Only a Captain re-relays**, and only to units in its own ship. For a grant on a parent mission, each ship's
   Captain re-relays to its own units from the mission channel. A Coordinator never re-relays to
   itself from a record: that would be a low-tier unit acting on content it fetched.
 - **Verbatim only.** The quote is copied from the entry, never paraphrased or summarized. The scope

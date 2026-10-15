@@ -5,7 +5,7 @@ angles. The capability folders beside this one are organized for building it; th
 organized for understanding it.
 
 This folder holds the **current** design: the one the project is building to, as decided through
-ADR-0024. The capability specs and the code catch up to it through missions; where they still
+ADR-0024. The capability specs and the code catch up to it through SDD-missions; where they still
 differ, the design is the target and the difference is work to do. When a next version's design is
 under way, it lives as a complete copy in a version folder inside this one, and replaces these files
 in one commit when it becomes current. The two are never mixed in one document.

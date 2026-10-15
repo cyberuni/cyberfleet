@@ -38,7 +38,7 @@ page covers what is different: finding the ship, and placing the Captain in a sh
   participant R as project registry
   participant S as ship address channel
   participant K as Captain
-  participant W as sortie channel
+  participant W as mission channel
   participant X as Coordinator
   C->>O: In cyberlegion, make unit prune report what it swept
   O->>R: project list, project show
@@ -95,7 +95,7 @@ on the merits, so it can answer "already done in PR 80" or "queued behind the re
 
 You gave the merge delegation in the Operator's seat. The Operator relays your words, verbatim, to
 the target ship's Coordinator as a turn, with `cyberlegion send --start --message`, and records the
-quote, its scope, and who relayed it on the sortie channel. Your words cover only the pull requests of
+quote, its scope, and who relayed it on the mission channel. Your words cover only the pull requests of
 this request's Pods. A Coordinator that later has no such turn in its own session holds the merge and
 asks the Council.
 

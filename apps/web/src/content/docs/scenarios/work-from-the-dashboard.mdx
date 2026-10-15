@@ -35,7 +35,7 @@ retry with backoff to the uploader." This page follows that request until the wo
   participant S as ship address channel
   participant K as Captain
   participant T as issue tracker
-  participant W as sortie channel
+  participant W as mission channel
   participant P as Pod
   participant X as Coordinator
   C->>R: Add retry with backoff to the uploader
@@ -71,7 +71,7 @@ Operator's address channel, rings it, and shows the reply. Calling takes over no
 pane never becomes the Operator. The Operator first decides what kind of turn it received:
 
 - **A question** ("what's open?", "is PR 57 green?") the Operator answers itself, from the status
-  UI's sources: `cyberfleet missions`, `gh`, and channels. No Captain is woken.
+  UI's sources: `cyberfleet status`, `gh`, and channels. No Captain is woken.
 - **Work**, as here, goes up to the ship's Captain. The Operator does not judge priority or scope
   itself.
 
@@ -106,9 +106,9 @@ request on three points:
 - **Details.** Scope, acceptance, and how to split it into lines of work.
 
 It then creates or updates the issue (`gh issue create` or `gh issue edit`) and opens the issue's
-work channel. The issue is now a **sortie** in flight: one repository, which may land several pull
-requests, and which ends when the Captain closes the issue. The plan lives in the tracker. If the
-work turns out to span repositories, the Captain deliberately promotes the issue to an epic; that
+work channel. The issue is now a **mission** in flight, which may land several pull
+requests and ends when the Captain closes the issue. The plan lives in the tracker. If the
+work turns out to span repositories, the Captain adds a child mission in the other repository; that
 case is [Work across ships](/cyberfleet/scenarios/work-across-ships/).
 
 ```sh
@@ -129,13 +129,13 @@ cyberlegion spawn --agent pod --model sonnet --branch <branch> --base main \
 Then the Captain records its role as the Pod's owner, at the lease generation it holds:
 
 ```sh
-cyberfleet pod bind <pod> --generation <n> --sortie <issue-ref>
+cyberfleet pod bind <pod> --generation <n> --mission <issue-ref>
 ```
 
 The owner is the Captain role, not this session, so the next Captain session has the Pod without
 adopting it.
 
-The brief names the sortie channel, so the Pod reports there, and names the Coordinator's address,
+The brief names the mission channel, so the Pod reports there, and names the Coordinator's address,
 so it knows where to say its pull request is ready. A Pod that needs a gate opens the gate thread
 and spawns the judge itself. The judge has no Pod record of its own, but like everything in the
 ship it is the Captain's: the Captain finds it through its gate thread, and closes it if its Pod is
@@ -151,23 +151,23 @@ its session can idle or exit.
 ### 6. The Operator relays the delegation
 
 The Operator sends your merge words to the ship's Coordinator, verbatim, as a turn, starting the
-Coordinator if it is not running. The quote, its scope, and who relayed it go on the sortie channel
+Coordinator if it is not running. The quote, its scope, and who relayed it go on the mission channel
 as the audit record. The record is not the delegation: a Coordinator that reads it is reading fetched
 content (authority-governance §3). The delegation is the turn in the Coordinator's own session, and
 it covers this request's pull requests.
 
 ```sh
 cyberlegion send --start <coordinator-address> --message "<the Council's words>"
-cynapse entry append <sortie-channel> --type delegation.record --body "<quote, scope, relayed by>"
+cynapse entry append <mission-channel> --type delegation.record --body "<quote, scope, relayed by>"
 ```
 
 ### 7. Pods work, and hand off to the Coordinator
 
 Each Pod works in its worktree and opens a pull request. When its line of work is done, it reports
-on the sortie channel and tells the Coordinator:
+on the mission channel and tells the Coordinator:
 
 ```sh
-cynapse entry append <sortie-channel> --type pod.report --ref gh:<org>/<repo>#57
+cynapse entry append <mission-channel> --type pod.report --ref gh:<org>/<repo>#57
 cynapse entry send <coordinator> --type pr.ready --ref gh:<org>/<repo>#57
 ```
 

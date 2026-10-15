@@ -65,7 +65,7 @@ cynapse channel create <handle> --kind work --type fleet.dispute --title "<the q
 cyberlegion unit nudge <other-captain-handle>
 ```
 
-Meanwhile both Captains hold the disputed sorties and keep working everything else. Nobody acts on
+Meanwhile both Captains hold the disputed missions and keep working everything else. Nobody acts on
 the disputed point while it is open.
 
 ### 2. State positions, with a bound
@@ -123,7 +123,7 @@ the high tier is for.
 | Step | Need | cyberlegion | cynapse | Status |
 | --- | --- | --- | --- | --- |
 | 1 | Branch a channel from an entry, with both Captains | — | `channel create --anchor --member` | Built |
-| 1 | Hold the disputed sorties while the rest continue | — | A state record on the mission | Gap: shared with cross-repository ordering |
+| 1 | Hold the disputed missions while the rest continue | — | A state record on the mission | Gap: shared with cross-repository ordering |
 | 2 | Bound the exchange | — | Channel conventions (`--convention`) | Built in cynapse; the bound is persona logic |
 | 3 | Standing rules the Council writes | — | — | Gap: the file format is decided when the first reader is built |
 | 4 | Start a mediator | `spawn --agent mediator --model opus` | — | Spawn built; no mediator agent |

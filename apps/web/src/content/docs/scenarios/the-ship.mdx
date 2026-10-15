@@ -30,8 +30,8 @@ section all happen on these layouts:
 | **Council** | Wherever you are | Human | — | Gives directions and makes decisions. All authority starts here. |
 | **Operator** | Command Center Dashboard, left pane. There is one. | Mid (Sonnet) | With the Command Center | Your voice to the fleet. Answers status itself and relays work and orders to the target ship. |
 | **Captain** | A ship's Bridge, left pane. One per ship, plus one for the fleet on the Flag Bridge. | High (Opus) | On demand | Decides. Judges a request's freshness, priority, and scope, owns the issue tracker and the plan, spawns and manages Pods, reviews what landed, and rules on escalations. The fleet's Captain makes the roadmap and cross-ship decisions. |
-| **Coordinator** | A ship's Bridge, right pane. One per ship, plus one for the fleet on the Flag Bridge. | Low (Haiku) | On demand | A ship's lands pull requests: it applies the clean bar, orders rebases, merges clean work, and escalates judgment. The fleet's keeps epics and lands missions. |
-| **Pod** | Its own herdr workspace and git worktree | Set per Pod by the Captain | Spawned by the Captain, or by a Pod for a gate | Carries one line of work (implementation, judge, refactor, audit) in one sortie. |
+| **Coordinator** | A ship's Bridge, right pane. One per ship, plus one for the fleet on the Flag Bridge. | Low (Haiku) | On demand | A ship's lands pull requests: it applies the clean bar, orders rebases, merges clean work, and escalates judgment. The fleet's files children in other ships and closes a mission whose children span ships. |
+| **Pod** | Its own herdr workspace and git worktree | Set per Pod by the Captain | Spawned by the Captain, or by a Pod for a gate | Carries one line of work (implementation, judge, refactor, audit) in one mission. |
 | **Mediator** | Cold | High | Per dispute | Writes a brief of a dispute. Decides nothing. |
 
 A ship has no Operator. The Dashboard's left pane is the **remote pane**, a mid-tier session for
@@ -66,7 +66,7 @@ unit.
   subgraph dash["Tab 1: Dashboard (main checkout)"]
     direction LR
     rp["Remote pane<br/>Sonnet, calls the Operator"]
-    ui["Status UI<br/>issues, PRs, missions, CI"]
+    ui["Status UI<br/>issues, PRs, SDD-missions, CI"]
   end
   subgraph bridge["Tab 2: Bridge (main checkout)"]
     direction LR
@@ -115,7 +115,7 @@ Every layout is a template slot you can change.
 The first tab, running in the main checkout. The default puts the remote pane on the left, where you
 talk to the Operator and direct traffic, and a status UI on the right that shows the ship's issues,
 pull requests, and status. The UI is any program that renders that state, such as a refreshing
-`cyberfleet missions` view until the mission TUI replaces it.
+`cyberfleet status` view until the mission TUI replaces it.
 
 ### Bridge
 
@@ -136,21 +136,21 @@ The Dashboard holds the Operator's seat on the left and fleet status on the righ
 holds the fleet's Captain on the left, where the fleet's roadmap and cross-ship decisions are made,
 and the fleet's Coordinator on the right. Both start on demand.
 
-## Sorties, missions, and their channels
+## Missions and their channels
 
 The fleet's roles sit on the tracker's levels, read from the tracker and never inferred.
 
 | Tracker level | Fleet role | Channel |
 | --- | --- | --- |
-| Issue: releasable on its own, in one repository | **Sortie**: an issue in flight. One Captain, one lease. It may land several pull requests and ends when the Captain closes the issue. | The **sortie channel** |
-| Epic: several issues delivering one outcome | **Mission**: an epic in flight | The **mission channel** |
-| Subtask: not releasable on its own | A **line of work** in a sortie, carried by Pods | None of its own |
+| Issue, with any sub-issues | **Mission**: an issue in flight. One Captain, one lease. It may land several pull requests and ends when the Captain closes the issue. It may have **child missions**, in any ship. | The **mission channel** |
+| Subtask: not releasable on its own | A **line of work** in a mission, carried by Pods | None of its own |
 
-Everything starts as a sortie. A mission exists only once someone deliberately makes the issue an
-epic. Crossing a repository boundary forces one, because each repository releases on its own.
+Everything is a mission. A Captain adds child missions to break work down, and crossing a repository
+boundary makes the work a child in the other repository, because each repository releases on its
+own.
 
 The automatons talk over [cynapse](https://github.com/cyberuni/cynapse) channels. An **address
-channel** belongs to whoever receives on it. A **work channel** belongs to an issue or an epic and has
+channel** belongs to whoever receives on it. A **work channel** belongs to a mission and has
 members but no owner. An exchange that needs different readers from its parent is a **thread**: a
 child channel anchored at the entry that starts it. A gate (whose cold judge reads only its thread),
 an escalation with its ruling, and a dispute are threads. Every thread posts its outcome back to
@@ -166,7 +166,7 @@ its parent, so a reader of the parent never has to open it.
   opaddr[("Operator address channel<br/>owner: Operator")]
   shipaddr[("ship address channel<br/>owner: Captain")]
   coordaddr[("Coordinator address channel<br/>owner: Coordinator")]
-  sortie[("sortie channel per issue<br/>members, no owner")]
+  mission[("mission channel per issue<br/>members, no owner")]
   thread[("thread<br/>gate, escalation, dispute")]
   rp["remote pane or any other pane"] -- the Council's words --> opaddr
   opaddr -.-> op
@@ -174,14 +174,14 @@ its parent, so a reader of the parent never has to open it.
   shipaddr -.-> cap
   cap -- reply on the request thread --> shipaddr
   shipaddr -.-> op
-  cap -- plan, decisions --> sortie
-  pod -- progress, done report --> sortie
+  cap -- plan, decisions --> mission
+  pod -- progress, done report --> mission
   pod -- PR ready --> coordaddr
   coordaddr -.-> coord
   coord -- escalation pointer at once, one report when settled --> shipaddr
   coord -- escalation --> thread
   pod -- opens a gate --> thread
-  thread -- outcome --> sortie`}
+  thread -- outcome --> mission`}
 />
 
 | Channel | Kind | Owner | Carries |
@@ -189,13 +189,12 @@ its parent, so a reader of the parent never has to open it.
 | Operator address | Address | Operator | The Council's calls |
 | Ship address | Address | Captain | Requests to the ship, pointers that ring the Captain to an escalation, and the Coordinator's one landing report |
 | Coordinator address | Address | Coordinator | "Pull request ready" notices from Pods |
-| Sortie, one per issue | Work | None | The plan, the Pods' progress and done reports, decisions, and landing talk |
-| Mission, one per epic | Work | None | What crosses sorties: the plan across them, blockers, invitations, and the delegation record |
+| Mission, one per issue | Work | None | The plan, the Pods' progress and done reports, decisions, and landing talk. For a parent, only what crosses its children: the plan, blockers, invitations, and the delegation record |
 | Thread | Work, anchored | None | A gate, an escalation and its ruling, or a dispute |
 
-No pull request channel is opened. Review lives on the host, and landing talk lives in the sortie
-channel. The Captain and the Coordinator are members of every sortie channel of their ship, and each
-Pod is a member of its own sortie's channel.
+No pull request channel is opened. Review lives on the host, and landing talk lives in the mission
+channel. The Captain and the Coordinator are members of every mission channel of their ship, and each
+Pod is a member of its own mission's channel.
 
 Posting to a channel does not wake anyone. Until the runtime watches channels itself, **the poster
 rings**: it posts, resolves or starts the receiver with `cyberlegion service start`, and nudges it
