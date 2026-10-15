@@ -20,12 +20,13 @@ behind a term, the entry links to it.
 | **owned Pod** | A Pod with a binding record under its ship's Captain role. The Captain lists, directs, and retires its owned Pods, and the next Captain session inherits them. The Coordinator also directs a Pod while it lands that Pod's pull request. |
 | **binding** | Writing a Pod's ownership record when the Captain spawns it. **Retiring** marks the record done; a retired Pod is never bound again. |
 | **gate judge** | A cold automaton a Pod spawns into a gate thread to judge its line of work. Like everything in the ship it is the Captain's to see and clean up, but it works only from its gate's brief, and no one directs its verdict. It ends with its gate. |
-| **Mediator** | A cold, headless, high-tier automaton that writes a brief of a dispute for the Council. Decides nothing. |
+| **Mediator** | A cold, high-tier automaton that writes a brief of a dispute for the Council. Decides nothing. |
 | **specialist crew** | A recruited specialist automaton with its own face (aced, quill, Warden, Scanner), installed as a persona gateway skill. |
 | **Crimp** | The persona that recruits specialist crew types from the Tavern and discharges them. Spec: [`recruitment/`](./recruitment/README.md). |
 | **Mechanic** | The persona that builds a new automaton or reconfigures an existing one. Spec: [`mechanic/`](./mechanic/README.md). |
 | **Tavern** | The marketplace query that lists recruitable specialist crews. |
 | **tier** | The model class an automaton runs on: high, mid, or low. Set by the work's need for judgment. |
+| **headless** | Run with no live user channel: started by a scheduled job's process, not by the Council. A headless automaton batches its needs-input instead of asking. The opposite is **interactive**. Headless says nothing about the host: a sub-agent is just how a role is hosted. |
 
 ## Places
 
