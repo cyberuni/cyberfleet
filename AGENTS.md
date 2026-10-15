@@ -146,6 +146,14 @@ Structured output (`toon` default, `--format json` escape hatch) flows through t
 `cyberfleet` imports from `cyberlegion` (`emit`, `toonObject`, `toonList`) rather than
 re-implementing formatting locally.
 
+### Command names
+
+CLI commands are `<noun> <verb>` (`cyberfleet mission close`, `cyberfleet pod list`). A top-level
+verb is allowed only where the CLI itself is the noun (`cyberfleet status`). Personas are addressed
+in prose, not noun-verb. The rule is clibuilder's
+[Naming Commands](https://clibuilder.github.io/clibuilder/guides/naming-commands/) guide; the
+renames it drives here are in [ADR-0027](docs/adr/0027-cli-commands-are-noun-verb.md).
+
 <!-- buddy-agent-harness:begin -->
 
 Skills are canonical in `.agents/skills/` — create and edit them there.
