@@ -14,7 +14,7 @@ behind a term, the entry links to it.
 | **crew** | The automatons that work a ship or the Command Center: Operator, Captain, Coordinator, Pod, and Mediator. |
 | **Operator** | The Council's interface to the fleet. It talks only with the Council: it answers questions itself and relays the Council's work to the target ship's Captain. It coordinates nothing; coordination is the Coordinators'. There is one Operator seat, in the Command Center, and the session in it need not stay running. |
 | **Captain** | The automaton that owns a ship's work: freshness, priority, scope, the tracker, the plan, spawning and managing Pods, reviewing what landed, ruling on escalations. One per ship, plus the fleet's Captain on the Flag Bridge for the roadmap and cross-ship decisions. High tier. |
-| **Coordinator** | The low-tier automaton that does a Captain's mechanics. A ship's Coordinator lands pull requests, unless the ship's landing setting gives landing to Pods; the fleet's Coordinator files children in other ships, lifts blocks, and closes a mission whose children span ships once every child has closed. |
+| **Coordinator** | The low-tier automaton that does a Captain's mechanics. A ship's Coordinator lands pull requests, unless the ship's landing setting gives landing to Pods; the fleet's Coordinator does the same for fleet missions, whose issues live in the fleet's tracker. |
 | **landing setting** | A ship's choice of who lands its pull requests: the Coordinator (the default) or each Pod its own. The Council can override it for a request. |
 | **Pod** | A worker automaton carrying one line of work in one mission, in its own workspace and worktree. Spawned and owned by the Captain. |
 | **owned Pod** | A Pod with a binding record under its ship's Captain role. The Captain lists, directs, and retires its owned Pods, and the next Captain session inherits them. The Coordinator also directs a Pod while it lands that Pod's pull request. |
@@ -45,13 +45,15 @@ behind a term, the entry links to it.
 
 | Term | Meaning |
 |---|---|
-| **mission** | An issue in flight, owned by its ship's Captain. Starts when the Captain takes the issue in, lives as long as its issue, and lands as one or more pull requests. May have child missions in any ship, as the tracker's sub-issues; each child is owned by its own ship's Captain. The fleet's Coordinator files a child in another ship and keeps the tracker record of a mission whose children span ships. Replaces "sortie", "epic" as a fleet term, and "promotion" ([ADR-0026](https://github.com/cyberuni/cyberfleet/blob/main/docs/adr/0026-one-noun-for-work-in-flight.md)). |
-| **child mission** | A mission that is a sub-issue of another. Adding children is how a Captain breaks work down or reaches another ship. Blocking a child instead of its parent, so the parent's other work goes on, is available and never required. |
+| **mission** | An issue in flight. Starts when a Captain takes the issue in, lives as long as its issue, and lands as one or more pull requests. Belongs to whoever holds its issue: the Captain of the ship whose repository holds it, or the fleet's Captain for an issue in the fleet's tracker. That Captain's Coordinator does its mechanics. Replaces "sortie", "epic" as a fleet term, and "promotion" ([ADR-0026](https://github.com/cyberuni/cyberfleet/blob/main/docs/adr/0026-one-noun-for-work-in-flight.md), [ADR-0028](https://github.com/cyberuni/cyberfleet/blob/main/docs/adr/0028-sub-missions-and-dependencies.md)). |
+| **sub-mission** | A part of a mission, as the tracker's sub-issue. The mission is done when its sub-missions are done. A sub-mission in another ship appears when a fleet mission is split across ships. Never called a "child". |
+| **blocks / blocked by** | A dependency between missions. A request from one ship to another is a mission in the other ship that blocks the requesting one, owned by that ship's Captain. A block can sit on a mission or on one of its sub-missions; the finer one is available and never required. |
 | **line of work** | A subtask of a mission, not releasable on its own (impl, judge, refactor, audit), carried by its Pods. |
 | **SDD-mission** | One run of SDD's change-request loop (`start-mission`), which is how a Pod carries out a line of work today. SDD calls it a mission; the fleet's mission is an issue in flight, so cyberfleet always writes SDD's as `SDD-mission`. SDD may rename it later. The line of work stays when the engine under it changes. |
 | **gate** | A check a cold judge runs on a line of work, in its own thread. |
 | **clean bar** | The four conditions `cyberfleet pr check` checks: no conflict with trunk, reviews resolved, CI green on the merged result, and the line of work reported done (with a passing gate where the mission has one). |
 | **merge backstop** | The landing discipline that keeps trunk green: Operation order, speculative CI, bisection of a red batch. Lives in `merge-backstop-governance`. |
+| **pull request** | A proposed change on the forge (a merge request on GitLab). The CLI's noun is `pr`, with `mr` as an alias. |
 | **settled queue** | A ship Coordinator's count of open delegated pull requests reaching zero. The point at which it reports to the Captain and exits. |
 | **escalation** | A question that runs up a level, from a unit at the limit of what it may decide to the one who may: Pod or Coordinator to Captain, Captain to the Council. Ends in a ruling. |
 | **dispute** | A disagreement between peer Captains, which have no authority over each other. The Captains settle it themselves on a dispute thread: one position and one rebuttal each, then standing rules, then a Mediator's brief. A dispute they cannot settle escalates to the Council. "Arbitration" is not used: an arbitrator binds, and only the Council binds two ships. |
@@ -65,7 +67,7 @@ behind a term, the entry links to it.
 |---|---|
 | **channel** | A cynapse conversation. Work items, roles, and threads each have one. |
 | **address channel** | A role's inbox channel. The Operator's takes the Council's calls; the ship address channel (owner: the Captain) takes requests, landing reports, and escalation pointers; a Coordinator's takes "PR ready". |
-| **mission channel** | A mission's work channel. The ship's Captain and Coordinator are members of every one in their ship; each Pod is a member of its own mission's. A parent's channel carries only what crosses its children: the plan, blockers, invitations, the delegation record. |
+| **mission channel** | A mission's work channel. The ship's Captain and Coordinator are members of every one in their ship; each Pod is a member of its own mission's. A mission with sub-missions keeps on its channel only what crosses them: the plan, blockers, invitations, the delegation record. |
 | **thread** | A child channel anchored at the entry that starts it, for an exchange with a different set of readers: a gate, an escalation, a dispute. Posts its outcome back to its parent. |
 | **calling** | Reaching the Operator, or a Captain from outside its pane, without becoming it. The calling session posts the Council's words verbatim, rings the role, and shows the reply. |
 | **ring** | Starting or waking a channel's owner after posting to it, transparently: the sender never checks whether it is running. The runtime's job (`cyberlegion send --start`). |
@@ -88,10 +90,10 @@ The full rules are in [`authority/`](./authority/README.md).
 | **re-relay** | A Captain passing a recorded grant, verbatim and as a turn, to a unit in its own ship that started after the Council spoke. The Captain answers for it. |
 | **decision entry** | The record of a grant on the work item's channel: the quote, its scope, who relayed it, and the lease generation. The audit record, and the source for re-relay. |
 | **decision-request** | What a unit raises instead of acting, or instead of relaying a guess. |
-| **scope** | What a grant covers, as the Council's words say: a mission (with its children, in any ship) or one action, plus any extension the Council pre-approved. Nothing outside it is covered implicitly. |
+| **scope** | What a grant covers, as the Council's words say: a mission (with its sub-missions, in any ship, but not the missions that block it) or one action, plus any extension the Council pre-approved. Nothing outside it is covered implicitly. |
 | **pre-approval** | The Council's explicit words covering work that extends from a mission before that work exists, within the bounds the words set. |
 | **ratification-class** | The actions that need a covering decision: merge to a protected branch, a human-attributed verdict, publish, history rewrite, settings or secrets, widened delegation, a minted owner identity. |
-| **merge delegation** | The Council's words authorizing a ship's Coordinator to land the pull requests of the work they name: a mission's, including its children. Spent per merge. |
+| **merge delegation** | The Council's words authorizing a ship's Coordinator to land the pull requests of the work they name: a mission's, including its sub-missions. Spent per merge. |
 | **attenuation** | No link passes on more authority than it holds. |
 
 ## Mechanism
