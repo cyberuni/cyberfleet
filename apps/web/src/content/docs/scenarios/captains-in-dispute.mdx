@@ -1,6 +1,6 @@
 ---
 title: Captains in dispute
-description: Scenario 5. Two Captains disagree about work that spans their ships; the dispute climbs an arbitration channel, standing rules, and a mediator's brief before the Council decides.
+description: Scenario 5. Two Captains disagree about work that spans their ships; the dispute climbs a dispute thread, standing rules, and a mediator's brief before the Council decides.
 ---
 
 import Mermaid from '../../../components/Mermaid.astro'
@@ -21,7 +21,7 @@ There is no lead Captain, and a Captain has no authority in another ship
 (authority-governance §2). The fleet's Captain, though admiral-like, makes roadmap decisions and does
 not rule here. So no Captain can settle a dispute by ruling. The ladder below settles most disputes
 without the Council, and brings the rest to the Council already summarized. It replaces ADR-0023 §5's
-step from the arbitration channel straight to the Council.
+step from the dispute thread straight to the Council.
 
 ## Who is involved
 
@@ -37,7 +37,7 @@ step from the arbitration channel straight to the Council.
 <Mermaid
 	caption="Each rung settles what it can. Only the Council's rung binds both ships."
 	code={`flowchart TD
-  d["Captains disagree"] --> ch["open an arbitration channel<br/>anchored at the disputed entry"]
+  d["Captains disagree"] --> ch["open a dispute thread<br/>anchored at the disputed entry"]
   ch --> pos["each Captain posts its position:<br/>claim, evidence, cost, what would change its mind"]
   pos --> r1{"one rebuttal each:<br/>agreed?"}
   r1 -- yes --> done["record the outcome, both proceed"]
@@ -52,15 +52,15 @@ step from the arbitration channel straight to the Council.
 
 ## Step by step
 
-### 1. Open an arbitration channel
+### 1. Open a dispute thread
 
-The Captain that hits the disagreement branches an arbitration channel from the disputed entry, with
+The Captain that hits the disagreement branches a dispute thread from the disputed entry, with
 both Captains as members. The channel is a thread: it is anchored at that entry, and it posts its
 outcome back to the channel that holds the entry. Arguing moves out of the mission channel, so the
 plan and the blockers stay readable. The thread's briefing names only its own exchange.
 
 ```sh
-cynapse channel create <handle> --kind work --type fleet.arbitration --title "<the question>" \
+cynapse channel create <handle> --kind work --type fleet.dispute --title "<the question>" \
   --anchor <disputed-entry> --member <captain-a>:party --member <captain-b>:party
 cyberlegion unit nudge <other-captain-handle>
 ```
@@ -94,11 +94,11 @@ is widening it. A rule lives as a reference in the repository it binds (`.agents
 
 If no rule settles it, either Captain asks the Operator for mediation. The Operator starts a
 **mediator**: a fresh Opus session that has worked for neither ship. It reads the
-arbitration channel and both issues, and writes a brief: each position in its own words, the
+dispute thread and both issues, and writes a brief: each position in its own words, the
 options, what each option costs each ship, and a recommendation.
 
 ```sh
-cyberlegion spawn --agent mediator --model opus --cwd <home> --brief-file <arbitration-brief>
+cyberlegion spawn --agent mediator --model opus --cwd <home> --brief-file <dispute-brief>
 ```
 
 The mediator decides nothing. A decision binding two ships is cross-project authority, and only the
@@ -108,7 +108,7 @@ Council's rung binds two ships.
 
 The Operator puts the brief to you, in the Operator's seat or through a ship's remote pane. Your
 answer goes to each Captain, as you wrote it, as a turn (`cyberlegion send --start --message`), and
-onto the arbitration channel as the record. Each Captain applies it within its own ship. If the
+onto the dispute thread as the record. Each Captain applies it within its own ship. If the
 decision becomes a pattern, it is a candidate for a new standing rule, and only you can add one.
 
 ## Why a mediator, not one of the Captains

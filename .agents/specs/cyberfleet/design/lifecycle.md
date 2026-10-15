@@ -135,9 +135,9 @@ boundary, which forces one.
   packages; at the issue's close only when the dependency is consumed from source.
 - **Closing.** When every child has closed, the fleet's Coordinator closes the epic and reports once
   to the Captain that created it.
-- **Disputes.** Two Captains that disagree climb a ladder: an arbitration thread with one position
-  and one rebuttal each, then standing rules, then a Mediator's brief, then the Council. Only the
-  Council's rung binds two ships.
+- **Disputes.** Two Captains that disagree settle it themselves on a dispute thread: one position
+  and one rebuttal each, then standing rules, then a Mediator's brief. A dispute they cannot settle
+  escalates to the Council, and only the Council binds two ships.
 
 ## Without the Council
 

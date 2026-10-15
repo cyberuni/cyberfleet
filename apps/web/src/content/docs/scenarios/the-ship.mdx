@@ -153,7 +153,7 @@ The automatons talk over [cynapse](https://github.com/cyberuni/cynapse) channels
 channel** belongs to whoever receives on it. A **work channel** belongs to an issue or an epic and has
 members but no owner. An exchange that needs different readers from its parent is a **thread**: a
 child channel anchored at the entry that starts it. A gate (whose cold judge reads only its thread),
-an escalation with its ruling, and an arbitration are threads. Every thread posts its outcome back to
+an escalation with its ruling, and a dispute are threads. Every thread posts its outcome back to
 its parent, so a reader of the parent never has to open it.
 
 <Mermaid
@@ -167,7 +167,7 @@ its parent, so a reader of the parent never has to open it.
   shipaddr[("ship address channel<br/>owner: Captain")]
   coordaddr[("Coordinator address channel<br/>owner: Coordinator")]
   sortie[("sortie channel per issue<br/>members, no owner")]
-  thread[("thread<br/>gate, escalation, arbitration")]
+  thread[("thread<br/>gate, escalation, dispute")]
   rp["remote pane or any other pane"] -- the Council's words --> opaddr
   opaddr -.-> op
   op -- request --> shipaddr
@@ -191,7 +191,7 @@ its parent, so a reader of the parent never has to open it.
 | Coordinator address | Address | Coordinator | "Pull request ready" notices from Pods |
 | Sortie, one per issue | Work | None | The plan, the Pods' progress and done reports, decisions, and landing talk |
 | Mission, one per epic | Work | None | What crosses sorties: the plan across them, blockers, invitations, and the delegation record |
-| Thread | Work, anchored | None | A gate, an escalation and its ruling, or an arbitration |
+| Thread | Work, anchored | None | A gate, an escalation and its ruling, or a dispute |
 
 No pull request channel is opened. Review lives on the host, and landing talk lives in the sortie
 channel. The Captain and the Coordinator are members of every sortie channel of their ship, and each

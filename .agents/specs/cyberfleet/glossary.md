@@ -54,8 +54,8 @@ behind a term, the entry links to it.
 | **clean bar** | The four conditions `cyberfleet pr clean` checks: no conflict with trunk, reviews resolved, CI green on the merged result, and the line of work reported done (with a passing gate where the sortie has one). |
 | **merge backstop** | The landing discipline that keeps trunk green: Operation order, speculative CI, bisection of a red batch. Lives in `merge-backstop-governance`. |
 | **settled queue** | A ship Coordinator's count of open delegated pull requests reaching zero. The point at which it reports to the Captain and exits. |
-| **escalation** | A question that runs up a level, from a unit at the limit of what it may decide to the one who may. Ends in a ruling. |
-| **dispute** | A disagreement that runs sideways between peer Captains. Climbs arbitration, standing rules, a Mediator's brief, then the Council. |
+| **escalation** | A question that runs up a level, from a unit at the limit of what it may decide to the one who may: Pod or Coordinator to Captain, Captain to the Council. Ends in a ruling. |
+| **dispute** | A disagreement between peer Captains, which have no authority over each other. The Captains settle it themselves on a dispute thread: one position and one rebuttal each, then standing rules, then a Mediator's brief. A dispute they cannot settle escalates to the Council. "Arbitration" is not used: an arbitrator binds, and only the Council binds two ships. |
 | **standing rule** | A rule only the Council writes, which Captains apply and never widen. |
 | **HAL tell** | A one-line signal an automaton speaks once when it self-asserted a gate above its leash. |
 | **leash** | SDD's bound on how far a delegate may act before it must signal the Council. |
@@ -68,7 +68,7 @@ behind a term, the entry links to it.
 | **address channel** | A role's inbox channel. The Operator's takes the Council's calls; the ship address channel (owner: the Captain) takes requests, landing reports, and escalation pointers; a Coordinator's takes "PR ready". |
 | **sortie channel** | The issue's work channel. The ship's Captain and Coordinator are members of every one; each Pod is a member of its own sortie's. |
 | **mission channel** | The epic's work channel. Carries only what crosses sorties: the plan, blockers, invitations, the delegation record. |
-| **thread** | A child channel anchored at the entry that starts it, for an exchange with a different set of readers: a gate, an escalation, an arbitration. Posts its outcome back to its parent. |
+| **thread** | A child channel anchored at the entry that starts it, for an exchange with a different set of readers: a gate, an escalation, a dispute. Posts its outcome back to its parent. |
 | **calling** | Reaching the Operator, or a Captain from outside its pane, without becoming it. The calling session posts the Council's words verbatim, rings the role, and shows the reply. |
 | **ring** | Starting or waking a channel's owner after posting to it, transparently: the sender never checks whether it is running. The runtime's job (`cyberlegion send --start`). |
 | **fenced write** | A write that succeeds only when the writer holds the role's current lease generation. A session whose lease was taken over is refused, so two sessions never both act as one role. |
