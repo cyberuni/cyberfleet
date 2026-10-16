@@ -17,8 +17,9 @@ changing it (cyber-sdd#14).
 The mission graph was the store for dependencies between SDD-missions. Its use was to find the leaf
 nodes, the work with nothing left blocking it, so that work could start in parallel. In the fleet's
 model those SDD-missions are sub-missions or lines of work, and their dependencies are blocking links
-between them. SDD is retiring the graph and moving its ledger into cynapse, where its outer loops
-read it; that is cyber-sdd's decision, recorded here as context.
+between them. SDD is retiring the graph; that is cyber-sdd's decision, recorded here as context. The
+graph has no ledger. The ledger SDD keeps belongs to each SDD-mission, and its move into cynapse is
+a separate question.
 
 ## Decision
 
@@ -43,7 +44,6 @@ read it; that is cyber-sdd's decision, recorded here as context.
 - `headless-operator`, the Operator skill's headless section, `merge-backstop-governance`, and the
   claim and retire step in `authority-governance` are rewritten to the Captain and Coordinator split
   (#25, #26). The headless pair is a headless Captain and a headless Coordinator.
-- `src/sdd/read.ts` reads SDD's ledger from files today; it moves to cynapse when SDD's ledger does.
 - cyber-sdd#14 can drop the lifecycle loop it attributes to cyberfleet.
 - A tracker without links for lines of work, such as GitHub below the sub-issue level, still has a
   home for them: the cynapse state record.
