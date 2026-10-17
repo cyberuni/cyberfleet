@@ -43,15 +43,16 @@ Council as a decision-request.
 flowchart LR
   C["Council"] -->|"own words, any pane"| R["receiving unit"]
   R -->|"verbatim, as a turn"| A["unit that acts"]
-  R -->|"decision entry: quote, scope, relayer, generation"| CH["work item's channel"]
+  R -->|"decision entry: quote, scope, relayer, generation"| CH["mission channel"]
   CH -->|"Captain rereads"| K["Captain"]
   K -->|"re-relay, verbatim, as a turn"| L["unit started later"]
 ```
 
 1. **Relay.** The unit that receives the Council's words passes them, verbatim and as a turn, to the
    unit that acts, unless it is that unit.
-2. **Record.** The receiver writes a decision entry on the work item's channel: the quote, its scope,
-   who relayed it, and the lease generation. A grant goes on the channel of the mission it names. The entry is the audit record, and the source for re-relay.
+2. **Record.** The receiver writes a decision entry on the channel of the mission the grant names:
+   the quote, its scope, who relayed it, and the lease generation. The entry is the audit record,
+   and the source for re-relay.
    Authority records live in cynapse, in the channel and its metadata, never on a public tracker
    such as GitHub Issues or Asana.
 3. **Re-relay.** A grant often has to reach a unit that did not exist when the Council spoke: a
@@ -60,7 +61,8 @@ flowchart LR
    turns. The Captain re-relays the grant to that unit, verbatim from the decision entry and as a
    turn. The Captain answers for the re-relay, and the re-relay is itself recorded. What triggers
    it: a unit that reaches a step needing a grant it does not hold asks its Captain first, with a
-   decision-request. If a recorded grant covers the step, the Captain re-relays it; if none does,
+   decision-request in the thread where it works (a line of work's thread, or a queue thread for a
+   Coordinator). If a recorded grant covers the step, the Captain re-relays it; if none does,
    the Captain adds the request to its list for the Council.
 
 Re-relay has limits:
@@ -103,7 +105,9 @@ unblocks more once the Council answers.
 
 **Asking.** The Captain batches its decision-requests into one list for the Operator to put to the
 Council, ordered by how much work each answer unblocks. Each request names the action, the target,
-and the revision, so one word answers it. A headless Captain and Coordinator batch the same list as
+and the revision, so one word answers it. Each request is recorded on the channel of the mission it
+concerns, and the Captain mentions the Operator once, with the list. A decision-request needs an answer, so it starts the Operator if
+none is running; an outcome or other notification only wakes a running one. A headless Captain and Coordinator batch the same list as
 needs-input and exit.
 
 ## Limits

@@ -74,16 +74,22 @@ headless Coordinator, never one loop doing both.
 ### Who lands
 
 Each ship has a landing setting, and the Council can override it for a request. By default the
-ship's Coordinator lands every pull request. A ship can instead let each Pod land its own, which
+ship's Coordinator lands every pull request, working from the ship queue: a Pod posts "PR ready"
+there, and each pull request's landing talk stays in its thread. A ship can instead let each Pod land its own, which
 saves starting a Coordinator where the queue is small. Whichever unit lands follows the same rules:
 the clean bar passes, the merge is fenced by the ship's merge lease, and the Council's grant covers
 it. Which setting costs less in a given repository is measurable but not yet measured, so the
 setting stays open and each user finds out what works.
 
+The Coordinator joins no mission channel. Its members are the queue's: the Captain, which posts
+tracker mechanics there, and each Pod that posts a pull request. Two pull requests that conflict in
+meaning are escalated on the queue too, since they may belong to different missions.
+
 ### Pod ownership
 
-Every Pod has exactly one owner: its ship's Captain role, never one Captain session. Whichever
-session holds the Captain's lease owns every Pod of that ship, so a Captain restart or a lease
+Every Pod has exactly one owner: its ship's Captain handle (`cyberlegion/captain`), never one
+Captain session. The binding record is keyed by that handle, and whichever session holds the lease
+on it owns every Pod of that ship, so a Captain restart or a lease
 takeover inherits the Pods without a handover.
 
 - Binding a Pod and retiring it are fenced writes: only the session holding the Captain's current
@@ -123,16 +129,24 @@ specialist crew types, **Mechanic** builds and reconfigures automatons, and the 
 | Tracker level | Fleet role | Owner | Channel |
 |---|---|---|---|
 | Issue, with any sub-issues | Mission, with any sub-missions | The Captain of the repository that holds the issue (the fleet's Captain for the fleet's tracker); each sub-mission, whoever holds its issue | Mission channel |
-| Subtask | Line of work | The Pods carrying it | None; threads in the mission channel |
+| Subtask | Line of work | The Pods carrying it | A thread on the mission channel, holding its SDD-mission's ledger |
 
 The level is read from the tracker, never inferred from how the work went. Everything is a mission;
 a mission has sub-missions when its Captain adds them to break the work down. Work that needs another
 ship is a dependency instead: a mission in that ship that blocks the requesting mission, owned by
 that ship's Captain. A mission belongs to whoever holds its issue, and its Captain's Coordinator does
-the mechanics: filing an issue in another repository, blocking, unblocking, closing. Writes to a
+the mechanics: filing an issue in another repository, adding sub-issues, closing. Writes to a
 repository are never ownerless: trunk, merge order, and the mission's issue belong to that
 repository's Captain and Coordinator, behind their leases. A mission's channel carries only what
 crosses its sub-missions and the missions that block it.
+
+Blocking links between missions, sub-missions, and lines of work live with the plan: in the tracker
+where it can hold them, otherwise in a cynapse state record, one home per ship set in its tracker
+routing. Only the Captain writes them, not its Coordinator, checking its lease before each write.
+The frontier, the work whose blockers are all closed, is
+computed from those links by a command the Captain calls; what to start from it, in what order and at
+what tier, is the Captain's decision
+([ADR-0029](https://github.com/cyberuni/cyberfleet/blob/main/docs/adr/0029-the-tracker-holds-dependencies-and-the-frontier.md)).
 
 The full flow of a piece of work is in [lifecycle](./lifecycle.md).
 
@@ -143,16 +157,20 @@ Each fact has one home, and anything else is derived from it on demand.
 | Fact | Home |
 |---|---|
 | The plan: missions and their sub-missions, scope, open and closed | The tracker |
+| Blocking links | The tracker, or a cynapse state record where the tracker cannot hold them; one home per ship, set in its tracker routing |
+| The ships: name, remote, template, tracker routing, landing setting; each main checkout's path | The ship registry, fleet-wide and per machine, reached through `cyberfleet ship` |
 | Pull requests, reviews, CI | The forge |
 | Conversation, reports, escalations, the delegation audit record | cynapse channels and threads |
-| A Captain's rulings | A comment on the issue (rationale) and a decision entry on the ship address channel (ruling, issue, lease generation) |
-| Which session holds a role | The role's lease in cyberlegion |
-| Which Pods a ship has, and their state | The Pod binding records in the runtime's hub, beside the Captain's lease |
-| SDD-mission, gate, and leash state of a line of work | SDD, in the repository |
+| A Captain's rulings | A comment on the issue (rationale) and a decision entry on the mission channel it concerns (ruling, issue, lease generation) |
+| Which session holds a role | The lease on the role's handle in cyberlegion |
+| Which Pods a ship has, and their state | The Pod binding records in the runtime's hub, keyed by the Captain's handle |
+| A line of work's SDD-mission ledger | Its thread on the mission channel |
+| Gate and leash state of a line of work | SDD, in the repository |
 | A ship or fleet report | Nowhere: composed when read, so it cannot drift |
 
-A Captain keeps nothing in memory between starts. Each start is a fresh session that rereads its
-address channel, its open missions, and the decision entries since its last lease generation. A
+A Captain keeps nothing in memory between starts. Each start is a fresh session that rereads the
+channels of its open missions, its ship queue, and the decision entries since its last lease
+generation. A
 decision that is not written down did not happen.
 
 ## Rules that hold everywhere
@@ -171,12 +189,15 @@ decision that is not written down did not happen.
    and the merge backstop.
 4. **Calling takes over nothing.** Invoking `/operator` or `/captain` outside that role's own pane
    reaches the one automaton; it never makes the calling session one.
-5. **Roles are addresses; sessions come and go.** A role is keyed from its project's address and
-   held by whichever session holds its lease. The project address is an opaque key to the runtime
-   ([civitas 0004](https://cyber-civitas.github.io/decisions/0004-opaque-service-keys/)).
-6. **Start or wake is transparent.** Addressing an automaton starts it if it is not running and
-   wakes it if it is. cyberfleet and cyberlegion do this for every automaton, so a sender never
-   checks first. The Operator is started by the Council in practice, since the Council is nearly
+5. **Roles are handles; sessions come and go.** Every participant has a readable handle
+   (`cyberlegion/captain`, `operator`, `fleet/captain`), owner-qualified only on a collision. The
+   handle keys the role's lease and a Pod's binding, and the runtime receives it as an opaque string
+   ([civitas 0004](https://cyber-civitas.github.io/decisions/0004-opaque-service-keys/)). Any number
+   of sessions may act as one handle; the lease holder is the one whose writes count.
+6. **A ping starts only when the post needs an answer.** A mention wakes every live session acting
+   as the handle. If none is running and the post is a request, an escalation, or a
+   decision-request, the runtime starts one through the handle's lease; a notification, such as an
+   outcome, only wakes. A sender never checks first. The Operator is started by the Council in practice, since the Council is nearly
    always the one talking to it. Nothing polls; a waiting automaton blocks on a command that returns
    when there is news.
 7. **Personas offload every mechanic.** What a persona says is the only thing it produces itself.
@@ -197,4 +218,8 @@ decision that is not written down did not happen.
 - **A real `gate approve`.** A human ratification cannot be relayed safely through a CLI.
 - **Unforgeable authority.** The rules make a wrong relay attributable and bounded, not impossible.
   Injected text carries no verified caller identity.
-- **A pull request channel.** Review lives on the forge, and landing talk in the mission channel.
+- **An inbox channel per role.** Channels belong to missions, a ship's queue, and threads; a role
+  is reached by mentioning its handle where the work is.
+- **A pull request channel.** Review lives on the forge; landing talk is a thread in the ship queue.
+- **A mission graph.** Dependencies are blocking links with the plan, and the frontier is a command,
+  not a stored graph.
