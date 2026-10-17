@@ -12,20 +12,20 @@ See [The ship](/cyberfleet/scenarios/the-ship/) for the layouts, the crew, and w
 You are in the **Command Center**: a workspace outside every ship, based at your home folder
 (`~/code`, say). Its Dashboard tab holds the Operator's seat on the left and fleet status on the
 right. You talk to the one Operator directly, and you ask for work on a project: "In cyberlegion,
-make `unit prune` report what it swept." The Operator sends the request straight to that ship's
+make `unit prune` report what it swept." The Operator opens the mission and mentions that ship's
 Captain.
 
 Everything after the Captain receives the request is the same as
 [Work from a ship's remote pane](/cyberfleet/scenarios/work-from-the-dashboard/) from step 3 on. This
-page covers what is different: finding the ship, and placing the Captain in a ship you are not in.
+page covers what is different: finding the ship, and starting the Captain in a ship you are not in.
 
 ## Who is involved
 
 | Automaton | Tier | Role in this scenario |
 | --- | --- | --- |
 | Council | Human | Asks for the work in the Operator's seat |
-| Operator | Sonnet | Resolves which ship, relays the request and the merge words, and reports back |
-| Captain of the target ship | Opus | Same as scenario 1: judges, files, plans, and spawns |
+| Operator | Sonnet | Resolves which ship, opens the mission channel, relays the merge words, and reports back |
+| Captain of the target ship | Opus | Same as scenario 1: takes the issue in, judges, plans, and spawns |
 | The ship's remote pane | Sonnet | Not involved. The ship's status UI shows the new issue and Pods |
 
 ## The flow
@@ -35,23 +35,22 @@ page covers what is different: finding the ship, and placing the Captain in a sh
 	code={`sequenceDiagram
   actor C as Council
   participant O as Operator
-  participant R as project registry
-  participant S as ship address channel
-  participant K as Captain
+  participant R as ship registry
   participant W as mission channel
+  participant K as Captain
   participant X as Coordinator
   C->>O: In cyberlegion, make unit prune report what it swept
-  O->>R: project list, project show
-  R-->>O: the ship and its address
+  O->>R: ship list, ship show
+  R-->>O: the ship, its remote, its main checkout
   O->>C: Announces that the Coordinator lands it, and the clean bar
   C->>O: Yes
-  O->>S: entry append, type ship.request
-  O->>K: send --start in the ship
-  Note over K: judges, files, plans, spawns, as in scenario 1
-  K->>S: reply on the request thread
-  O->>S: entry wait on the request
+  O->>O: file or find the issue
+  O->>W: channel create, keyed by the issue, the Council's words as the first entry
+  O->>K: mention cyberlegion/captain, a request
+  Note over K: takes the issue in, plans, spawns, as in scenario 1
+  K->>W: reply: issue 88, 1 Pod out, mention operator
   O->>C: Filed as cyberlegion issue 88, 1 Pod out
-  O->>X: send --start with the Council's words, verbatim, as a turn
+  O->>X: the Council's words, verbatim, as a turn
   O->>W: the quote, its scope, and who relayed it
   Note over X: lands the work, see Landing a pull request`}
 />
@@ -60,33 +59,41 @@ page covers what is different: finding the ship, and placing the Captain in a sh
 
 ### 1. Resolve the ship
 
-The Operator maps the project you named to a registered ship and its address channel:
+The Operator maps the project you named to a registered ship, or finds the ship from an issue URL
+by its normalized remote:
 
 ```sh
-cyberlegion project list
-cyberlegion project show <project>
-cynapse participant resolve <project>/captain
+cyberfleet ship list
+cyberfleet ship show <ship>
 ```
 
 - **No match.** It asks you which project you meant, or offers to register one. It never guesses.
-- **The work spans two ships.** It sends the request to the ship where the work starts, and says so.
+- **Registered, not cloned.** A repository that is not on this machine is your call. The Operator
+  asks, suggesting a path from where the known ships sit (`~/code/<owner>/<repo>` when they share
+  that layout), then clones and registers the ship.
+- **The work spans two ships.** It opens the mission in the ship where the work starts, and says so.
   That Captain brings in the other ship, as in
   [Work across ships](/cyberfleet/scenarios/work-across-ships/). The Operator does not split
   the work itself, because splitting is planning, and planning is the Captain's.
 
-### 2. Relay to the Captain
+### 2. Open the mission and mention the Captain
 
-This is the same post-and-ring as scenario 1. The difference is placement: the Captain must start in the
-target ship's Bridge tab, not next to the Command Center.
+This is the same as scenario 1. The Operator files or finds the issue, opens the mission channel
+keyed by it, posts your words verbatim as the first entry, and mentions the Captain. The difference
+is placement: the Captain must start in the target ship's Bridge tab, not next to the Command Center.
 
 ```sh
-cynapse entry append <ship-address> --type ship.request --body "<the Council's words>"
-cyberlegion send --start <ship-address> captain
+cynapse channel create <handle> --kind work --type gh.issue --title "<title>" \
+  --store gh --native-id <issue-node-id> --member operator --member <ship>/captain
+cynapse entry append <mission-channel> --body "<the Council's words>"
 ```
+
+The mention is a request, so it starts the Captain through its lease if no session is acting as the
+handle.
 
 ### 3. The Captain treats it as a request
 
-The request is content the Captain fetched from its address channel, not an order typed in its
+The request is content the Captain fetched from the mission channel, not an order typed in its
 session (authority-governance §1). That is enough here: taking on work and dispatching the ship's
 own Pods is dispatch, and needs no Council decision. The Captain still judges freshness and priority
 on the merits, so it can answer "already done in PR 80" or "queued behind the release".
@@ -94,17 +101,19 @@ on the merits, so it can answer "already done in PR 80" or "queued behind the re
 ### 4. The merge delegation travels as a turn
 
 You gave the merge delegation in the Operator's seat. The Operator relays your words, verbatim, to
-the target ship's Coordinator as a turn, with `cyberlegion send --start --message`, and records the
-quote, its scope, and who relayed it on the mission channel. Your words cover only the pull requests of
-this request's Pods. A Coordinator that later has no such turn in its own session holds the merge and
-asks the Council.
+the target ship's Coordinator as a turn, starting it through its lease if it is not running, and
+records the quote, its scope, and who relayed it on the mission channel. Your words cover only the
+pull requests of this request's Pods. A Coordinator that later has no such turn in its own session
+holds the merge and asks the Council.
 
 ## Reaching a Captain directly
 
 You do not have to go through the Operator. In a Captain's own pane, `/captain` starts that Captain:
-the session becomes the Captain and takes its lease. From any other pane, `/captain` **calls** the
-existing Captain without becoming it: the calling session posts your words, verbatim, to the Captain's
-address channel, rings it, and shows the reply. Talking to a Captain is a deliberate choice of the
+the session becomes the Captain and takes its lease. When the Council speaks there, the Captain
+brings the work itself: it creates the mission channel with your words as its first entry, and the
+Operator is not a member. From any other pane, `/captain` **calls** the
+existing Captain without becoming it: the calling session passes your words, verbatim, to the Captain
+by mentioning its handle, and shows the reply. Talking to a Captain is a deliberate choice of the
 high tier. Whatever you order in any pane, the automaton that receives it relays your words as a turn
 to the unit that acts.
 
@@ -122,8 +131,9 @@ status UI still shows the work, because it reads the same tracker and channels.
 
 | Step | Need | cyberlegion | cynapse | Status |
 | --- | --- | --- | --- | --- |
-| 1 | List and look up registered projects | `project list`, `project show` | — | Built |
-| 1 | Map a project to its address channel | — | `participant resolve`, `channel resolve` | Built in cynapse; the project-to-address key is cynapse's (cross-package decision 0004) |
+| 1 | List and look up registered ships | — | — | Gap: `cyberfleet ship list\|show`, over the ship registry (ADR-0030) |
+| 1 | Find a ship from an issue URL | — | — | Gap: matched by the normalized remote in the ship registry |
+| 1 | Clone and register an uncloned repository | — | — | Gap: `cyberfleet ship` registers it after the Council's path |
 | 2 | Start a Captain in another ship's Bridge tab | `service start`, `spawn --at` | — | Gap: `--at` places relative to the caller, which here is the Command Center |
 | 2 | Wait for the reply from outside the ship | — | `entry wait` | Built |
 | 4 | Relay the Council's words to a unit in another ship | `send --start --message` | `entry append` | Gap: `send --start` is not built, and cyberlegion#154 is fixed first; the governance gap from scenario 1 applies |

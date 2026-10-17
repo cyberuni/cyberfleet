@@ -10,16 +10,16 @@ See [The ship](/cyberfleet/scenarios/the-ship/) for the layouts, the crew, and w
 :::
 
 Every scenario that produces code ends here. A Pod has opened a pull request and told the
-Coordinator it is ready. The Coordinator's job is to get it onto trunk in the right order without
-breaking trunk, to wake the Captain at once only when a decision is needed, and otherwise to report
-once, when its queue settles.
+Coordinator it is ready, as a thread in the ship's queue. The Coordinator's job is to get it onto
+trunk in the right order without breaking trunk, to mention the Captain at once only when a decision
+is needed, and otherwise to report once, when its queue settles.
 
 ## Who is involved
 
 | Automaton | Tier | Role in this scenario |
 | --- | --- | --- |
 | Pod | Set by the Captain | Rebases, fixes, and re-verifies its own pull request when told |
-| Coordinator | Haiku | Applies the clean bar, orders rebases, merges, escalates, and reports once |
+| Coordinator | Haiku | Works from the ship queue: applies the clean bar, orders rebases, merges, escalates, and reports once. Joins no mission channel |
 | Captain | Opus | Rules on escalations, then reviews the settled queue: closes or reopens issues and replans |
 | Council | Human | Holds merge authority, and decides anything above the Captain's leash |
 
@@ -29,7 +29,7 @@ Landing is a loop: check a pull request, tell a Pod to rebase, wait for CI, merg
 Pods that trunk moved, and repeat. Almost every turn is a status read and a command. Running that
 loop on the Captain's Opus session spends the most expensive tier on the cheapest turns, and keeps
 the Captain's context full of CI logs. Splitting it out lets the Captain sleep through a run of clean
-merges and wake only for the ones that need judgment, and once for the review of what landed.
+merges and start only for the ones that need judgment, and once for the review of what landed.
 
 The saving is a hypothesis. Cost per landed pull request is measured with the Captain landing and
 with the Coordinator landing before the Coordinator becomes load-bearing.
@@ -55,15 +55,15 @@ The check sends each pull request one of four ways:
   fix --> ready`}
 />
 
-A clean pull request still has to be covered by a delegation, next in line, and green on the merged
-result:
+A clean pull request still has to be covered by a delegation, next in the merge order the blocking
+links give, and green on the merged result:
 
 <Mermaid
 	caption="Landing. Nothing red reaches trunk."
 	code={`flowchart TD
   clean["clean PR"] --> deleg{"delegation in this<br/>session covers it?"}
   deleg -- no --> ask["hold the merge,<br/>decision-request to the Council"]
-  deleg -- yes --> order{"next in<br/>rebase order?"}
+  deleg -- yes --> order{"next in merge order,<br/>from the blocking links?"}
   order -- no --> hold["hold"]
   order -- yes --> spec{"CI on the<br/>merged result"}
   spec -- red --> esc["hold, bisect,<br/>escalate"]
@@ -101,10 +101,11 @@ What the Captain does with the one report:
 
 ### 1. Check the clean bar
 
-The Coordinator reads its address channel and runs the clean bar on each ready pull request:
+The Coordinator reads the ship queue, where each "PR ready" is a thread, and runs the clean bar on
+each ready pull request:
 
 ```sh
-cynapse entry list <coordinator-address> --unread
+cynapse entry list <ship-queue> --unread
 cyberfleet pr check <pr>
 ```
 
@@ -113,8 +114,8 @@ The command computes four conditions. The first three come from `gh`, the fourth
 1. No conflict with trunk.
 2. Reviews resolved.
 3. CI green on the merged result.
-4. The pull request's line of work reported done on its mission channel, and, where the mission has a
-   gate, the gate thread's outcome is a pass.
+4. The pull request's line of work reported done in its thread on the mission channel, and, where the
+   mission has a gate, the gate thread's outcome is a pass.
 
 ### 2. Handle the mechanical cases itself
 
@@ -122,29 +123,32 @@ The command computes four conditions. The first three come from `gh`, the fourth
   tells the other Pod to rebase once the first one lands.
 - **CI red, caused by this pull request.** The Pod fixes it, as it already does while shepherding.
 
-Each instruction goes on the Pod's address and rings it:
+Each instruction goes in the pull request's queue thread, mentioning the Pod's handle. The mention
+wakes the Pod:
 
 ```sh
-cynapse entry send <pod> --type trunk.moved --ref gh:<org>/<repo>#57
-cyberlegion unit nudge <pod-handle>
+cynapse entry append <queue-thread> --type trunk.moved --ref gh:<org>/<repo>#57 \
+  --body "@<pod-handle> trunk moved, rebase"
 ```
 
 ### 3. Land clean work in order
 
-A clean pull request lands only if the Council's delegation covers it. The delegation names this
+A clean pull request lands only if the Council's delegation covers it. It lands in the order the
+blocking links give, so a pull request whose line of work is blocked by another waits for it. The delegation names this
 ship's Coordinator, is scoped to the pull requests of the request it answers, is spent per merge, and
 sits in the Coordinator's own session as a turn (authority-governance §7, as amended by ADR-0024).
 The Coordinator runs speculative CI on the merged result first, as
 [merge-backstop-governance](https://github.com/cyberuni/cyberfleet/blob/main/packages/cyberfleet/skills/merge-backstop-governance/SKILL.md)
 requires, and merges only on green. Before `gh pr merge` it checks its lease with `service verify`.
-After a merge it closes the merged Pod's unit (`cyberlegion unit close`), posts the landing on the
-mission channel, and tells every other open Pod that trunk moved. The pull request references its
+After a merge it closes the merged Pod's unit (`cyberlegion unit close`), posts the landing in the
+pull request's queue thread, and mentions every other open Pod there that trunk moved. The landing
+reaches the mission channel when the Captain posts the outcome. The pull request references its
 issue and never closes it: no `Closes #n`.
 
 The Coordinator stays alive while it has pull requests to land. It counts the open pull requests of
 each delegated request: up when a Pod opens one, down when it merges or closes. Both are host events,
 never inferred. While it waits for a review or CI, it blocks on a command that returns when there is
-news (`cynapse entry wait` on its address channel, `gh pr checks --watch`) rather than polling.
+news (`cynapse entry wait` on the ship queue, `gh pr checks --watch`) rather than polling.
 
 A Coordinator that has no delegation in its own session for a clean pull request holds that merge and
 raises a decision-request naming it. That covers a crash, a lease takeover, a Coordinator that exited
@@ -155,47 +159,47 @@ Otherwise it batches the merge as needs-input.
 
 ### 4. Escalate what needs judgment
 
-The Coordinator rings the Captain at once for anything that is not a fact check:
+The Coordinator mentions the Captain in the pull request's queue thread at once for anything that
+is not a fact check:
 
 - a review that asks for a change of scope;
 - two pull requests that conflict in meaning, not only in text;
 - a pull request that stays red after the Pod's fixes, or that a bisect isolated as the culprit;
 - a Pod that reports it is stuck.
 
-The escalation lives on the work at its scope: its entry goes on the mission channel, and the
-escalation and its ruling form a thread anchored there, so the Captain and the Coordinator argue it
-without crowding the mission channel, and the ruling posts back where the Pod reads it. A red batch
-that spans sub-missions of one mission goes to that mission's channel instead. Two pull requests from
-unrelated missions that conflict in meaning share no work item, so that one thread lives on the ship
-address channel, with the ruling posted back to both missions. Otherwise the ship address channel
-gets only a pointer that rings the Captain.
+An escalation needs an answer, so the mention starts the Captain through its lease if no session is
+acting as it. The Coordinator joins no mission channel, so the escalation stays where the landing
+talk is: in the pull request's queue thread. Two pull requests that conflict in meaning may belong to
+different missions, so that escalation goes on the ship queue itself, and the Captain posts the
+ruling there and on each mission it concerns.
 
 ```sh
-cynapse entry append <mission-channel> --type pr.escalation --ref gh:<org>/<repo>#57 --body "<what holds it>"
-cyberlegion send --start <ship-address> captain --message "escalation: <mission-channel>#<seq>"
+cynapse entry append <queue-thread> --type pr.escalation --ref gh:<org>/<repo>#57 \
+  --body "@<ship>/captain <what holds it>"
 ```
 
 ### 5. The Captain rules
 
 - **Accept.** The Captain decides the question that held the pull request, for example that the
-  review's request is out of scope and becomes a follow-up issue. It sends that direction to the Pod,
-  and the pull request goes back through the clean bar. "Accept" does not mean "merge it
+  review's request is out of scope and becomes a follow-up issue. It gives that direction to the Pod in
+  the queue thread, and the pull request goes back through the clean bar. "Accept" does not mean "merge it
   anyway": a red pull request never lands, whoever rules on it.
 - **Reject.** The Captain closes the pull request, updates the issue, and replans.
 - **Above its leash.** The Captain raises a decision-request to the Council through the Operator.
 
 The ruling goes where it takes effect: its rationale as a comment on the issue, and a one-line
-decision entry (ruling, issue, lease generation) on the ship address channel. The thread posts its
-outcome back to the mission channel.
+decision entry (ruling, issue, lease generation) on the mission channel it concerns.
 
 ### 6. The Coordinator reports once, and the Captain reviews
 
-When the count of open pull requests reaches 0, the Coordinator posts one report of what landed to
-the ship address channel, rings the Captain, and exits. It does not report each landing. The Captain
-then reviews what merged against its missions and the project as a whole. It decides which missions are
+When the count of open pull requests reaches 0, the Coordinator posts one report of what landed in
+the ship queue, mentions the Captain, and exits. The report asks for the Captain's review, so the
+mention starts the Captain if none is running. The Coordinator does not report each landing. The
+Captain then reviews what merged against its missions and the project as a whole. It decides which missions are
 done and closes their issues, reopens an issue when a follow-up the request covers is needed,
-replans, and spawns Pods on work that became ready. A follow-up the request did not cover is a new
-issue.
+calls the frontier command again, and spawns Pods on work that became ready. It posts each mission's
+outcome on the mission channel and mentions the Operator, which only wakes it. A follow-up the request
+did not cover is a new issue.
 
 This outer loop is judgment, so it runs once per settled queue at the high tier. The cost is that a
 queue that keeps refilling delays the review, and work waiting on a landing in the same ship is not
@@ -203,9 +207,11 @@ replanned until the queue settles.
 
 ## Decisions this page rests on
 
-- **Two leases per ship.** The Coordinator's lease (`cyberlegion service start <project>
-  coordinator`) fences merges. The Captain's lease fences changes to its missions and plan: taking an
-  issue in, scope, adding sub-missions, closing, and reopening. The Coordinator writes nothing to the tracker.
+- **Two leases per ship.** The Coordinator's lease, keyed by its handle (`cyberlegion/coordinator`),
+  fences merges. The Captain's lease fences changes to its missions and plan: taking an issue in,
+  scope, adding sub-missions, closing, reopening, and writing blocking links. The Coordinator decides
+  nothing about the tracker and never writes a blocking link; it runs the mechanics the Captain posts
+  to the ship queue.
 - **Merge authority.** authority-governance §7 says only the Operator merges under a standing
   delegation. ADR-0024 amends it so the delegation names the ship's Coordinator. The words reach the
   Coordinator as a turn from whoever received them, and nothing holds or re-relays them afterward.
@@ -217,15 +223,16 @@ replanned until the queue settles.
 
 | Step | Need | cyberlegion | cynapse | Status |
 | --- | --- | --- | --- | --- |
-| 1 | Read "PR ready" notices | — | `entry list --unread`, `read` | Built |
-| 1 | The clean bar as one deterministic check | — | Mission channel state for condition 4 | Gap: proposed `cyberfleet pr check <pr>`, built on `gh` and cynapse. No Coordinator merges before it exists |
-| 2, 4 | Tell a Pod or the Captain, and ring them | `unit nudge`, `send --start` | `entry send`, `entry append` | Built, except `send --start` |
+| 1 | Read "PR ready" threads in the ship queue | — | `entry list --unread`, `read` | Built; how the queue is keyed is open |
+| 1 | The clean bar as one deterministic check | — | The line-of-work thread's state for condition 4 | Gap: proposed `cyberfleet pr check <pr>`, built on `gh` and cynapse. No Coordinator merges before it exists |
+| 2, 4 | Tell a Pod or the Captain by mention; a mention to the Captain starts it through its lease | Wake, `service start` | `entry append` | Gap: the runtime must accept a handle as an opaque lease key (ADR-0030) |
+| 3 | Merge order from the blocking links | — | — | Gap: the frontier command and the blocking links (ADR-0029) |
 | 3 | Fence merges to one Coordinator | `service start`, `service verify --generation` | — | Built in cyberlegion; not wired |
 | 3 | Count open pull requests from host events | — | — | Gap: Coordinator persona logic |
 | 3 | Block until there is news | — | `entry wait` | Built |
 | 3 | Merge in order with speculative CI | — | — | merge-backstop-governance, built for the Operator |
 | 3 | Tear down a merged Pod | `unit close` | — | Built |
-| 3 | Post the landing on the issue | — | `entry append`; `cynapse.published` write-back | Append built; write-back planned |
-| 4 | An escalation thread anchored at an entry | — | `channel create --anchor` | Built |
+| 3 | Post the landing in the queue thread | — | `entry append`; `cynapse.published` write-back | Append built; write-back planned |
+| 4 | A queue thread anchored at an entry | — | `channel create --anchor` | Built |
 | 6 | Close and reopen issues | — | — | `gh`, built; the Captain's lease fences it |
 | — | A Coordinator allowed to merge under the Council's delegation | — | — | Gap: authority-governance §7 amendment, and the frozen `authority.feature`, `operator.feature`, and `pod.feature` suites reopen for ratification |

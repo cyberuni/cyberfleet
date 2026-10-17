@@ -54,15 +54,15 @@ step from the dispute thread straight to the Council.
 
 ### 1. Open a dispute thread
 
-The Captain that hits the disagreement branches a dispute thread from the disputed entry, with
-both Captains as members. The channel is a thread: it is anchored at that entry, and it posts its
-outcome back to the channel that holds the entry. Arguing moves out of the mission channel, so the
+The Captain that hits the disagreement branches a dispute thread from the disputed entry on the
+mission channel both Captains share, with both Captains as members. The channel is a thread: it is
+anchored at that entry, and it posts its outcome back to the channel that holds the entry. Arguing moves out of the mission channel, so the
 plan and the blockers stay readable. The thread's briefing names only its own exchange.
 
 ```sh
 cynapse channel create <handle> --kind work --type fleet.dispute --title "<the question>" \
   --anchor <disputed-entry> --member <captain-a>:party --member <captain-b>:party
-cyberlegion unit nudge <other-captain-handle>
+cynapse entry append <dispute-thread> --body "@<other-captain-handle> <position>"
 ```
 
 Meanwhile both Captains hold the disputed missions and keep working everything else. Nobody acts on
