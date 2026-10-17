@@ -13,11 +13,11 @@ The **Captain** owns a ship's work. There is one per ship, in the left pane of i
 
 ## What it does
 
-- **Takes work in.** The Operator relays your request to the ship's address channel and rings the Captain. The Captain judges its freshness, priority, and scope, and takes the issue in. That starts the mission. Anyone may file an issue; only the Captain takes one in.
-- **Plans and spawns.** It splits the mission into lines of work, picks each Pod's tier, and spawns each Pod into its own worktree. It never works inside a Pod.
-- **Owns its Pods through the role.** Whichever session holds the Captain's lease owns every Pod of the ship. Binding and retiring a Pod are fenced by the lease generation, so a session that lost its lease cannot act as Captain. The rules are in [Pod ownership](/cyberfleet/design/model/#pod-ownership).
-- **Rules on escalations.** A Pod at the edge of its brief, or a Coordinator facing a judgment call, escalates to the Captain. A ruling never overrides red CI.
-- **Reviews what landed.** When the Coordinator's queue settles, the Captain closes the issues that are done, reopens one that needs a follow-up, and files new issues for work the request did not cover.
+- **Takes work in.** The Operator opens a channel for the mission with your request and mentions the Captain (`cyberlegion/captain`), which starts it if no session is running. If you talk in the Captain's own pane, the Captain opens the channel itself. The Captain judges its freshness, priority, and scope, and takes the issue in. That starts the mission. Anyone may file an issue; only the Captain takes one in.
+- **Plans and spawns.** It splits the mission into lines of work and writes the blocking links between them. A command gives it the frontier, the work whose blockers are all closed; the Captain decides what to start, in what order, and at what tier. It spawns each Pod into its own worktree, and each line of work gets a thread on the mission channel. It never works inside a Pod.
+- **Owns its Pods through its handle.** A Pod's binding is keyed by the Captain's handle, so whichever session holds the lease on it owns every Pod of the ship. Binding and retiring a Pod are fenced by the lease generation, so a session that lost its lease cannot act as Captain. The rules are in [Pod ownership](/cyberfleet/design/model/#pod-ownership).
+- **Rules on escalations.** A Pod at the edge of its brief escalates in a thread on the mission channel; a Coordinator facing a judgment call escalates in the ship queue. The ruling is recorded on the mission it concerns. A ruling never overrides red CI.
+- **Reviews what landed.** When the Coordinator reports in the ship queue that its queue has settled, the Captain closes the issues that are done, reopens one that needs a follow-up, files new issues for work the request did not cover, and posts each mission's outcome on its channel for the Operator.
 - **Works within your grants.** When a step needs your words and has none, the Captain moves everything else forward and batches its decision-requests for you. It re-relays a grant you already gave, verbatim, to a unit that started after you spoke. See [authority](/cyberfleet/design/authority/).
 
 The fleet's Captain makes the roadmap and cross-ship decisions. A Captain's home is the project's main checkout; mission work never happens there.

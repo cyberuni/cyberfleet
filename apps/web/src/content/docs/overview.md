@@ -47,13 +47,13 @@ Two more personas sit outside the crew:
 
 An issue in flight is a **mission**. It belongs to the Captain of the repository that holds its issue. A mission may have **sub-missions**, its parts. Work that needs another ship is a **dependency**: a mission in that ship that blocks yours, which that ship's Captain accepts as its own, declines, or asks the Council about.
 
-1. You ask anywhere. The session that hears you posts your words, verbatim, to the ship's Captain.
-2. The Captain takes the issue in, plans its lines of work, and spawns a Pod for each.
+1. You ask anywhere. The Operator opens a channel for the mission with your words, verbatim, and mentions the ship's Captain.
+2. The Captain takes the issue in, plans its lines of work and the links that block them, and spawns a Pod for each line that is ready.
 3. Each Pod works its line, runs its gate, and opens a pull request.
-4. The Coordinator lands each clean pull request in order, then reports once to the Captain.
+4. The Pod posts its pull request to the ship's queue. The Coordinator lands each clean one in the order the blocking links give, then reports once to the Captain.
 5. The Captain reviews what landed, and closes or reopens the issue.
 
-The full path, including work that crosses ships, is in [lifecycle](/cyberfleet/design/lifecycle/).
+Every participant has a readable handle, such as `cyberlegion/captain` or `operator`, and a mention of it wakes that participant. Conversations live on the mission's channel and its threads, and on each ship's queue; no role has an inbox of its own. The full path, including work that crosses ships, is in [lifecycle](/cyberfleet/design/lifecycle/).
 
 ## Authority
 
@@ -75,7 +75,7 @@ Under the personas sits the `cyberfleet` **console**: the CLI. It is determinist
 | `cyberfleet pods [project]` | List the Pods a project's Captain role owns, and whether a Captain holds that role now (`--all` for every project) |
 | `cyberfleet pod bind\|retire <pod>` | Record the Captain role as a Pod's one owner, or retire the Pod once. Fenced by the caller's Captain lease generation |
 
-The design adds `cyberfleet ship board` (open a ship from its template, or focus it), `cyberfleet pr check` (the clean bar), and `cyberfleet mission` (`add-sub`, `block`, `unblock`, `close`). None of them ship yet. The design also renames the shipped commands to noun-verb form (`missions` becomes `status`, `captain` becomes `captain show`, `pods` becomes `pod list`, `jump` folds into `ship board`, and `pause` is removed) per [ADR-0027](https://github.com/cyberuni/cyberfleet/blob/main/docs/adr/0027-cli-commands-are-noun-verb.md).
+The design adds `cyberfleet ship` (the ship registry, and `ship board` to open a ship from its template or focus it), `cyberfleet pr check` (the clean bar), and `cyberfleet mission` (`add-sub`, `block`, `unblock`, `close`). None of them ship yet. The design also renames the shipped commands to noun-verb form (`missions` becomes `status`, `captain` becomes `captain show`, `pods` becomes `pod list`, `jump` folds into `ship board`, and `pause` is removed) per [ADR-0027](https://github.com/cyberuni/cyberfleet/blob/main/docs/adr/0027-cli-commands-are-noun-verb.md).
 
 ## What ships today
 
