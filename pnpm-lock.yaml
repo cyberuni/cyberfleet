@@ -191,8 +191,8 @@ importers:
         specifier: ^2.10.8
         version: 2.10.12
       universal-plugin:
-        specifier: ^0.14.0
-        version: 0.14.0(typescript@7.0.2)
+        specifier: ^0.15.0
+        version: 0.15.0
 
   apps/web:
     dependencies:
@@ -578,13 +578,6 @@ packages:
     resolution: {integrity: sha512-dlT1m5e/0yUL0kRNcQn7yGLVThkgbB0Ga/1AmfDDC/8ik6AIiSf2QLQO2zPYvefsHP0aFgxO93cVLCCfDp7kzQ==}
     engines: {node: '>= 20.12.0'}
 
-  '@clibuilder/axi@0.1.0':
-    resolution: {integrity: sha512-axduLxgCRP33iEPv8AGeFY9xDo0z6LH5JwhqpF/JqNmKo99UNI5rmSLduEjCfgIBc7TRwM1jiV0mBFNPKuLabA==}
-    engines: {node: '>= 20.19'}
-    deprecated: Folded into clibuilder 12. Import the value helpers from "clibuilder/axi" and use the output, error and format support built into clibuilder. See https://clibuilder.github.io/clibuilder/guides/upgrade-to-12/
-    peerDependencies:
-      clibuilder: ^11.0.0
-
   '@commitlint/cli@21.2.2':
     resolution: {integrity: sha512-a+6hQxIxnpdvSvS2apvttPNbEliYsVC3PqFYDiiB2kjbwIsQsj1urvQ4Tkf70pKYozPalKAuRQmm/GHwndduqA==}
     engines: {node: '>=22.12.0'}
@@ -674,10 +667,15 @@ packages:
     resolution: {integrity: sha512-Vh5uy9Y1JBMId6J1f68TMXnZrTCvNdo9Fu2k0d1YnJngR+sM5kWTKl441c/3TFs+cG0NWOjRWgQ/iaWhbYx+7A==}
     engines: {node: '>=14'}
 
-  '@cyberuni/agent-harness@0.6.0':
-    resolution: {integrity: sha512-ELy0pcHiRb9vjaVymBIvCQTDaQTOyliVKEx3MdpiDLeaGAYkhBwgCfoIa/ov/hPFxed4gQdYLBv6O3UTNgr78A==}
+  '@cyberuni/agent-harness@0.7.1':
+    resolution: {integrity: sha512-duoJGvfumx1Nfz8KRfptu7ixJbBbEJwrOlaUP6smfbgH3ioFIiStcIsFO9yNeTkxkgj/9TDUCctQj3Gw6bC3FA==}
     engines: {node: '>=22'}
     hasBin: true
+    peerDependencies:
+      clibuilder: ^12.0.0
+    peerDependenciesMeta:
+      clibuilder:
+        optional: true
 
   '@emnapi/core@1.11.1':
     resolution: {integrity: sha512-RSvbQmHzdKzNsLYa/wHrbc3KN4sYLKAdPZxqiM2HATqv/SBk2/ENSHpvXGaLOMcsAyz0poEGqkmmKYG3OWiJEQ==}
@@ -3738,8 +3736,8 @@ packages:
   unist-util-visit@5.1.0:
     resolution: {integrity: sha512-m+vIdyeCOpdr/QeQCu2EzxX/ohgS8KbnPDgFni4dQsfSCtpz8UqDyY5GjRru8PDKuYn7Fq19j1CQ+nJSsGKOzg==}
 
-  universal-plugin@0.14.0:
-    resolution: {integrity: sha512-+2kSU4mpWFyiFdNTz7TYX1Nj+Y9mOZzxpwSxPNX0QFblRKw6VmAUCx3RNSzfxe+tj8t9o74rc8RDLWx4nDS2+g==}
+  universal-plugin@0.15.0:
+    resolution: {integrity: sha512-5cfC/O73/bjxfhAFxLHPWMWghGfRTiAweOCbkNvqyg7UKpbqShAhfCEdcdULQxCL6Pm88S6svGypeqNirzkwPw==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -4381,11 +4379,6 @@ snapshots:
       fast-wrap-ansi: 0.2.2
       sisteransi: 1.0.5
 
-  '@clibuilder/axi@0.1.0(clibuilder@11.3.2(typescript@7.0.2))':
-    dependencies:
-      '@toon-format/toon': 4.1.1
-      clibuilder: 11.3.2(typescript@7.0.2)
-
   '@commitlint/cli@21.2.2(@types/node@24.13.4)(conventional-commits-parser@7.1.2)(typescript@7.0.2)':
     dependencies:
       '@commitlint/config-conventional': 21.2.2
@@ -4507,13 +4500,7 @@ snapshots:
 
   '@ctrl/tinycolor@4.2.1': {}
 
-  '@cyberuni/agent-harness@0.6.0(typescript@7.0.2)':
-    dependencies:
-      '@clibuilder/axi': 0.1.0(clibuilder@11.3.2(typescript@7.0.2))
-      clibuilder: 11.3.2(typescript@7.0.2)
-      yaml: 2.9.1
-    transitivePeerDependencies:
-      - typescript
+  '@cyberuni/agent-harness@0.7.1': {}
 
   '@emnapi/core@1.11.1':
     dependencies:
@@ -7464,16 +7451,16 @@ snapshots:
       unist-util-is: 6.0.1
       unist-util-visit-parents: 6.0.2
 
-  universal-plugin@0.14.0(typescript@7.0.2):
+  universal-plugin@0.15.0:
     dependencies:
-      '@cyberuni/agent-harness': 0.6.0(typescript@7.0.2)
+      '@cyberuni/agent-harness': 0.7.1
       '@repobuddy/upx': 0.2.0
       '@toon-format/toon': 4.1.1
       commander: 15.0.0
-      rolldown: 1.2.12
+      rolldown: 1.2.14
       semver: 7.8.5
     transitivePeerDependencies:
-      - typescript
+      - clibuilder
 
   unpartial@1.0.8: {}
 
