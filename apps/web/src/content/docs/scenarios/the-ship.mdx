@@ -51,8 +51,8 @@ where you speak to the landing directly.
 
 You start a Captain by invoking `/captain` in that Captain's pane. The session becomes the Captain
 and takes its lease. Anywhere else, `/operator` and `/captain` **call** the existing automaton and
-never make the calling session one: the session posts your words, verbatim, to the role's address
-channel, rings it, and shows the reply.
+never make the calling session one: the session passes your words, verbatim, to the role by
+mentioning its handle, and shows the reply.
 
 Orders travel as they do today (authority-governance §3). Wherever you give an order, the automaton
 that receives it relays your words, verbatim and as a turn, to the unit that acts, unless it is that
@@ -121,8 +121,8 @@ pull requests, and status. The UI is any program that renders that state, such a
 
 The second tab. The Captain's session is on the left, and the Coordinator's session is on the right.
 Both panes stay empty until something needs them. You start the Captain with `/captain` in its pane.
-When work, not you, has to reach a Captain or a Coordinator that is not running, `cyberlegion send
---start` starts it, so a ship you only ask questions of never starts an Opus session.
+When a post that needs an answer mentions a Captain or a Coordinator that is not running, the
+mention starts it through its lease, so a ship you only ask questions of never starts an Opus session.
 
 ### Engine Room
 
@@ -143,18 +143,20 @@ The fleet's roles sit on the tracker's levels, read from the tracker and never i
 | Tracker level | Fleet role | Channel |
 | --- | --- | --- |
 | Issue, with any sub-issues | **Mission**: an issue in flight. One Captain, one lease. It may land several pull requests and ends when the Captain closes the issue. It may have **sub-missions**, and may be blocked by a mission in another ship. | The **mission channel** |
-| Subtask: not releasable on its own | A **line of work** in a mission, carried by Pods | None of its own |
+| Subtask: not releasable on its own | A **line of work** in a mission, carried by Pods | A thread on the mission channel, holding its SDD-mission's ledger |
 
 Everything is a mission. A Captain adds sub-missions to break work down. Crossing a repository
 boundary makes the work a dependency: a mission in the other repository that blocks this one, because
 each repository releases on its own.
 
-The automatons talk over [cynapse](https://github.com/cyberuni/cynapse) channels. An **address
-channel** belongs to whoever receives on it. A **work channel** belongs to a mission and has
-members but no owner. An exchange that needs different readers from its parent is a **thread**: a
-child channel anchored at the entry that starts it. A gate (whose cold judge reads only its thread),
-an escalation with its ruling, and a dispute are threads. Every thread posts its outcome back to
-its parent, so a reader of the parent never has to open it.
+The automatons talk over [cynapse](https://github.com/cyberuni/cynapse) channels, like channels in
+Slack or Discord. Missions, a ship's queue, and threads have channels; roles do not. A role is
+reached by mentioning its **handle**: `cyberlegion/captain`, `cyberlegion/coordinator`, `operator`,
+`fleet/captain`, `cyberlegion/pod-7a`. The ship's part of a handle is the repository name. An
+exchange that needs different readers from its parent is a **thread**: a child channel anchored at
+the entry that starts it. A line of work, a gate (whose cold judge reads only its thread), an
+escalation with its ruling, a dispute, and an item in the ship queue are threads. Every thread posts
+its outcome back to its parent, so a reader of the parent never has to open it.
 
 <Mermaid
 	caption="Who posts where. Solid arrows post; dotted arrows read."
@@ -163,43 +165,44 @@ its parent, so a reader of the parent never has to open it.
   cap["Captain"]
   coord["Coordinator"]
   pod["Pod"]
-  opaddr[("Operator address channel<br/>owner: Operator")]
-  shipaddr[("ship address channel<br/>owner: Captain")]
-  coordaddr[("Coordinator address channel<br/>owner: Coordinator")]
-  mission[("mission channel per issue<br/>members, no owner")]
-  thread[("thread<br/>gate, escalation, dispute")]
-  rp["remote pane or any other pane"] -- the Council's words --> opaddr
-  opaddr -.-> op
-  op -- request --> shipaddr
-  shipaddr -.-> cap
-  cap -- reply on the request thread --> shipaddr
-  shipaddr -.-> op
-  cap -- plan, decisions --> mission
-  pod -- progress, done report --> mission
-  pod -- PR ready --> coordaddr
-  coordaddr -.-> coord
-  coord -- escalation pointer at once, one report when settled --> shipaddr
-  coord -- escalation --> thread
-  pod -- opens a gate --> thread
-  thread -- outcome --> mission`}
+  mission[("mission channel per issue<br/>members: Operator, Captain")]
+  queue[("ship queue<br/>members: Captain, Coordinator")]
+  lane[("line-of-work thread<br/>holds the SDD-mission ledger")]
+  thread[("gate, escalation,<br/>dispute threads")]
+  qthread[("queue thread<br/>one per pull request")]
+  rp["remote pane or any other pane"] -- calls, with the Council's words --> op
+  op -- the Council's words verbatim, mention the Captain --> mission
+  mission -.-> cap
+  cap -- outcome, mention the Operator --> mission
+  mission -.-> op
+  cap -- opens --> lane
+  pod -- progress, done report --> lane
+  lane -- outcome --> mission
+  pod -- opens a gate or escalation --> thread
+  thread -- outcome --> mission
+  pod -- PR ready --> qthread
+  cap -- tracker mechanics --> queue
+  qthread --- queue
+  queue -.-> coord
+  coord -- landing talk, settled-queue report --> qthread
+  coord -- escalation between pull requests --> queue`}
 />
 
-| Channel | Kind | Owner | Carries |
-| --- | --- | --- | --- |
-| Operator address | Address | Operator | The Council's calls |
-| Ship address | Address | Captain | Requests to the ship, pointers that ring the Captain to an escalation, and the Coordinator's one landing report |
-| Coordinator address | Address | Coordinator | "Pull request ready" notices from Pods |
-| Mission, one per issue | Work | None | The plan, the Pods' progress and done reports, decisions, and landing talk. For a mission with sub-missions or blockers, only what crosses them: the plan, blockers, invitations, and the delegation record |
-| Thread | Work, anchored | None | A gate, an escalation and its ruling, or a dispute |
+| Channel | Members | Carries |
+| --- | --- | --- |
+| Mission, one per issue | The Operator that brought it and the ship's Captain; each Pod joins its own mission's | The Council's words as the first entry, the plan, decisions and rulings, the delegation record, and the outcome. For a mission with sub-missions or blockers, only what crosses them: the plan, blockers, invitations, and the delegation record |
+| Line-of-work thread, on the mission channel | The Pods carrying the line | The Pod's progress and done reports, and its SDD-mission's ledger |
+| Gate, escalation, or dispute thread | The parties to it | One exchange, and its outcome posted back to its parent |
+| Ship queue, one per ship | The Captain and the Coordinator; a Pod joins when it posts | One thread per item: "PR ready" from Pods, tracker mechanics from the Captain, and landing talk. Two pull requests that conflict in meaning are escalated here |
 
-No pull request channel is opened. Review lives on the host, and landing talk lives in the mission
-channel. The Captain and the Coordinator are members of every mission channel of their ship, and each
-Pod is a member of its own mission's channel.
+The Coordinator joins no mission channel, and the ship's remote pane is never invited to one. No
+pull request channel is opened. Review lives on the host, and landing talk lives in the pull request's
+queue thread. A starting Captain rereads the channels of its open missions and its ship queue.
 
-Posting to a channel does not wake anyone. Until the runtime watches channels itself, **the poster
-rings**: it posts, resolves or starts the receiver with `cyberlegion service start`, and nudges it
-with `cyberlegion unit nudge`. Folded into one step, that is `cyberlegion send --start`
-(ADR-0023's provisional `hail`).
+A **mention** is a ping. It wakes every live session acting as the handle. When none is running and
+the post needs an answer (a request, an escalation, a decision-request), it starts one through the
+handle's lease. A notification, such as an outcome, only wakes. Waking and starting are the
+runtime's job.
 
 ## Features this layout needs
 
@@ -207,8 +210,9 @@ with `cyberlegion unit nudge`. Folded into one step, that is `cyberlegion send -
 | --- | --- | --- |
 | A per-role model and effort | `cyberlegion spawn --model --effort`, also accepted by `service start` | Built |
 | Start a role on demand, at most once, with a fenced lease | `cyberlegion service start <project> <name>` | Built |
-| Address and work channels with owners and members, and anchored threads | `cynapse channel create --kind address\|work --owner --member --anchor` | Built in cynapse; cyberfleet does not depend on cynapse yet |
+| Mission and queue channels with members, and anchored threads | `cynapse channel create --kind work --member --anchor` | Built in cynapse; cyberfleet does not depend on cynapse yet. How the queue is keyed apart from cynapse's repository address channel is open |
+| Own the ships: name, remote, template, tracker routing, landing setting, and the path to each main checkout | `cyberfleet ship` commands | Gap: replaces the project address; the runtime is handed paths and handles |
 | Open a ship or the Command Center as a workspace with named tabs and a pane layout | cyber-mux layout templates | cyber-mux has templates; cyberlegion does not call them, and no `cyberfleet` verb opens a ship |
 | Start a session in a named slot, such as the Bridge's right pane | `cyberlegion spawn --at` | Gap: `--at` only places relative to the caller (`pane:right`, `pane:down`, `tab`, `workspace`), and tabs are unnamed |
-| Post, start, and nudge as one step | `cyberlegion send --start` | Gap: `send` already rings; it needs to start a receiver that is not running. ADR-0023 called this step `hail` and put it in cyberfleet, but waking is the runtime's job |
+| A mention that wakes every live session acting as a handle, and starts one through the handle's lease only when the post needs an answer | The runtime's wake and lease | Gap: the runtime must accept a handle as an opaque lease key (ADR-0030) |
 | `/captain` and `/operator` as a call from any pane | Operator and Captain personas | Gap: neither persona is rewritten for it yet |

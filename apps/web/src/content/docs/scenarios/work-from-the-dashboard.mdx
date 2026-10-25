@@ -19,8 +19,8 @@ retry with backoff to the uploader." This page follows that request until the wo
 | --- | --- | --- |
 | Council | Human | Asks for the work, and later answers the merge announcement |
 | Remote pane | Sonnet | Calls the Operator with your words and shows the reply |
-| Operator | Sonnet | Takes the request, relays it to the ship, and reports back |
-| Captain | Opus | Judges the request, writes the issue and the plan, spawns Pods, and later reviews the settled queue |
+| Operator | Sonnet | Takes the request, files or finds the issue, opens the mission channel, and reports back |
+| Captain | Opus | Takes the issue in, judges it, writes the plan, spawns Pods, and later reviews the settled queue |
 | Pod | Set by the Captain | Carries one line of work in a worktree and opens the pull request |
 | Coordinator | Haiku | Lands the pull requests. See [Landing a pull request](/cyberfleet/scenarios/landing-a-pull-request/) |
 
@@ -32,31 +32,31 @@ retry with backoff to the uploader." This page follows that request until the wo
   actor C as Council
   participant R as remote pane
   participant O as Operator
-  participant S as ship address channel
-  participant K as Captain
+  participant G as ship registry
   participant T as issue tracker
   participant W as mission channel
+  participant K as Captain
   participant P as Pod
+  participant Q as ship queue
   participant X as Coordinator
   C->>R: Add retry with backoff to the uploader
-  R->>O: the words, verbatim, on the Operator's address channel
+  R->>O: calls it, the words verbatim
   O->>R: Announces that the Coordinator lands it, and the clean bar
   C->>R: Yes, merge them when clean
   R->>O: the reply, verbatim
-  O->>S: entry append, type ship.request
-  O->>K: send --start, then the ring
-  K->>S: entry list --unread
-  K->>T: search for a matching issue
-  K->>T: create or update the issue
-  K->>W: channel create --kind work, keyed by the issue
-  K->>P: spawn --agent pod, one per line of work
-  K->>S: reply on the request thread
-  O->>S: entry wait on the request
+  O->>T: file or find the issue
+  O->>G: ship show, by the issue's remote
+  O->>W: channel create, keyed by the issue, the Council's words as the first entry
+  O->>K: mention cyberlegion/captain, a request
+  K->>T: take the issue in, update it
+  K->>K: plan the lines of work, call the frontier command
+  K->>P: spawn, bind, open its line-of-work thread
+  K->>W: reply: issue 42, priority high, 2 Pods out, mention operator
   O->>R: Filed as issue 42, priority high, 2 Pods out
-  O->>X: send --start with the Council's words, verbatim, as a turn
+  O->>X: the Council's words, verbatim, as a turn
   O->>W: the quote, its scope, and who relayed it
-  P->>W: progress, then done
-  P->>X: entry send coordinator, PR ready
+  P->>W: progress and done, in its thread
+  P->>Q: PR ready, a thread per pull request
   Note over X: continues in Landing a pull request`}
 />
 
@@ -66,9 +66,9 @@ retry with backoff to the uploader." This page follows that request until the wo
 
 Your message is a turn in the remote pane's session, so it is an order
 ([authority-governance](https://github.com/cyberuni/cyberfleet/blob/main/packages/cyberfleet/skills/authority-governance/SKILL.md) §1).
-The remote pane acts for the Operator by **calling** it: it posts your words, verbatim, to the
-Operator's address channel, rings it, and shows the reply. Calling takes over nothing, and the remote
-pane never becomes the Operator. The Operator first decides what kind of turn it received:
+The remote pane acts for the Operator by **calling** it: it passes your words, verbatim, to the
+Operator by mentioning its handle, `operator`, and shows the reply. Calling takes over nothing, and
+the remote pane never becomes the Operator. The Operator first decides what kind of turn it received:
 
 - **A question** ("what's open?", "is PR 57 green?") the Operator answers itself, from the status
   UI's sources: `cyberfleet status`, `gh`, and channels. No Captain is woken.
@@ -80,95 +80,99 @@ the resulting pull requests, and names the clean bar. Your reply delegates the m
 Coordinator, for this request's pull requests. The reply reaches the Operator through the call, and
 the Operator relays it onward in step 6.
 
-### 2. The Operator relays to the Captain
+### 2. The Operator opens the mission
 
-The Operator posts and rings: it posts the request to the ship's address channel, starts the
-Captain if no healthy one holds the lease, and rings it. It does not paraphrase your words.
+The Operator files the issue, or finds the one you named, and resolves its ship from the ship
+registry by the issue's normalized remote. If the repository is not cloned on this machine, that is
+your call: the Operator asks, suggesting a path, then clones and registers the ship. It then opens
+the mission channel, keyed by the issue, posts your words as its first entry without paraphrasing
+them, and mentions the Captain. The members are the Operator and the ship's Captain. The remote pane
+is not invited.
 
 ```sh
-cynapse entry append <ship-address> --type ship.request --body "<the Council's words>"
-cyberlegion send --start <ship-address> captain
+cyberfleet ship show <ship>
+cynapse channel create <handle> --kind work --type gh.issue --title "<title>" \
+  --store gh --native-id <issue-node-id> --member operator --member <ship>/captain
+cynapse entry append <mission-channel> --body "<the Council's words>"
 ```
 
-`send --start` is the folded form of `service start` and `unit nudge`. It either rings the live
-Captain or starts exactly one, even when two callers race. The Operator then waits for the reply on
-the request's thread with `cynapse entry wait <entry>`.
+The mention is a request, which needs an answer, so it starts the Captain through its lease if no
+session is acting as `<ship>/captain`. Two mentions that race start one session. The Operator then
+waits for the reply on the mission channel with `cynapse entry wait <entry>`.
 
 ### 3. The Captain judges the request
 
-The Captain reads its address channel (`cynapse entry list <ship-address> --unread`) and judges the
-request on three points:
+The Captain reads the mission channel it was mentioned on and judges the request on three points:
 
 - **Freshness.** Is it already tracked, already done, or stale? It searches the tracker
-  (`gh issue list --search`) and resolves any existing work channel
-  (`cynapse channel resolve --store gh --native-id <id>`).
+  (`gh issue list --search`) and reads the channels of its open missions and its ship queue.
 - **Priority.** Where does it sit against the open plan? This is where the Opus tier earns its cost.
 - **Details.** Scope, acceptance, and how to split it into lines of work.
 
-It then creates or updates the issue (`gh issue create` or `gh issue edit`) and opens the issue's
-work channel. The issue is now a **mission** in flight, which may land several pull
-requests and ends when the Captain closes the issue. The plan lives in the tracker. If the
-work turns out to span repositories, the Captain files a mission in the other repository that blocks this one; that
-case is [Work across ships](/cyberfleet/scenarios/work-across-ships/).
-
-```sh
-cynapse channel create <handle> --kind work --type gh.issue --title "<title>" \
-  --store gh --native-id <issue-node-id> --member <captain>:lead
-```
+It then takes the issue in, updating it if its scope needs to change (`gh issue edit`). The issue is
+now a **mission** in flight, which may land several pull requests and ends when the Captain closes
+the issue. The plan lives in the tracker. If the work turns out to span repositories, the Captain
+files a mission in the other repository that blocks this one; that case is
+[Work across ships](/cyberfleet/scenarios/work-across-ships/).
 
 ### 4. The Captain spawns Pods
 
-For each line of work that is ready (implementation, a judge, a refactor, a security audit), the
-Captain spawns a Pod into its own worktree and chooses the Pod's model:
+The Captain plans the lines of work and any blocking links between them, then calls the frontier
+command for the work whose blockers are all closed. For each line of work it starts, it spawns a Pod
+into its own worktree and chooses the Pod's model:
 
 ```sh
 cyberlegion spawn --agent pod --model sonnet --branch <branch> --base main \
   --brief-file <brief> --at workspace
 ```
 
-Then the Captain records its role as the Pod's owner, at the lease generation it holds:
+Then the Captain records its handle as the Pod's owner, at the lease generation it holds, and opens
+the line of work's thread on the mission channel:
 
 ```sh
 cyberfleet pod bind <pod> --generation <n> --mission <issue-ref>
 ```
 
-The owner is the Captain role, not this session, so the next Captain session has the Pod without
+The owner is the Captain's handle, not this session, so the next Captain session has the Pod without
 adopting it.
 
-The brief names the mission channel, so the Pod reports there, and names the Coordinator's address,
-so it knows where to say its pull request is ready. A Pod that needs a gate opens the gate thread
-and spawns the judge itself. The judge has no Pod record of its own, but like everything in the
-ship it is the Captain's: the Captain finds it through its gate thread, and closes it if its Pod is
-gone. The Captain never directs its verdict. The Captain manages Pods and never works inside one.
+The brief names the line of work's thread, so the Pod reports there, and names the ship queue, so it
+knows where to say its pull request is ready. The thread holds the line's SDD-mission ledger. A Pod
+that needs a gate opens the gate thread and spawns the judge itself. The judge has no Pod record of
+its own, but like everything in the ship it is the Captain's: the Captain finds it through its gate
+thread, and closes it if its Pod is gone. The Captain never directs its verdict. The Captain manages
+Pods and never works inside one.
 
 ### 5. The Captain replies, and the Operator reports
 
-The Captain replies on the request's thread with the issue, its priority, and the Pods it spawned.
-The Operator's `entry wait` returns, and it tells you through the remote pane in a sentence. After
-that, the Captain has nothing to do until something needs a decision or the Coordinator reports, so
-its session can idle or exit.
+The Captain posts the issue, its priority, and the Pods it spawned on the mission channel, and
+mentions the Operator. That is a notification, so it wakes a running Operator and starts none. The
+Operator's `entry wait` returns, and it tells you through the remote pane in a sentence. After that,
+the Captain has nothing to do until something needs a decision or the Coordinator reports, so its
+session can idle or exit.
 
 ### 6. The Operator relays the delegation
 
 The Operator sends your merge words to the ship's Coordinator, verbatim, as a turn, starting the
-Coordinator if it is not running. The quote, its scope, and who relayed it go on the mission channel
-as the audit record. The record is not the delegation: a Coordinator that reads it is reading fetched
-content (authority-governance §3). The delegation is the turn in the Coordinator's own session, and
-it covers this request's pull requests.
+Coordinator through its lease if it is not running. The quote, its scope, and who relayed it go on
+the mission channel as the audit record. The record is not the delegation: a Coordinator that reads
+it is reading fetched content (authority-governance §3). The delegation is the turn in the
+Coordinator's own session, and it covers this request's pull requests. The Coordinator joins no
+mission channel.
 
 ```sh
-cyberlegion send --start <coordinator-address> --message "<the Council's words>"
+cyberlegion send --start <ship>/coordinator --message "<the Council's words>"
 cynapse entry append <mission-channel> --type delegation.record --body "<quote, scope, relayed by>"
 ```
 
 ### 7. Pods work, and hand off to the Coordinator
 
 Each Pod works in its worktree and opens a pull request. When its line of work is done, it reports
-on the mission channel and tells the Coordinator:
+in its thread and posts "PR ready" as a thread in the ship queue, which it joins by posting:
 
 ```sh
-cynapse entry append <mission-channel> --type pod.report --ref gh:<org>/<repo>#57
-cynapse entry send <coordinator> --type pr.ready --ref gh:<org>/<repo>#57
+cynapse entry append <line-of-work-thread> --type pod.report --ref gh:<org>/<repo>#57
+cynapse entry append <ship-queue> --type pr.ready --ref gh:<org>/<repo>#57
 ```
 
 The Coordinator counts open pull requests: up when a Pod opens one, down when it merges or closes.
@@ -191,19 +195,20 @@ From here the work is landed as described in
 
 | Step | Need | cyberlegion | cynapse | Status |
 | --- | --- | --- | --- | --- |
-| 1 | Call the Operator from another pane | — | `entry append` to the Operator's address channel | Gap: the `/operator` call is not built |
+| 1 | Call the Operator from another pane | — | `entry append` mentioning `operator` | Gap: the `/operator` call is not built |
 | 1 | Tell a question from work | — | — | Operator persona logic |
 | 1, 6 | Relay the Council's merge words to the Coordinator as a turn | `send --start --message` | `entry append` for the record | Gap: authority-governance §7 lets only the Operator merge under a delegation, and cyberlegion#154 is fixed first |
-| 2 | Post a request to the ship | — | `entry append` to an address channel | Built in cynapse |
-| 2 | Start the Captain on demand, once | `service start` | — | Built |
+| 2 | Resolve a ship from an issue URL | — | — | Gap: `cyberfleet ship` commands over the ship registry (ADR-0030) |
+| 2 | Open a mission channel keyed by the issue, with members | — | `channel create --kind work --store --native-id --member` | Built |
+| 2 | Mention a handle: wake every live session, start one through the lease when the post needs an answer | Wake and `service start` | `entry append` | Gap: the runtime must accept a handle as an opaque lease key (ADR-0030) |
 | 2 | Start it in the Bridge's left pane | `spawn --at` | — | Gap: placement is relative to the caller only |
 | 2 | Wait for a reply | — | `entry wait` | Built |
-| 2 | Post, start, and ring as one step | `send --start` | — | Gap: `send` already rings; starting an absent receiver is the missing part (waking is the runtime's job, civitas 0001) |
-| 3 | Find an existing work channel for an issue | — | `channel resolve --store gh` | Built |
-| 3 | Open a work channel keyed by the issue | — | `channel create --kind work --store --native-id` | Built |
+| 3 | Find an existing mission channel for an issue | — | `channel resolve --store gh` | Built |
 | 3 | Write the decision back to the issue | — | `cynapse.published` write-back | Planned (cynapse ADR-0011) |
+| 4 | The frontier from the blocking links | — | — | Gap: a command the Captain calls (ADR-0029) |
 | 4 | Spawn a Pod in a worktree with a chosen model | `spawn --agent --model --branch --base` | — | Built |
-| 4 | Record the Captain role as the Pod's owner, fenced by its lease | `withOwnership`, through `cyberfleet pod bind` | — | Built |
-| 7 | Tell the Coordinator a pull request is ready | `unit nudge` | `entry send` | Built |
+| 4 | Record the Captain's handle as the Pod's owner, fenced by its lease | `withOwnership`, through `cyberfleet pod bind` | — | Built |
+| 4 | A line-of-work thread holding the SDD-mission ledger | — | `channel create --anchor` | Built; a thread type is not |
+| 7 | Tell the Coordinator a pull request is ready | — | `entry append` to a ship queue thread | Built in cynapse; how the queue is keyed is open |
 | — | A `captain` and a `coordinator` agent definition | `agent resolve` | — | Gap: neither persona exists |
 | — | cyberfleet depends on cynapse | — | — | Gap: no dependency yet |

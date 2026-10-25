@@ -48,33 +48,36 @@ behind a term, the entry links to it.
 | **mission** | An issue in flight. Starts when a Captain takes the issue in, lives as long as its issue, and lands as one or more pull requests. Belongs to whoever holds its issue: the Captain of the ship whose repository holds it, or the fleet's Captain for an issue in the fleet's tracker. That Captain's Coordinator does its mechanics. Replaces "sortie", "epic" as a fleet term, and "promotion" ([ADR-0026](https://github.com/cyberuni/cyberfleet/blob/main/docs/adr/0026-one-noun-for-work-in-flight.md), [ADR-0028](https://github.com/cyberuni/cyberfleet/blob/main/docs/adr/0028-sub-missions-and-dependencies.md)). |
 | **sub-mission** | A part of a mission, as the tracker's sub-issue. The mission is done when its sub-missions are done. A sub-mission in another ship appears when a fleet mission is split across ships. Never called a "child". |
 | **blocks / blocked by** | A dependency between missions. A request from one ship to another is a mission in the other ship that blocks the requesting one, owned by that ship's Captain. A block can sit on a mission or on one of its sub-missions; the finer one is available and never required. |
-| **line of work** | A subtask of a mission, not releasable on its own (impl, judge, refactor, audit), carried by its Pods. |
+| **frontier** | The work whose blockers are all closed, computed from the blocking links by a command the Captain calls. Where the links live is set per ship in its tracker routing: the tracker, or cynapse state records ([ADR-0029](https://github.com/cyberuni/cyberfleet/blob/main/docs/adr/0029-the-tracker-holds-dependencies-and-the-frontier.md)). |
+| **line of work** | A subtask of a mission, not releasable on its own (impl, judge, refactor, audit), carried by its Pods. It is a thread on its mission channel, and the thread holds its SDD-mission's ledger. |
 | **SDD-mission** | One run of SDD's change-request loop (`start-mission`), which is how a Pod carries out a line of work today. SDD calls it a mission; the fleet's mission is an issue in flight, so cyberfleet always writes SDD's as `SDD-mission`. SDD may rename it later. The line of work stays when the engine under it changes. |
 | **gate** | A check a cold judge runs on a line of work, in its own thread. |
 | **clean bar** | The four conditions `cyberfleet pr check` checks: no conflict with trunk, reviews resolved, CI green on the merged result, and the line of work reported done (with a passing gate where the mission has one). |
-| **merge backstop** | The landing discipline that keeps trunk green: Operation order, speculative CI, bisection of a red batch. Lives in `merge-backstop-governance`. |
+| **merge backstop** | The landing discipline that keeps trunk green: merges in the order of the blocking links, speculative CI, bisection of a red batch. Lives in `merge-backstop-governance`. |
 | **pull request** | A proposed change on the forge (a merge request on GitLab). The CLI's noun is `pr`, with `mr` as an alias. |
-| **settled queue** | A ship Coordinator's count of open delegated pull requests reaching zero. The point at which it reports to the Captain and exits. |
+| **settled queue** | A ship Coordinator's count of open delegated pull requests in its ship queue reaching zero. The point at which it reports to the Captain and exits. |
 | **escalation** | A question that runs up a level, from a unit at the limit of what it may decide to the one who may: Pod or Coordinator to Captain, Captain to the Council. Ends in a ruling. |
 | **dispute** | A disagreement between peer Captains, which have no authority over each other. The Captains settle it themselves on a dispute thread: one position and one rebuttal each, then standing rules, then a Mediator's brief. A dispute they cannot settle escalates to the Council. "Arbitration" is not used: an arbitrator binds, and only the Council binds two ships. |
 | **standing rule** | A rule only the Council writes, which Captains apply and never widen. |
 | **HAL tell** | A one-line signal an automaton speaks once when it self-asserted a gate above its leash. |
 | **leash** | SDD's bound on how far a delegate may act before it must signal the Council. |
 
-## Channels and addressing
+## Channels and handles
 
 | Term | Meaning |
 |---|---|
-| **channel** | A cynapse conversation. Work items, roles, and threads each have one. |
-| **address channel** | A role's inbox channel. The Operator's takes the Council's calls; the ship address channel (owner: the Captain) takes requests, landing reports, and escalation pointers; a Coordinator's takes "PR ready". |
-| **mission channel** | A mission's work channel. The ship's Captain and Coordinator are members of every one in their ship; each Pod is a member of its own mission's. A mission with sub-missions keeps on its channel only what crosses them: the plan, blockers, invitations, the delegation record. |
-| **thread** | A child channel anchored at the entry that starts it, for an exchange with a different set of readers: a gate, an escalation, a dispute. Posts its outcome back to its parent. |
-| **calling** | Reaching the Operator, or a Captain from outside its pane, without becoming it. The calling session posts the Council's words verbatim, rings the role, and shows the reply. |
-| **ring** | Starting or waking a channel's owner after posting to it, transparently: the sender never checks whether it is running. The runtime's job (`cyberlegion send --start`). |
-| **fenced write** | A write that succeeds only when the writer holds the role's current lease generation. A session whose lease was taken over is refused, so two sessions never both act as one role. |
-| **lease** | The fenced right to act as a role, held in the runtime. A ship has two: the Captain's (missions and plan) and the merge lease, held by whichever unit lands. The Command Center holds the same pair. |
+| **channel** | A cynapse conversation, like a channel in Slack or Discord. Missions, a ship's queue, and threads each have one; roles do not. |
+| **mission channel** | A mission's channel, keyed by its issue and created by whoever brings the work, with the Council's words verbatim as its first entry. Its members are the Operator that brought it and the ship's Captain; each Pod joins its own mission's. Lines of work, gates, and escalations are threads on it. A mission with sub-missions keeps on its channel only what crosses them: the plan, blockers, invitations, the delegation record ([ADR-0030](https://github.com/cyberuni/cyberfleet/blob/main/docs/adr/0030-handles-missions-and-a-ship-queue.md)). |
+| **ship queue** | A ship's channel for its Coordinator's work: "PR ready" from Pods and tracker mechanics from the Captain, one thread per item. Members are the Captain and the Coordinator; a Pod joins when it posts. Landing talk lives here. The Command Center has one for the fleet's Coordinator. |
+| **thread** | A child channel anchored at the entry that starts it, for an exchange with a different set of readers: a line of work, a gate, an escalation, a dispute, a queue item. Posts its outcome back to its parent. |
+| **calling** | Reaching the Operator, or a Captain from outside its pane, without becoming it. The calling session posts the Council's words verbatim, mentions the role, and shows the reply. |
+| **handle** | A participant's readable name, unique in the hub: `cyberlegion/captain`, `operator`, `fleet/captain`, `cyberlegion/pod-7a`. The ship's part is the repository name, owner-qualified only on a collision. Any number of sessions may act as one handle. The handle also keys the role's lease and a Pod's binding. |
+| **mention** | Naming a handle in an entry, which pings it. |
+| **ring** | What a mention does: wake every live session acting as the handle. When none is running and the post needs an answer (a request, an escalation, a decision-request), start one through the handle's lease. A notification only wakes. The runtime's job. |
+| **fenced write** | A write that succeeds only when the writer holds the role's current lease generation. A session whose lease was taken over is refused, so two sessions never both make a role's fenced writes. |
+| **lease** | A one-holder right in the runtime, keyed by a handle. It fences writes and starts a session at most once; it does not route. A ship's Captain lease fences taking issues in and binding Pods; its merge lease fences landing; any role a ring may start has one. Sessions without it still read, post, and talk. |
 | **lease generation** | The number that tells two sessions holding one role apart over time. |
-| **project address** | The cynapse address of a project, used by the runtime as an opaque key. Roles are keyed from it (`<project-address>/captain`). |
+| **ship registry** | The Command Center's record of its ships: name, remote, template, tracker routing, and landing setting fleet-wide, and each main checkout's path per machine. cyberfleet owns it; the runtime is handed paths and handles. |
 
 ## Authority
 

@@ -13,7 +13,7 @@ The **Operator** is your interface to the fleet. It talks with you, and with no 
 
 - **One seat.** The Operator sits on the Command Center's Dashboard. The session in that seat need not stay running; you start it when you want to talk.
 - **Answers questions itself.** It reads `cyberfleet status`, `gh`, and channels, and never wakes a Captain to answer a question.
-- **Relays work up.** It posts your words, verbatim, to the target ship's address channel and rings that ship's Captain, which starts the Captain if it is not running.
+- **Relays work up.** It files the issue or finds the one you named, and finds its ship in the ship registry. For a repository that is not cloned on this machine, it asks you where to put it, suggesting a path. It then opens the mission's channel with your words, verbatim, as the first entry, and mentions the ship's Captain, which starts the Captain if it is not running. The Operator stays a member: the Captain posts the mission's outcome there and mentions it, which wakes it but never starts it.
 - **Coordinates nothing.** It never spawns a Pod and never lands a pull request. Planning belongs to the [Captain](/cyberfleet/captain/), and landing to the [Coordinator](/cyberfleet/coordinator/).
 - **Calling takes over nothing.** Invoking `/operator` outside the Operator's seat reaches the one Operator. It never makes the calling session an Operator.
 
