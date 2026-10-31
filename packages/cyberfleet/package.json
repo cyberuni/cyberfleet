@@ -32,7 +32,8 @@
 		".codex-plugin",
 		".plugin",
 		"skills",
-		"agents"
+		"agents",
+		"CHANGELOG.md"
 	],
 	"scripts": {
 		"build": "tsdown",
