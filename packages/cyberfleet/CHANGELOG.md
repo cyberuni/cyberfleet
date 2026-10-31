@@ -1,5 +1,15 @@
 # cyberfleet
 
+## 0.6.0
+
+### Minor Changes
+
+- 2cacfe7: Add `cyberfleet captain`, `cyberfleet pods`, and `cyberfleet pod bind|retire`. A project's Captain is cyberlegion's `captain` project service, and each Pod is owned by that Captain role, so a Captain restart or a new Captain session keeps its Pods with nothing to adopt. Binding and retiring run fenced at the caller's lease generation: a session that does not hold the Captain's lease cannot record or retire a Pod, and a Pod is retired once. `pods` lists the Pods of the project here (or of every project with `--all`), each as `current`, `unavailable` (no Captain holds the role now), or `retired`, and `pod bind --sortie <issue-ref>` records the sortie the Pod carries.
+
+### Patch Changes
+
+- c118fe4: Make the Operator, Pod, and Crimp skills and the headless-operator agent self-contained: the pinned `cyberlegion` version is written into their text instead of read from `.plugin/pins.json` outside the skill folder.
+
 ## 0.5.2
 
 ### Patch Changes
