@@ -11,9 +11,9 @@ todos:
   - content: "Cold spec-judge; fold findings"
     status: completed
   - content: "Impl: authority-governance §1/§6/§7 + README, operator SKILL.md/README, docs page, changeset"
-    status: pending
+    status: completed
   - content: "Cold impl-judge; pnpm verify; PR as decision-request; shepherd CI"
-    status: pending
+    status: completed
   - content: "Spec gate (Clearance) and impl gate: Council ratification"
     status: pending
 ---
@@ -31,4 +31,5 @@ reply on every order.
 
 ## NEXT
 
-Spec ALIGNED at round 2 (should-fix items folded). Next: commit the implementation, cold impl-judge, open the PR.
+PR #135 open, CI green, impl-judge passed. Waiting on the Council: spec gate (Clearance — narrowing)
+and impl gate, then the merge. Nothing else to resume.

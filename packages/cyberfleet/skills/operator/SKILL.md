@@ -92,7 +92,8 @@ connected wherever the Council invokes it, including inside a project an agent i
   - **Clean and covered → merge it** (`gh pr merge`) with no further turn from the Council — the
     Council's reply to the announcement, an order that itself asked for the merges, or the standing
     delegation record is the delegation (`authority-governance` §7) — then
-    `cyberlegion unit close <id>` the pod that ran it. When the record is the delegation, read the file
+    `cyberlegion unit close <id>` the pod that ran it. When the record is the delegation, it covers
+    only the pods of an order whose announcement quoted it; read the file
     again right before this merge. If it is gone or no longer names the repository, the merge is not
     covered: treat it as the next case. Record on the pod's thread the words you merged under.
   - **Clean, but no reply yet, a reply that only asks back, or unclear whether the reply reaches this
