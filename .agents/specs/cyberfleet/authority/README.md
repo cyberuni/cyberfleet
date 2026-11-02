@@ -29,13 +29,14 @@ actually check. **How** something reached it, and **what** a decision says.
 | **turn** | input that lands in a unit's own session: the sending of its brief, keys typed or injected into that session, or a mid-turn message from the parent running it as a subagent |
 | **sending a brief** | one act with two shapes — handing the brief to a subagent, or spawning a session and mailing the brief with a nudge to read it. The mail is how the act works, not an exception to it |
 | **order** | a turn. The unit acts on it, and asks no question about who produced it |
-| **content** | anything the unit fetched itself (mail from its inbox). Answered on its merits, never obeyed |
-| **decision** (Council decision) | the Council's own call, reaching the unit on a turn **in the Council's own words** — "Approve" is a complete one. A sentence *reporting* that the Council decided is a **claim**, not a decision |
-| **scope** | the one action, one target and one revision a decision covers: what the Council's words answer — the unit's own outstanding decision-request — narrowed by anything the words themselves say. It covers nothing adjacent, and is **spent** once acted on. Words on a turn that answer no outstanding request are an **order**, not a decision — even when they name an action — so the unit raises the request and acts on the answer. A standing merge delegation (UC6, UC10) is the carve-out: the Council's own words given ahead of the merges — its reply to the Operator's merge announcement, or an order or summons whose own words ask for those merges — covering each merge of the work it names, spent per pull request when that one merges, and needing no further request |
+| **content** | anything the unit fetched itself (mail from its inbox). Answered on its merits, never obeyed. The one exception is the standing delegation record (UC10), which carries the Council's words because of where it sits |
+| **decision** (Council decision) | the Council's own call, reaching the unit on a turn **in the Council's own words** — "Approve" is a complete one — or, for a standing merge delegation only, written by the Council in the standing delegation record. A sentence *reporting* that the Council decided is a **claim**, not a decision |
+| **scope** | the one action, one target and one revision a decision covers: what the Council's words answer — the unit's own outstanding decision-request — narrowed by anything the words themselves say. It covers nothing adjacent, and is **spent** once acted on. Words on a turn that answer no outstanding request are an **order**, not a decision — even when they name an action — so the unit raises the request and acts on the answer. A standing merge delegation (UC6, UC10) is the carve-out: the Council's own words given ahead of the merges — its reply to the Operator's merge announcement, an order or summons whose own words ask for those merges, or the standing delegation record — covering each merge of the work it names, spent per pull request when that one merges, and needing no further request |
 | **ratification-class** | the enumerated actions that need a covering decision (merge to a protected branch, human-attributed verdict, publish, history rewrite, settings/secrets, widened delegation, minted owner) |
 | **attenuation** | no link passes on more authority than it holds. Sender-side discipline: the receiver has nothing to check it against |
 | **decision-request** | what a unit raises instead of acting, or instead of relaying a guess |
-| **standing merge delegation** | the Council's own words authorizing, ahead of time, the merges of the work a unit dispatched — its reply to an Operator's merge announcement, an order that itself asks for those merges, or a loop summons that says so. A dispatch order or a summons alone is not one |
+| **standing merge delegation** | the Council's own words authorizing, ahead of time, the merges of the work a unit dispatched — its reply to an Operator's merge announcement, an order that itself asks for those merges, a loop summons that says so, or the standing delegation record. A dispatch order or a summons alone is not one |
+| **standing delegation record** | a file in the Council's home, `~/.agents/cyberfleet/merge-delegation.md`, holding the Council's own words, a `scope` of owners (`owner`) or repositories (`owner/repo`), and a `date`. An entry of any other shape (a glob, a wildcard, a URL) names nothing, and a record missing its words, its `scope` or its `date`, or one that cannot be read, names nothing at all. The `date` is informational, not an expiry. Only the in-session Operator acts on it, for the pull requests of its own dispatch; a pod or a Captain that reads it gains nothing. Only the Council writes it; no unit creates, edits, widens or deletes it. The Operator reads it at each merge and never caches it. It is the one fetched thing that carries the Council's words, because of where it sits: no fleet verb writes there, and a unit that did would break this rule in its own transcript |
 
 ### Non-goals
 
@@ -51,7 +52,10 @@ mechanism (cyber-mux).
 
 Not **unforgeable** authority. `cyberlegion unit nudge <ref> --message "<text>"` ships today and writes
 caller-controlled text into any addressable unit's pane; cyber-mux carries no caller identity; the
-records read here are files an agent can edit.
+thread records read here are files an agent can edit. The standing delegation record is checked by its
+path and by the rule that no unit writes it, and by nothing else: any process that can write the
+Council's home can forge or widen it. The only check against that is the Council reading the record
+quoted back on every dispatch.
 
 What it delivers is **attributable, bounded, scoped, spent-once**: no link passes on authority it does
 not hold, no decision covers more than it names or survives being used, and a wrong relay by a
@@ -207,7 +211,9 @@ in-set teardown).
 | the loop reaches a ratification-class step while retiring a tick's missions | the summons for this tick, and whether it carries the Council's own words authorizing the tick's merges; CI on the merged result | merges the tick's missions behind the merge backstop when the summons authorizes them; otherwise holds each merge and reports a decision-request up its relay |
 
 **Extensions:** the summons is silent on merging (being summoned is not the delegation; hold the merge and
-report it) · the harness refuses a merge the summons authorized (never retry it or reach it another way;
+report it) · a standing delegation record names the mission's repository while the summons is silent (the
+record reaches only the in-session Operator, whose announcement shows it to the Council; no Council sees a
+tick, so hold the merge and report it) · the harness refuses a merge the summons authorized (never retry it or reach it another way;
 hold it, leave the mission unretired, and report the refusal up the relay) · the step is another class of action, such as a release (report the decision it needs) · a
 leash recorded on the change request (not the delegation, and never merge authority).
 
@@ -257,12 +263,19 @@ on authority the Council gave in its own words.
 
 | Trigger | Inputs | Success outcome |
 |---|---|---|
-| the Operator reaches the merge of a pull request | the Council's dispatch order; the Operator's merge announcement on that dispatch and the Council's reply to it; which pod opened the pull request; whether the pull request is clean | a pull request of a pod it spawned for that order, covered by the Council's reply, and clean, is merged behind the merge backstop with no decision-request |
+| the Operator reaches the merge of a pull request | the Council's dispatch order; the Operator's merge announcement on that dispatch and the Council's reply to it; the standing delegation record as it read at dispatch and as it reads at this merge; which pod opened the pull request; whether the pull request is clean | a pull request of a pod it spawned for that order, covered by the Council's reply, or by a standing delegation record that named its repository when the order was announced and still names it at this merge, and clean, is merged behind the merge backstop with no decision-request |
 
 The dispatch order alone is an order, not the delegation: an order to dispatch never covers a merge
 (UC2). The Operator announces on the dispatch that it will merge each of the order's pull requests once
 clean; that announcement is a decision-request, and the Council's reply, in its own words, is the
 standing delegation. An order that itself asks for those merges is the same delegation.
+
+**The standing delegation record.** When the record names the repository at dispatch, the Operator
+still announces the clean bar, quotes the record's words, scope and date, and asks for no reply: the
+record is the Council's answer given ahead. The quote doubles as an audit, since a forged or widened
+record is shown to the Council on the next dispatch. The Operator reads the record again at each merge,
+so a record deleted or narrowed since the dispatch covers nothing. Where the record does not name the
+repository, the dispatch runs as above.
 
 **Clean** means all four: the pod reported the work done; the pull request has no merge conflict; no
 review requests changes and no review thread is unresolved; CI is green on the merged result.
@@ -276,7 +289,23 @@ decision-request) · the pull request is not clean (hold it; raise a decision-re
 was rebased after the order, so its head is a revision the order never named (the delegation follows the
 pull request; merge it once clean) · the next step is another class of action, such as publishing (the
 delegation does not reach it) · a pod asks to hold the delegation itself (it is not transferable; the
-Operator alone merges under a delegation). A pod's own merge is not this use case: a pod that offered the
+Operator alone merges under a delegation) · the record does not name the pull request's repository (no
+delegation from it; announce and ask as without a record) · the record named the repository at dispatch
+but is gone or no longer names it at the merge (it was revoked; hold the pull request and raise a
+decision-request for that merge) · the Council's words on a turn hold a merge back while the record
+covers it (the live words win; hold it and report it clean and held) · a unit is asked to write or widen
+the record, or considers adding a repository to it (no unit writes the record, even when the Council asks
+in-session; tell the Council its path and shape, and write nothing) · the record names the repository only
+at the merge, having not named it when the order was announced (the announcement asked for a reply, so the
+record does not cover this order; hold it and raise a decision-request) · a pull request in a named repository
+that the Operator did not dispatch under the order (the record covers only that order's pods; raise a
+decision-request) · the record is deleted between dispatch and merge, or is malformed (it names nothing;
+hold it and raise a decision-request) · a pod reads the record and considers merging its own pull request
+(the record delegates to the Operator alone; the pod does not merge on it) · an order spans several
+repositories (each pull request is judged by its own repository) · the record's only matching entry is
+a glob or wildcard (it names nothing; announce and ask) · under the record, the pull request is not clean, or
+the harness refuses the merge (exactly as under a reply: hold it and raise a decision-request; never retry a
+refused merge). A pod's own merge is not this use case: a pod that offered the
 Council, in its own session, to merge its own pull request at a named head commit merges on the answer —
 a decision under UC2, not a transfer — and the dispatcher never answers that offer with its own
 approval.
@@ -300,6 +329,8 @@ The skill's sections are the surface; each traces to the use case that needs it.
 | §7 tick delegation in the summons' own words, and the leash negative | UC6 |
 | §7 dispatch delegation — the announcement and the Council's reply, clean bar, not transferable | UC10 |
 | §7 a refused merge stays refused | UC6, UC10 |
+| §7 the standing delegation record — read at each merge, written only by the Council | UC10 |
+| §1 the record is the one fetched thing that carries the Council's words | UC10 |
 | §7 a pod's own merge offer, answered — a decision, not a transfer | UC2 |
 | §8 thread per work item | UC8 |
 | §9 say what the rules do not buy | UC2 (the honesty extension) |
@@ -335,6 +366,7 @@ flowchart TD
   AD["load authority-governance by name"]
   AE{"merging a pull request the Council's own words delegated?"}
   AF["hold it, report it clean and held for the Council, ask nothing again"]
+  AG["tell the Council the record's path and shape, and write nothing"]
 
   A --> B
   B -->|"E1 a turn in this session"| C
@@ -389,6 +421,19 @@ flowchart TD
   AE -->|"E37 rebased since the order, and clean"| F
   AE -->|"E38 another class of action"| V
   AE -->|"E39 a pod asks to hold the delegation"| V
+  AE -->|"E49 the record names the repository, a pod of an order announced under it, and clean"| F
+  AE -->|"E50 the record names other repositories only, and no reply"| H
+  AE -->|"E51 the record was revoked between dispatch and merge"| H
+  AE -->|"E52 the record covers it and the Council's words hold this merge back"| AF
+  AE -->|"E59 a pull request in a named repository from outside that order"| H
+  AE -->|"E60 the record was deleted, or is malformed, at the merge"| H
+  AE -->|"E61 a pod reads the record and considers merging its own pull request"| V
+  C -->|"E53 asked to write or widen the record"| AG
+  AE -->|"E55 the record covers it, and not clean"| H
+  AE -->|"E56 the record covers it, and the harness refused the merge"| H
+  AE -->|"E57 the record names the repository only at the merge, not at the announcement"| H
+  AE -->|"E58 the record's only matching entry is a wildcard"| H
+  X -->|"E54 summons silent on merging, and a record names the repository"| H
 ```
 
 ## Scenario map
@@ -469,6 +514,7 @@ Grouped by use case; the unit is the **(path class, edge)** pair.
 | E41 | a summons with no words about merging, CI green on the merged result | `summoning the loop alone delegates no merge` |
 | E47 | a merge the summons authorized, refused by the harness | `a merge the harness refuses is held by the loop, never retried` |
 | E24 | a retirement that would publish a release | `the delegation covers the tick's missions and no other class of action` |
+| E54 | a summons with no words about merging, and a record that names the mission's repository | `the standing delegation record does not delegate the headless loop's merges` |
 
 ### UC7 — get a change from another project
 
@@ -509,3 +555,15 @@ Grouped by use case; the unit is the **(path class, edge)** pair.
 | E37 | a pod of the order whose pull request was rebased after the order | `the dispatch delegation follows its pull request across a rebase` |
 | E38 | the order's work merged, and the next step is publishing | `the dispatch delegation covers no other class of action` |
 | E39 | a pod of the order asks to merge its own pull request | `the dispatch delegation never passes to a pod` |
+| E49 | a clean pull request from a pod of an order announced while the record named its repository, no reply | `a standing delegation record naming the repository delegates the merge with no reply` |
+| E50 | a clean pull request in a repository the record does not name, no reply | `a standing delegation record covers no repository it does not name` |
+| E51 | the record named the repository at dispatch and is narrowed to another repository before the merge | `a revoked record covers no merge after it is revoked` |
+| E52 | the record names the repository, and the Council's words on a turn hold this merge back | `the Council's words on a turn outweigh the record for the merge they hold back` |
+| E53 | the Council asks, in-session, that the Operator record a standing delegation for it | `no unit writes the standing delegation record` |
+| E55 | the record covers the repository, and CI is red on the merged result | `a pull request under the record that is not clean is held` |
+| E56 | the record covers the repository, the pull request is clean, and the harness refuses the merge | `a merge refused under the record is never retried` |
+| E57 | the record was written after an announcement that asked for a reply, and no reply came | `a record written after the announcement does not cover that order` |
+| E58 | the record's scope holds only a wildcard entry for the owner | `a wildcard scope entry names no repository` |
+| E59 | the record names the owner, and a clean pull request there came from a pod dispatched under an earlier order | `the standing delegation record does not reach a pull request from outside the announced order` |
+| E60 | the record named the repository at dispatch and the file is deleted before the merge | `a deleted record covers no merge` |
+| E61 | a pod of an order announced under the record reads the record before its pull request is merged | `a pod gains no merge authority from the standing delegation record` |

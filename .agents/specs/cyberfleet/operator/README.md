@@ -112,7 +112,8 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
   behind the merge backstop with no further turn, and its pod is torn down with `cyberlegion unit close`;
   anything short of clean is held, its pod left running, and raised to the Council as a
   decision-request. The authority to merge without asking merge by merge is the Council's **own words**
-  — its reply to the announcement, or an order that itself asks for those merges — never the dispatch
+  — its reply to the announcement, an order that itself asks for those merges, or the standing
+  delegation record below — never the dispatch
   order alone, delegated to Operator alone and never to a pod (`authority-governance` §7, the
   [`authority/`](../authority/README.md) node's UC10). With no reply, or one unclear for this merge,
   Operator holds the clean pull request, raises a decision-request for that merge, and waits for the
@@ -120,6 +121,17 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
   harness refuses is held and raised, never retried or worked around.
   When the order itself asks for the merges, Operator still announces the clean bar with the dispatch,
   but waits for no reply before merging.
+- **Merge under a standing delegation the Council recorded** — the Council may write, once, a standing
+  delegation record (`~/.agents/cyberfleet/merge-delegation.md`: its own words, a `scope` of owners or
+  repositories, a `date`). When the record names the dispatch's repository, Operator's announcement
+  still names the clean bar, and also quotes the record's words, scope and date, and asks for no reply;
+  each clean pull request of that dispatch then merges with no turn from the Council. Operator reads the
+  record again at each merge, so a deleted or narrowed record covers nothing from then on. A repository
+  the record does not name gets the announcement and the wait above. Operator never writes the record,
+  even when the Council asks: it tells the Council the path and shape, and the Council writes it
+  (`authority-governance` §7, the [`authority/`](../authority/README.md) node's UC10). The headless
+  loop does not read it. Re-reading at each merge, and holding a not-clean or refused merge under the
+  record, are specified in the authority node's suite rather than repeated here.
 - **Orchestrate several pods on one order** — their pull requests merge in dependency order (a
   consumer never before its producer, per `merge-backstop-governance`), not the order they finished.
   After each merge, Operator mails every other still-open pod of the order, on its own thread, that the
@@ -203,6 +215,7 @@ Every scenario in [`operator.feature`](./operator.feature) maps to one of these 
 | **own every spawn** | spawning a worktree-ship is Operator's, including parallel work on a project that is already a ship; Pod never spawns |
 | **every spawn carries a brief and its own workspace** | `cyberlegion unit spawn` with a self-contained brief, `--at workspace` so the ship opens in its own workspace — binds every spawn, not only the first |
 | **watch and merge clean work** | every brief sets the pod's side (PR, report on thread, never merge, rebase when told); the dispatch announces the merges; a clean PR the Council's reply covers merges with no further turn and its pod is closed; with no reply, or a refused merge, or an unclean PR, it is held and raised, its pod left running |
+| **merge under a standing delegation** | a Council-written record naming the dispatch's repository makes the announcement quote it and ask for nothing, and a clean PR of that dispatch merges with no reply; the record is re-read at each merge; an unnamed repository falls back to announce-and-wait; Operator never writes the record and tells the Council its path and shape instead |
 | **orchestrate several pods** | dependency-order merge; after each merge every other open pod of the order is told the default branch moved; a rebased PR is re-gated from scratch |
 | **list the fleet** | `cyberlegion unit who` (`--all` includes exited ships) |
 | **route messages between ships** | `cyberlegion mail send` / `inbox` / `read`, always by handle |
