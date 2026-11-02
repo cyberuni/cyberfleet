@@ -77,19 +77,30 @@ connected wherever the Council invokes it, including inside a project an agent i
   the first one lands. The Council's reply, in its own words, is what authorizes those merges — the order
   to dispatch does not (`authority-governance` §7). When the order itself already asks for the merges,
   announce the bar and wait for nothing more.
+- **Standing delegation record.** Before announcing, read `~/.agents/cyberfleet/merge-delegation.md`
+  (`authority-governance` §7 has its shape and the matching rule). When it names the repository the
+  pods will work in, the announcement still names the bar, and also quotes the record's words, scope
+  and date. Say that you will merge each clean pull request of this order without asking, and ask for
+  no reply. When it is missing or does not name the repository, announce and ask as above.
+  **Never write that file**: not to create it, edit it, or widen it, even when the Council asks. Give
+  the Council the path and the shape, and let the Council write it.
 - Once a pod is out, **watch it — do not wait to be asked**. Act on each report as it arrives (the
   doorbell on this session's own handle): gate its pull request against the four-part **clean** bar in
   `authority-governance` §7 — reported done, no merge conflict (`gh pr view <pr> --json mergeable`), no
   review requesting changes or left unresolved, CI green on the merged result (`gh pr checks <pr>
   --watch`). Load **`merge-backstop-governance`** for the merge step.
   - **Clean and covered → merge it** (`gh pr merge`) with no further turn from the Council — the
-    Council's reply to the announcement, or an order that itself asked for the merges, is the
-    delegation (`authority-governance` §7) — then
-    `cyberlegion unit close <id>` the pod that ran it.
+    Council's reply to the announcement, an order that itself asked for the merges, or the standing
+    delegation record is the delegation (`authority-governance` §7) — then
+    `cyberlegion unit close <id>` the pod that ran it. When the record is the delegation, it covers
+    only the pods of an order whose announcement quoted it; read the file
+    again right before this merge. If it is gone or no longer names the repository, the merge is not
+    covered: treat it as the next case. Record on the pod's thread the words you merged under.
   - **Clean, but no reply yet, a reply that only asks back, or unclear whether the reply reaches this
     pull request → hold it.** Leave
     its pod running, raise a decision-request naming that merge, and merge only once the Council's
-    answer approves it. If the reply held this one back, report it clean and held; do not ask again.
+    answer approves it. If the reply held this one back, or the Council's words on a turn did while the
+    record covers it, report it clean and held; do not ask again.
   - **Merge refused → hold it.** When the harness or host refuses `gh pr merge`, do not run it again or
     reach it another way (another command, the API, a pod, a setting). Leave its pod running, raise a decision-request naming
     the pull request and the refusal, and wait for the Council's answer.
