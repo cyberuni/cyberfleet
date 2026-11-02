@@ -34,6 +34,15 @@ The Captain and the Coordinator are not shipped, so the shipped `operator` skill
   blocks a merge you did not ask for in your own words. Until you reply, a clean pull request waits for
   you to approve that merge. A merge the harness refuses waits for you too; Operator never retries it
   or works around it. Anything short of clean waits for you.
+- Merges without asking when you have said so once. Write a standing delegation record at
+  `~/.agents/cyberfleet/merge-delegation.md`: your own words, a `scope` listing owners (`cyberuni`) or
+  repositories (`cyberuni/cyberfleet`), and a `date`. For a repository the record names, Operator
+  still states the clean bar with each dispatch and quotes your record. It then merges each clean pull
+  request of that dispatch without waiting for your reply. It reads the record again before every
+  merge, so deleting the file, or taking a repository out of `scope`, stops the next merge. Only you
+  write this file; Operator tells you the path and shape when you ask, and never writes it itself.
+  The record does not reach the unattended `headless-operator`. It also does not get a merge past
+  Claude Code auto mode: that guard reads your Claude Code settings, not this file.
 - Orchestrates several ships on one order: merges their work in dependency order, and after each
   merge tells the ships still open to rebase, adapt to what landed, and re-verify.
 - Keeps one holder of the command center. The standing `operator` is a single long-lived session

@@ -26,8 +26,11 @@ project Captains when they land.
   decision-request, narrowed by the words; it is valid for nothing else.
 - **Standing merge delegations** — only the Council's own words delegate merges ahead of time: its reply
   to the in-session Operator's announcement that it will merge the order's clean pull requests, an order
-  that itself asks for those merges, or a loop summons that says so. A dispatch order or a summons alone
-  delegates no merge. The delegation covers exactly that work: clean pull requests only, merged by the
+  that itself asks for those merges, a loop summons that says so, or the **standing delegation record**
+  the Council wrote once at `~/.agents/cyberfleet/merge-delegation.md` (its words, a scope of owners or
+  repositories, a date). The record lets the in-session Operator merge a named repository's clean pull
+  requests with no reply. It is re-read at each merge, written only by the Council, and never read by the
+  headless loop. A dispatch order or a summons alone delegates no merge. The delegation covers exactly that work: clean pull requests only, merged by the
   Operator itself, never passed to a pod, and never any other ratification-class action. A pod may still
   merge its own pull request on the Council's answer to the pod's own merge offer, a decision rather than
   a transfer, and the dispatcher never answers that offer with its own approval. Without it,

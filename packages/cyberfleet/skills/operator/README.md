@@ -44,7 +44,9 @@ topic, never by a probed location.
   (`authority-governance` §7), which the brief does not grant and the Operator never answers.
   Operator gates each report against the clean bar in `authority-governance` §7. With the dispatch it announces that it will merge the order's clean pull
   requests; the Council's reply to that, in its own words, is the delegation — the dispatch order alone
-  is not. A clean, covered pull request merges with no further Council turn and its pod is closed; an
+  is not. When the Council has written a standing delegation record
+  (`~/.agents/cyberfleet/merge-delegation.md`) that names the repository, the announcement quotes it and
+  asks for no reply, and the record is read again before each merge. Operator never writes that record. A clean, covered pull request merges with no further Council turn and its pod is closed; an
   unclean one, a clean one with no reply yet, or one whose merge the harness refused is held and raised
   as a decision-request, never retried or worked around.
   With several pods on one order it merges in dependency order and, after each merge, tells every other
