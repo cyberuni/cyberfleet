@@ -41,8 +41,8 @@ longer wanted.
 ## Delegation
 
 Every mechanic is a CLI call — the Tavern marketplace query (by intent, not by its exact command
-slug), `npx skills add` / plugin install, and `cyberlegion unit register` / `cyberfleet
-uninstall` / retiring the crew from the registry. Crimp never re-implements the marketplace query
+slug), `npx skills add` / plugin install and `cyberlegion unit register` to recruit, and `npx skills
+remove` / plugin uninstall to discharge, then retiring the crew from the registry. Crimp never re-implements the marketplace query
 and never re-implements the fleet registry — it only invokes them.
 
 ## Resolving `cyberlegion`
