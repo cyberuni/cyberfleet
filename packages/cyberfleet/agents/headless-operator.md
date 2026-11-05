@@ -46,7 +46,7 @@ on mission-done(m):                            # m reports through its existing 
 ```
 
 - **Ready is a pull query, not a service.** Read the frontier with the mission-graph engine's `ready`
-  verb (`node <mission-graph-skill>/scripts/mission-graph.mts ready --format json`); it emits each
+  verb (`node <mission-graph-skill>/scripts/mission-graph.mjs ready --format json`); it emits each
   mission's `id, node, operation, blast, hitlOrAfk, modelTier, briefPointer, rank`. Do not re-derive
   the frontier by hand — the engine owns `fold`/`ready`.
 - **Single writer.** The Operator is the sole graph writer. Claims and retirements are `mission-graph
