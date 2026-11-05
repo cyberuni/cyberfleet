@@ -53,8 +53,9 @@ invokes no gate, spawns nothing, and routes to concrete engines rather than reim
 
 Every operation is routed to a concrete engine, never reimplemented: `define-skill` to author a new
 automaton, `define-skill` / `improve-skill` for governance/loadout re-chip on an existing one,
-`manage-model-runners` for model/effort, the autonomy rubric for leash. Mechanic loads the matched
-engine in-session — it spawns nothing and holds no engine logic itself.
+`manage-model-runners` for model/effort, the autonomy rubric (the SDD conductor's autonomy bar, in
+`start-mission`) for leash. Mechanic loads the matched engine in-session — it spawns nothing and
+holds no engine logic itself.
 
 ## Output
 
