@@ -1,5 +1,23 @@
 # cyberfleet
 
+## 0.6.0
+
+### Minor Changes
+
+- 2cacfe7: Add `cyberfleet captain`, `cyberfleet pods`, and `cyberfleet pod bind|retire`. A project's Captain is cyberlegion's `captain` project service, and each Pod is owned by that Captain role, so a Captain restart or a new Captain session keeps its Pods with nothing to adopt. Binding and retiring run fenced at the caller's lease generation: a session that does not hold the Captain's lease cannot record or retire a Pod, and a Pod is retired once. `pods` lists the Pods of the project here (or of every project with `--all`), each as `current`, `unavailable` (no Captain holds the role now), or `retired`, and `pod bind --sortie <issue-ref>` records the sortie the Pod carries.
+- 4d8eb75: Operator merges clean pull requests under a standing delegation you write once. Put your own words, a `scope` of owners or repositories, and a `date` in `~/.agents/cyberfleet/merge-delegation.md`. For a repository it names, Operator quotes the record with each dispatch and merges each clean pull request without waiting for your reply. It reads the record again before every merge and never writes it. Without the record, Operator still asks before the first merge.
+
+### Patch Changes
+
+- 9dfa193: The authority governance states its reason directly instead of through an incident story, and dates its reference to Claude Code's Merge Without Review rule.
+- df952b6: Move `commander` and `cyberlegion` from `dependencies` to `devDependencies`. The published CLI already inlines both into `dist/cli.mjs`, so installing `cyberfleet` no longer pulls them in.
+- cddbae4: Crimp names the real discharge commands (`npx skills remove` / plugin uninstall); `cyberfleet uninstall` does not exist.
+- 9445884: Point the headless Operator at `mission-graph.mjs`, the script sdd ships, instead of the retired `mission-graph.mts`.
+- 3a34d09: Mechanic's leash route names where the autonomy rubric ships: the SDD conductor's autonomy bar in `start-mission`.
+- c118fe4: Make the Operator, Pod, and Crimp skills and the headless-operator agent self-contained: the pinned `cyberlegion` version is written into their text instead of read from `.plugin/pins.json` outside the skill folder.
+- 90899ad: Include `CHANGELOG.md` in the published package.
+- 2dcd9b8: Crimp and Mechanic say why they skip hedging and restating the request.
+
 ## 0.5.2
 
 ### Patch Changes
