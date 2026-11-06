@@ -51,7 +51,7 @@ Apply these rules in order to each unit. The first rule that matches decides it.
 | 9 | That list is empty | keep: no pull request yet |
 | 10 | Any pull request in it has state `OPEN` | keep: pull request open |
 | 11 | `git -C <root> merge-base --is-ancestor HEAD <headRefOid>` exits non-zero for every pull request in the list | keep: commits after the last pull request |
-| 12 | `git -C <root> status --porcelain` prints anything | ask: work landed, leftover files |
+| 12 | `git -C <root> status --porcelain --untracked-files=all` prints any line other than `?? .agents/cyberlegion/config.json` | ask: work landed, leftover files |
 | 13 | Anything else (every pull request is `MERGED` or `CLOSED`, `HEAD` is inside one of them, and the worktree is clean) | close: pull requests merged or closed |
 
 Rules 4 and 5 handle a worktree that was deleted from disk. Nothing is left on disk to check, so
@@ -63,7 +63,9 @@ the Council's own desk. Those are standing seats, not pods, so this skill never 
 
 Rule 12 catches a pod whose work landed but left files behind: build output, scratch files, an edit it
 never committed. Those are often safe to drop, but only the Council can say, so the unit is listed
-with its files and closed only on the Council's word.
+with its files and closed only on the Council's word. The one line it skips is the marker cyberlegion
+stamps into every worktree it spawns; `cyberlegion unit close` sets that file aside too, so it never
+counts as leftover work.
 
 Rule 11 is the unpushed-work check. It compares the local `HEAD` with each pull request's head commit
 rather than with the remote branch, because the host usually deletes a branch once its pull request
@@ -78,7 +80,7 @@ A held merge always keeps its unit, because a held pull request is still open (r
 
 Show the units in three groups: **close** (rules 5 and 13), **ask** (rule 12), then **keep**. Each row
 gives the unit id, the handle, the branch, the result, and the pull request numbers. Under each ask
-row, list the lines `git status --porcelain` printed (the first 10, then how many more), so the
+row, list the lines rule 12 counted (the first 10, then how many more), so the
 Council sees exactly what would be discarded. Handles are not unique, so the id is what identifies a
 unit.
 
