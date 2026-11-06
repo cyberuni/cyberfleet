@@ -13,7 +13,7 @@ for retiring a pod's record: that belongs to the pod's Captain (`cyberfleet pod 
 ## What it does
 
 - Reads every unit with `cyberlegion unit who --all --format json`, and acts only on units in the
-  caller's current multiplexer session (until records store the herdr session, cyberuni/cyberlegion#241:
+  caller's current multiplexer session (records do not yet store the multiplexer session, cyberuni/cyberlegion#241, so
   units whose pane `mux` matches the caller's). Other units are kept, since another session may resume them.
 - Fetches pull requests once per repository and matches branches locally, instead of one `gh` call per unit.
 - Classifies each unit by its worktree and its branch's pull requests. A unit is closable only when

@@ -36,14 +36,13 @@ When no rung resolves, stop and tell the Council to install the `cyberlegion` pl
 ## 2. Read the fleet
 
 1. `cyberlegion unit prune` marks units whose pane is gone as exited.
-2. `cyberlegion unit whoami` gives this session's own id.
+2. `cyberlegion unit whoami` gives this session's own id and handle.
 3. Name the caller's multiplexer: `herdr` when `HERDR_ENV` is set, `tmux` when `TMUX` is set.
    When neither is set, stop and tell the Council.
 4. `cyberlegion unit who --all --format json` lists every unit. Each record has `id`, `handle`,
    `harness`, `status`, `cwd`, a pane, and `worktree` (`root` and `branch`). The pane is under `pane`
-   (`mux` and `id`), or under the legacy `tmux` key until cyberuni/cyberlegion#241 lands. Read it from
-   whichever is present. Do not rely on a `conversation` field: it is optional, and absent in
-   cyberlegion 1.7.0.
+   (`mux` and `id`), or, in records written by older versions, under the legacy `tmux` key. Read it from
+   whichever is present. The `conversation` field is optional, and this skill does not use it.
 5. Fetch pull requests once per repository, not once per unit. For each distinct repository among the
    in-scope units, run inside one of its worktrees:
    `gh pr list --state all --limit 1000 --json number,state,headRefOid,headRefName`.
@@ -77,8 +76,8 @@ Rules 5 and 6 handle a worktree that was deleted from disk. Nothing is left on d
 the session's own state decides: a live session may still be in use, and an exited one has nothing
 left to lose.
 
-Rule 3 is the scope rule. Until records store the herdr session (cyberuni/cyberlegion#241), scope is
-the multiplexer kind. A record with no pane, or with only the legacy `tmux` key while the caller is
+Rule 3 is the scope rule. Records do not yet store the multiplexer session (cyberuni/cyberlegion#241),
+so scope is the multiplexer kind. A record with no pane, or with only the legacy `tmux` key while the caller is
 on herdr, is out of scope. herdr restores panes with the same ids and resumes Claude itself, so a
 unit on another herdr session may come back.
 
@@ -114,11 +113,16 @@ For each **live** unit (`status` is not `exited`) that step 3 put in **close**:
 
    ```sh
    cyberlegion mail send --to <id> --thread close-<id>-<timestamp> --subject "Closing?" \
-     --body "Do you have unfinished work? Reply DONE or UNFINISHED: <reason>"
+     --body "Do you have unfinished work? Reply with: cyberlegion mail send --to <caller handle> --thread <thread> --body 'DONE' (or --body 'UNFINISHED: <reason>')"
    ```
 
-   Send the questions to all such units first, then wait for replies with
-   `cyberlegion mail await --thread <thread>` under a bound of about 2 minutes in total, not per unit.
+   `<caller handle>` is the handle from `unit whoami`, and `<thread>` is the same thread id. A reply
+   sent without that thread never matches the wait.
+
+   Send the questions to all such units first. Then wait on each thread with
+   `cyberlegion mail await --thread <thread> --timeout <ms>`, giving each the remaining share of a
+   total budget of about 2 minutes (120000 ms), not 2 minutes per unit. `await` prints the reply and acks
+   it; it exits non-zero on timeout.
 3. Read the reply:
    - `DONE` → the unit stays in **close**.
    - `UNFINISHED: <reason>` → **keep: unit reports unfinished work**, and show the reason.
