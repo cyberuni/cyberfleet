@@ -18,6 +18,9 @@ for retiring a pod's record: that belongs to the pod's Captain (`cyberfleet pod 
   request's head commit. A unit whose worktree was deleted is closed only once its session has exited.
 - Lists a landed unit with leftover uncommitted files separately, with the files, and closes it
   (discarding them) only when the Council names it.
+- Reads each close candidate's Claude Code transcript. A unit active in the last hour is kept. A unit
+  the Council typed into is listed with its last exchange and closed only when the Council names it,
+  so a conversation still in progress is never cut off.
 - Keeps this session, standing owners, units with no worktree, and every session in a main
   checkout (Captain, Coordinator, Operator, the Council's desk).
 - Shows the Council the close, ask, and keep groups, and asks about the close and ask groups
