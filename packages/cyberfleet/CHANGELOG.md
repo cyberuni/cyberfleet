@@ -1,5 +1,12 @@
 # cyberfleet
 
+## 0.7.0
+
+### Minor Changes
+
+- ddaf2a0: Add the `close-sessions` skill: a mechanical sweep that closes every agent session whose branch's pull requests have all landed, and keeps every session that might still have work.
+- 9f663f9: Add the `jump` skill: `/jump [repo|branch|pod|task|back|<prose>]` moves the view to the one pane working on what the argument names, through `cyberlegion unit focus`, and `/jump back` returns through cyber-mux's jump history. More than one match lists the candidates and stops.
+
 ## 0.6.0
 
 ### Minor Changes
