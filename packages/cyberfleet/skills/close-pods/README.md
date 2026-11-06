@@ -14,13 +14,16 @@ for retiring a pod's record: that belongs to the pod's Captain (`cyberfleet pod 
 
 - Reads every unit with `cyberlegion unit who --all --format json`.
 - Classifies each unit by its worktree and its branch's pull requests. A unit is closable only when
-  every pull request from its branch is merged or closed, its worktree is clean, and its `HEAD` is
-  contained in a pull request's head commit. A unit whose worktree was deleted is closed only once its
-  session has exited.
+  every pull request from its branch is merged or closed and its `HEAD` is contained in a pull
+  request's head commit. A unit whose worktree was deleted is closed only once its session has exited.
+- Lists a landed unit with leftover uncommitted files separately, with the files, and closes it
+  (discarding them) only when the Council names it.
 - Keeps this session, standing owners, units with no worktree, and every session in a main
   checkout (Captain, Coordinator, Operator, the Council's desk).
-- Shows the Council one table and asks once before closing anything.
-- Closes each confirmed unit with `cyberlegion unit close <id>`, never with `--force`.
+- Shows the Council the close, ask, and keep groups, and asks about the close and ask groups
+  separately before closing anything.
+- Closes each confirmed unit with `cyberlegion unit close <id>`, adding `--force` only for a confirmed
+  unit with leftover files.
 
 This is the interim home for the sweep. The planned design moves the close into the Coordinator, at the
 moment a pod's last pull request lands, and leaves this sweep for the leftovers.
