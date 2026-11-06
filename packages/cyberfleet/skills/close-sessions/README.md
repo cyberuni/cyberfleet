@@ -12,15 +12,20 @@ for retiring a pod's record: that belongs to the pod's Captain (`cyberfleet pod 
 
 ## What it does
 
-- Reads every unit with `cyberlegion unit who --all --format json`.
+- Reads every unit with `cyberlegion unit who --all --format json`, and acts only on units in the
+  caller's current multiplexer session (until records store the herdr session, cyberuni/cyberlegion#241:
+  units whose pane `mux` matches the caller's). Other units are kept, since another session may resume them.
+- Fetches pull requests once per repository and matches branches locally, instead of one `gh` call per unit.
 - Classifies each unit by its worktree and its branch's pull requests. A unit is closable only when
   every pull request from its branch is merged or closed and its `HEAD` is contained in a pull
-  request's head commit. A unit whose worktree was deleted is closed only once its session has exited.
+  request's head commit. Mechanical evidence decides first. A unit whose worktree was deleted is
+  closed only once its session has exited.
 - Lists a landed unit with leftover uncommitted files separately, with the files, and closes it
   (discarding them) only when the Council names it.
-- Reads each close candidate's Claude Code transcript. A unit active in the last hour is kept. A unit
-  the Council typed into is listed with its last exchange and closed only when the Council names it,
-  so a conversation still in progress is never cut off.
+- Asks each live unit that passes the mechanical close one question by mail: "Do you have unfinished
+  work? Reply DONE or UNFINISHED: <reason>". A unit the multiplexer shows working is kept without
+  asking. UNFINISHED or no reply keeps the unit, with the reason listed. A reply never closes a unit
+  the evidence keeps. It never types into a pane or reads its screen, and needs no transcript or hook.
 - Keeps this session, standing owners, units with no worktree, and every session in a main
   checkout (Captain, Coordinator, Operator, the Council's desk).
 - Shows the Council the close, ask, and keep groups, and asks about the close and ask groups
