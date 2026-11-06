@@ -13,7 +13,8 @@
 			"!packages/cyberfleet/.claude-plugin/plugin.json",
 			"!packages/cyberfleet/.codex-plugin/plugin.json",
 			"!packages/cyberfleet/.plugin/plugin.json",
-			"!.claude-plugin/marketplace.json"
+			"!.claude-plugin/marketplace.json",
+			"!.github/scripts/min-release-age.mjs"
 		]
 	},
 	"overrides": [

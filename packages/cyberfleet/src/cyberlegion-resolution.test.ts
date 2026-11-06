@@ -14,6 +14,7 @@ const ENTRY_POINTS = [
 	'skills/operator/SKILL.md',
 	'skills/pod/SKILL.md',
 	'skills/crimp/SKILL.md',
+	'skills/jump/SKILL.md',
 	'agents/headless-operator.md',
 ]
 
