@@ -1,11 +1,11 @@
-# close-pods
+# close-sessions
 
 A mechanical sweep that closes every agent session whose work has landed, and keeps every session
 that might still have work. It has no persona and no judgment step, so it runs on a low-tier model.
 
 ## When to use
 
-- The Council asks to close finished pods, clean up idle sessions or panes, or tidy the fleet.
+- The Council asks to close finished agent sessions, panes, or pods, clean up idle sessions, or tidy the fleet.
 
 Not for marking dead records only: that is `cyberlegion unit prune`, which this skill runs first. Not
 for retiring a pod's record: that belongs to the pod's Captain (`cyberfleet pod retire`).
@@ -29,4 +29,4 @@ for retiring a pod's record: that belongs to the pod's Captain (`cyberfleet pod 
   unit with leftover files.
 
 This is the interim home for the sweep. The planned design moves the close into the Coordinator, at the
-moment a pod's last pull request lands, and leaves this sweep for the leftovers.
+moment a unit's last pull request lands, and leaves this sweep for the leftovers.

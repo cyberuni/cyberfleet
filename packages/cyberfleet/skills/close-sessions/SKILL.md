@@ -1,10 +1,10 @@
 ---
-name: close-pods
-description: "Use this skill when the Council asks to close finished pods, clean up idle agent sessions or panes, or tidy the fleet — it closes each unit whose worktree branch has landed and keeps everything else. Not for sweeping dead records only (`cyberlegion unit prune`), and not for retiring a Captain's pod record."
+name: close-sessions
+description: "Use this skill when the Council asks to close finished agent sessions, panes, or pods, clean up idle sessions, or tidy the fleet — it closes each unit whose worktree branch has landed and keeps everything else. Not for sweeping dead records only (`cyberlegion unit prune`), and not for retiring a Captain's pod record."
 model: haiku
 ---
 
-# Close pods
+# Close sessions
 
 Close every agent session whose work has landed, and keep every session that might still have work.
 This is a mechanical sweep: each step below is a command and a rule, with no judgment call in it.
@@ -60,9 +60,9 @@ the session's own state decides: a live session may still be in use, and an exit
 left to lose.
 
 Rule 7 keeps every session in a project's main checkout: a Captain, a Coordinator, the Operator, or
-the Council's own desk. Those are standing seats, not pods, so this skill never closes one.
+the Council's own desk. Those are standing seats, not spawned units, so this skill never closes one.
 
-Rule 12 catches a pod whose work landed but left files behind: build output, scratch files, an edit it
+Rule 12 catches a unit whose work landed but left files behind: build output, scratch files, an edit it
 never committed. Those are often safe to drop, but only the Council can say, so the unit is listed
 with its files and closed only on the Council's word. The one line it skips is the marker cyberlegion
 stamps into every worktree it spawns; `cyberlegion unit close` sets that file aside too, so it never
@@ -79,7 +79,7 @@ A held merge always keeps its unit, because a held pull request is still open (r
 
 ## 4. Check the conversation
 
-A pod's pull requests can land while the Council is still talking with it: a question the pod asked
+A unit's pull requests can land while the Council is still talking with it: a question the unit asked
 is unanswered, or a decision lives only in its conversation. Closing ends that conversation. Run these
 checks on every unit that step 3 put in close or ask. The first rule that matches decides it.
 
@@ -95,7 +95,7 @@ checks on every unit that step 3 put in close or ask. The first rule that matche
 **Find the transcript.** It is `~/.claude/projects/*/<conversation>.jsonl`, where `<conversation>` is
 the unit's `conversation` field. When the unit has no `conversation`, or that matches no file, no
 transcript is found. Do not substitute another file from the same folder: a worktree is reused by
-many pods, so the newest transcript there often belongs to a different one.
+many units, so the newest transcript there often belongs to a different one.
 
 `stopped` is not `exited`. A stopped unit was kept on purpose so it can be restarted.
 
@@ -112,7 +112,7 @@ jq -rR 'fromjson? | select(.type=="user" and .origin.kind=="human" and (.isMeta|
   | .[0:200]' <transcript>
 ```
 
-Print the pod's last reply with:
+Print the unit's last reply with:
 
 ```sh
 jq -rR 'fromjson? | select(.type=="assistant")
@@ -122,7 +122,7 @@ jq -rR 'fromjson? | select(.type=="assistant")
 
 C2 lets an exited unit with no transcript keep its step-3 result: its session ended and no
 conversation is left on disk, so closing it loses nothing more. C4 keeps a unit that is working or
-being talked to right now. C5 sends every pod the Council spoke to back to the Council, because only
+being talked to right now. C5 sends every unit the Council spoke to back to the Council, because only
 the Council knows whether that conversation finished.
 
 ## 5. Confirm with the Council
