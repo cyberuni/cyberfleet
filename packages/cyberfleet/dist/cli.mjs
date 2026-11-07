@@ -2963,6 +2963,7272 @@ function useColor() {
 new Command();
 //#endregion
 //#region ../../node_modules/.pnpm/cyber-mux@0.11.0/node_modules/cyber-mux/dist/exec-Bmdcg_T7.mjs
+const nodeExec$1 = (cmd, args) => {
+	try {
+		const out = execFileSync(cmd, args, {
+			encoding: "utf8",
+			stdio: [
+				"ignore",
+				"pipe",
+				"pipe"
+			]
+		}).trim();
+		nodeExec$1.lastError = void 0;
+		return out;
+	} catch (err) {
+		const stderr = err.stderr;
+		nodeExec$1.lastError = String(stderr ?? "").trim() || void 0;
+		return null;
+	}
+};
+/**
+* A failure message carrying the runner's reason for it, when there is one. The backend's own words
+* verbatim — never a paraphrase, and never a guess: a refused split may be a region too small, or a
+* server that is simply gone, and only the backend knows which.
+*/
+function withReason$1(exec, message) {
+	return exec.lastError ? `${message} — ${exec.lastError}` : message;
+}
+//#endregion
+//#region ../../node_modules/.pnpm/cyber-mux@0.11.0/node_modules/cyber-mux/dist/backend-D3VSsev4.mjs
+const KNOWN_MUX$1 = [
+	"tmux",
+	"rmux",
+	"herdr",
+	"wezterm",
+	"zellij",
+	"cmux",
+	"otty",
+	"screen",
+	"none"
+];
+function isKnownMux$1(v) {
+	return v != null && KNOWN_MUX$1.includes(v);
+}
+/**
+* The single source of the mux → per-pane-env-var mapping. tmux exports `$TMUX_PANE`; herdr exports
+* `$HERDR_PANE_ID` (both in the same `wX:pY`-style namespace); WezTerm exports `$WEZTERM_PANE` in
+* every pane (its own bare-integer id) — per the issue that requested that backend (#47), the same
+* fast-path extension `$TMUX_PANE`/`$HERDR_PANE_ID` already get; Zellij exports `$ZELLIJ_PANE_ID` in
+* every terminal pane (its own `terminal_N`/bare-`N` id) — per the issue that requested this backend
+* (#46); cmux exports `$CMUX_SURFACE_ID` in every terminal (its surface ref, e.g. `surface:7`) — per
+* the issue that requested this backend (#48); otty exports `$OTTY_PANE_ID` in every pane, which is
+* also its only "inside otty" signal, so it doubles as the ancestry fallback's hint the way
+* `$WEZTERM_PANE` does. screen carries no per-pane env var. Both the ancestry
+* probe and the `currentPane` self-identity helper read the pane through this table so the two never
+* diverge on which env var a given mux uses.
+*
+* **rmux is the one entry whose ORDER against another matters**, and the reason is not cosmetic: an
+* rmux pane exports `$RMUX_PANE` AND `$TMUX_PANE`, both holding the same `%N` id, because rmux
+* reimplements the tmux command language and keeps tmux's env contract for anything that reads it
+* (probed live on rmux 0.10.0 — a pane's env carried `RMUX=<socket>,<pid>,<session>`,
+* `RMUX_PANE=%1`, `TMUX=<the same triple>`, `TMUX_PANE=%1`, `TERM_PROGRAM=rmux`). So `$TMUX_PANE`
+* is NOT evidence of tmux, and every read that walks this table must ask rmux BEFORE tmux, or an
+* rmux session self-identifies as tmux and gets driven with the wrong binary. The table itself is
+* unordered — `currentPane` and `discoverByAncestry` below each carry the ordering, and each says so.
+*/
+const PANE_ENV$1 = {
+	tmux: (env) => env["TMUX_PANE"],
+	rmux: (env) => env["RMUX_PANE"],
+	herdr: (env) => env["HERDR_PANE_ID"],
+	wezterm: (env) => env["WEZTERM_PANE"],
+	zellij: (env) => env["ZELLIJ_PANE_ID"],
+	cmux: (env) => env["CMUX_SURFACE_ID"],
+	otty: (env) => env["OTTY_PANE_ID"]
+};
+/**
+* Resolve THIS session's own pane from env alone (no `ps` walk): the `$CYBER_MUX_PANE` fast-path a
+* spawn propagates → `$RMUX_PANE` (rmux) → `$TMUX_PANE` (tmux) → `$HERDR_PANE_ID` (herdr) →
+* `$WEZTERM_PANE` (wezterm) → `$ZELLIJ_PANE_ID` (zellij) → `$CMUX_SURFACE_ID` (cmux) →
+* `$OTTY_PANE_ID` (otty). Returns the pane tagged with its multiplexer, or undefined when the
+* session is in no pane-carrying multiplexer. This is the mux-agnostic self-identity key.
+*
+* **rmux is asked before tmux, and that order is load-bearing** — an rmux pane sets `$TMUX_PANE`
+* too (see `PANE_ENV`), so the tmux question is not a question rmux answers `no` to. The reverse
+* order would report every rmux pane as tmux and hand `resolveMuxAdapter` the wrong binary.
+*/
+function currentPane$1(env) {
+	if (env["CYBER_MUX_PANE"]) return {
+		mux: env["CYBER_MUX"] === "rmux" ? "rmux" : env["CYBER_MUX"] === "herdr" ? "herdr" : env["CYBER_MUX"] === "wezterm" ? "wezterm" : env["CYBER_MUX"] === "zellij" ? "zellij" : env["CYBER_MUX"] === "cmux" ? "cmux" : env["CYBER_MUX"] === "otty" ? "otty" : "tmux",
+		pane: env["CYBER_MUX_PANE"]
+	};
+	const rmux = PANE_ENV$1.rmux(env);
+	if (rmux) return {
+		mux: "rmux",
+		pane: rmux
+	};
+	const tmux = PANE_ENV$1.tmux(env);
+	if (tmux) return {
+		mux: "tmux",
+		pane: tmux
+	};
+	const herdr = PANE_ENV$1.herdr(env);
+	if (herdr) return {
+		mux: "herdr",
+		pane: herdr
+	};
+	const wezterm = PANE_ENV$1.wezterm(env);
+	if (wezterm) return {
+		mux: "wezterm",
+		pane: wezterm
+	};
+	const zellij = PANE_ENV$1.zellij(env);
+	if (zellij) return {
+		mux: "zellij",
+		pane: zellij
+	};
+	const cmux = PANE_ENV$1.cmux(env);
+	if (cmux) return {
+		mux: "cmux",
+		pane: cmux
+	};
+	const otty = PANE_ENV$1.otty(env);
+	if (otty) return {
+		mux: "otty",
+		pane: otty
+	};
+}
+/**
+* Two-mode multiplexer detection.
+*
+* Fast-path: `$CYBER_MUX` (tmux | rmux | herdr | wezterm | zellij | cmux | otty | screen | none) is
+* trusted outright — this also serves as an OVERRIDE (`=none` forces no-mux even inside a real
+* multiplexer).
+* `$CYBER_MUX_PANE` carries the pane id alongside it. Detection RECOGNIZES `screen` (so an override
+* pinning it, or a real screen ancestor, is reported truthfully rather than silently ignored), but
+* `screen` is not a drivable backend — `resolveMuxAdapter` rejects it with a reason. Recognition is
+* not support.
+*
+* Discovery (else): walk the process ancestry from `$$` via `ps -o ppid=,comm= -p <pid>`, since the
+* tool's own shell may not be the human's pane. `$RMUX`/`$TMUX`/`$HERDR_ENV` are NOT trusted alone —
+* they are used only as a fast-positive hint the ancestry walk falls back to when the walk itself is
+* inconclusive (e.g. `ps` unavailable), never as a substitute for it.
+*/
+function probeMultiplexer$1(exec, env, opts = {}) {
+	const prefix = opts.envPrefix ?? "CYBER_MUX";
+	const override = env[prefix];
+	const pane = env[`${prefix}_PANE`];
+	if (isKnownMux$1(override)) return {
+		mux: override,
+		...pane ? { pane } : {},
+		via: "env"
+	};
+	if (opts.discover === false) return {
+		mux: "none",
+		via: "ancestry"
+	};
+	return discoverByAncestry$1(exec, env);
+}
+const MUX_COMM$1 = [
+	{
+		re: /^tmux(:|$)/,
+		mux: "tmux"
+	},
+	{
+		re: /^rmux(-daemon|-server)?(:|$)/,
+		mux: "rmux"
+	},
+	{
+		re: /^herdr(:|$)/,
+		mux: "herdr"
+	},
+	{
+		re: /^wezterm(-gui|-mux-server)?(:|$)/,
+		mux: "wezterm"
+	},
+	{
+		re: /^zellij(:|$)/,
+		mux: "zellij"
+	},
+	{
+		re: /^screen(:|$)/,
+		mux: "screen"
+	}
+];
+/** Narrows a `Mux` to a `PaneMux` by ASKING `PANE_ENV`, so membership has exactly one definition. */
+function isPaneMux$1(mux) {
+	return Object.hasOwn(PANE_ENV$1, mux);
+}
+/**
+* The per-pane env var for a mux, via the shared `PANE_ENV` table; undefined for screen/none.
+*
+* The guard is "does `PANE_ENV` have a row for this mux?", NOT a second hand-written list of the
+* muxes that have one. The hand-written list is what #169 was: `otty` had a `PANE_ENV` row and a
+* `discoverByAncestry` hint, but was missing from the list here, so an ancestry-discovered otty
+* session reported no pane while `$OTTY_PANE_ID` sat in its env, readable. `screen` and `none` still
+* answer undefined — now because they are genuinely absent from the table, which is the same reason
+* they were meant to answer undefined before.
+*/
+function paneFor$1(mux, env) {
+	return isPaneMux$1(mux) ? PANE_ENV$1[mux](env) : void 0;
+}
+/**
+* An ancestry-discovered probe, OMITTING `pane` when the mux carries none — never carrying it as an
+* explicit `undefined`, so `MuxProbe.pane` stays an absent-or-present field (the same conditional
+* shape the `$CYBER_MUX_PANE` fast-path uses above).
+*/
+function ancestryProbe$1(mux, env) {
+	const pane = paneFor$1(mux, env);
+	return {
+		mux,
+		...pane !== void 0 ? { pane } : {},
+		via: "ancestry"
+	};
+}
+const MAX_ANCESTORS$1 = 32;
+function walkAncestry$1(exec, env) {
+	let pid = process.pid;
+	const seen = /* @__PURE__ */ new Set();
+	for (let i = 0; i < MAX_ANCESTORS$1; i++) {
+		if (seen.has(pid)) break;
+		seen.add(pid);
+		const line = exec("ps", [
+			"-o",
+			"ppid=,comm=",
+			"-p",
+			String(pid)
+		]);
+		if (!line) break;
+		const trimmed = line.trim();
+		const spaceIdx = trimmed.indexOf(" ");
+		const ppidStr = spaceIdx === -1 ? trimmed : trimmed.slice(0, spaceIdx);
+		const comm = spaceIdx === -1 ? "" : trimmed.slice(spaceIdx + 1).trim();
+		const ppid = Number.parseInt(ppidStr, 10);
+		for (const entry of MUX_COMM$1) if (entry.re.test(comm)) return ancestryProbe$1(entry.mux, env);
+		if (!Number.isFinite(ppid) || ppid <= 1) break;
+		pid = ppid;
+	}
+}
+function discoverByAncestry$1(exec, env) {
+	const found = walkAncestry$1(exec, env);
+	if (found) return found;
+	if (env["RMUX"]) return ancestryProbe$1("rmux", env);
+	if (env["TMUX"]) return ancestryProbe$1("tmux", env);
+	if (env["HERDR_ENV"]) return ancestryProbe$1("herdr", env);
+	if (env["WEZTERM_PANE"]) return ancestryProbe$1("wezterm", env);
+	if (env["ZELLIJ"]) return ancestryProbe$1("zellij", env);
+	if (env["CMUX_WORKSPACE_ID"]) return ancestryProbe$1("cmux", env);
+	if (env["OTTY_PANE_ID"]) return ancestryProbe$1("otty", env);
+	return {
+		mux: "none",
+		via: "ancestry"
+	};
+}
+/**
+* Where the history lives: `$CYBER_MUX_STATE_DIR/jumps.json`, else `~/.agents/cyber-mux/jumps.json`.
+* A state file of its own, kept apart from any settings file a person edits.
+*/
+function jumpStatePath$1(env) {
+	return join(env["CYBER_MUX_STATE_DIR"] || join(homedir(), ".agents", "cyber-mux"), "jumps.json");
+}
+/**
+* The history file on disk. A write goes to a temp file beside it and is renamed over it, so a reader
+* never sees half a file and a crash mid-write leaves the old history whole.
+*/
+function nodeJumpStore$1(path) {
+	return {
+		read() {
+			try {
+				return readFileSync(path, "utf8");
+			} catch {
+				return null;
+			}
+		},
+		write(contents) {
+			mkdirSync(dirname(path), { recursive: true });
+			const tmp = `${path}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
+			writeFileSync(tmp, contents, "utf8");
+			renameSync(tmp, path);
+		}
+	};
+}
+/**
+* The server instance the caller's pane belongs to, read from the env its backend sets in every pane.
+* tmux and rmux export `socket,pid,session` (`$TMUX`, `$RMUX`): the socket is the home and the pid is
+* the run. zellij pane ids are per session, so the session is the home. wezterm's mux socket is the
+* home. A backend whose panes carry no such var gets an empty instance: its links are still checked
+* against the live panes on every read, but a restart that reuses a pane id is not detected.
+*/
+function jumpServer$1(mux, env) {
+	const triple = (value) => {
+		const [home = "", run = ""] = (value ?? "").split(",");
+		return {
+			mux,
+			home,
+			run
+		};
+	};
+	if (mux === "tmux") return triple(env["TMUX"]);
+	if (mux === "rmux") return triple(env["RMUX"]);
+	if (mux === "zellij") return {
+		mux,
+		home: env["ZELLIJ_SESSION_NAME"] ?? "",
+		run: ""
+	};
+	if (mux === "wezterm") return {
+		mux,
+		home: env["WEZTERM_UNIX_SOCKET"] ?? "",
+		run: ""
+	};
+	return {
+		mux,
+		home: "",
+		run: ""
+	};
+}
+/** Parse the file, reading anything unreadable or of another shape as empty history — a broken file
+* must never block a jump, and the next write replaces it. */
+function load$2(store) {
+	const raw = store.read();
+	if (raw == null) return {
+		version: 1,
+		servers: []
+	};
+	try {
+		const parsed = JSON.parse(raw);
+		if (parsed.version !== 1 || !Array.isArray(parsed.servers)) return {
+			version: 1,
+			servers: []
+		};
+		return {
+			version: 1,
+			servers: parsed.servers.filter((s) => s != null && typeof s.mux === "string" && typeof s.home === "string" && typeof s.run === "string" && s.links != null && typeof s.links === "object")
+		};
+	} catch {
+		return {
+			version: 1,
+			servers: []
+		};
+	}
+}
+function save$1(store, file) {
+	store.write(`${JSON.stringify(file, null, "	")}\n`);
+}
+/** The history of `server`, after dropping any earlier run at the same home (S10). Creates it. */
+function historyOf$1(file, server) {
+	file.servers = file.servers.filter((s) => s.mux !== server.mux || s.home !== server.home || s.run === server.run);
+	let history = file.servers.find((s) => s.mux === server.mux && s.home === server.home);
+	if (!history) {
+		history = {
+			...server,
+			links: {}
+		};
+		file.servers.push(history);
+	}
+	return history;
+}
+/**
+* Record target ← the caller's pane. Records nothing when the caller is in no pane of `muxName`, or
+* when it is the target itself (S6). The latest jump into a pane replaces the one before (S4, S11).
+*/
+function recordJump$1(muxName, target, ctx) {
+	const self = currentPane$1(ctx.env);
+	if (!self || self.mux !== muxName || self.pane === target.id) return;
+	const file = load$2(ctx.store);
+	historyOf$1(file, jumpServer$1(muxName, ctx.env)).links[target.id] = {
+		from: self.pane,
+		at: (ctx.now ?? Date.now)()
+	};
+	save$1(ctx.store, file);
+}
+/** Each wrapped adapter's unwrapped original, so a focus can run without being recorded (back). */
+const unwrapped$1 = /* @__PURE__ */ new WeakMap();
+/** The adapter's focus without the recording `withJumpHistory` adds. */
+function rawFocus$1(adapter) {
+	return (unwrapped$1.get(adapter) ?? adapter).focus;
+}
+/**
+* Focus `target`, then record target ← the caller's pane. A failed focus records nothing. A failed
+* write never fails the focus: the view already moved, and reporting failure would be false.
+*/
+function focusAndRecord$1(adapter, exec, target, ctx) {
+	rawFocus$1(adapter)(exec, target);
+	try {
+		recordJump$1(adapter.name, target, ctx);
+	} catch {}
+}
+/**
+* Give an adapter a `focus` that records each jump, reading the caller's pane from `process.env` and
+* writing `jumpStatePath(process.env)`. Every adapter the library exports is wrapped, so a host that
+* calls `adapter.focus` directly (cyberlegion's `unit focus`) records with no change of its own.
+*/
+function withJumpHistory$1(adapter) {
+	const original = unwrapped$1.get(adapter) ?? adapter;
+	const wrapped = {
+		...original,
+		focus(exec, target) {
+			const env = process.env;
+			focusAndRecord$1(original, exec, target, {
+				env,
+				store: nodeJumpStore$1(jumpStatePath$1(env))
+			});
+		}
+	};
+	unwrapped$1.set(wrapped, original);
+	return wrapped;
+}
+/**
+* The launch-line fallbacks — the compensations for what a creating route could not set natively.
+*
+* Two things a caller can ask for may have no native flag on the verb that opens a pane: the env the
+* pane starts with, and the directory it starts in. Both are then delivered the only way left, by
+* composing them onto the command line the pane runs — an `env K=V` prefix, a `cd <dir> &&` prefix,
+* or both. They compose in ONE order (`cd '/x' && env K=V cmd`, the env INSIDE the `&&`), because the
+* other order sets the variables on `cd` and leaves the command without them.
+*
+* The routes that lose env are herdr's worktree `create`/`open` (0.7.4 answers `--env` with `unknown
+* option`) and every cmux and otty creating verb. The routes that lose cwd are cmux's `new-pane` and
+* otty's `tab new`. Each adapter's header records what it found; this module only composes.
+*
+* The env prefix is a LAST resort — the values land in `ps` output and the pane's shell history — and
+* it only works when there IS a command to ride; with none, the honest outcome is to warn, never to
+* drop silently. A `cd` needs no command to ride, so a route with a cwd and no launch still lands in
+* the right directory.
+*
+* This lives in one module, called by every route that can lose either, so the rule cannot be wired
+* on one and forgotten on another — and so the ordering the two must agree about is written once.
+* Only a route that actually lost the native flag may call it: prefixing over a natively-set value
+* would push it into `ps` and shell history on every route, the exact cost these prefixes exist to
+* pay only when they must.
+*/
+/**
+* Single-quote a value for a shell command line. Everything is literal inside single quotes, so the
+* only escape needed is for a single quote itself: end the quoting, emit an escaped `'`, reopen.
+* Without this a value carrying a space or a quote would split into extra words, or unbalance the
+* line outright.
+*/
+function shellQuote$1(value) {
+	return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+/** `env K=V …` with a trailing space, ready to prepend to a command line. Values are shell-quoted. */
+function envPrefix$1(env) {
+	return `env ${Object.entries(env).map(([key, value]) => `${key}=${shellQuote$1(value)}`).join(" ")} `;
+}
+/**
+* Given the env a route could not carry and the command (if any) that would run in the opened pane,
+* decide how env rides in. With a command, env is prefixed onto it and the pane carries the value;
+* with none, env is dropped and the caller warns. No env (or an empty map) is `carried` unchanged, so
+* a caller on the losing route can call this unconditionally and get the right command back.
+*/
+function envFallback$1(env, command) {
+	if (env === void 0 || Object.keys(env).length === 0) return {
+		kind: "carried",
+		command
+	};
+	if (command === void 0) return {
+		kind: "dropped",
+		variables: Object.keys(env)
+	};
+	return {
+		kind: "carried",
+		command: `${envPrefix$1(env)}${command}`
+	};
+}
+/**
+* Compose whatever a creating route could not set natively onto the command line for its new pane.
+*
+* Pass `env` and `cwd` ONLY when this route genuinely has no native flag for them; a route that sent
+* `--cwd` must not also send a `cd`, which would push into shell history a directory the pane is
+* already in. A route that carried both natively can still call this with both omitted and get its
+* `launch` back unchanged.
+*
+* The env prefix goes INSIDE the `cd`'s `&&`, never outside it: `env K=V cd '/x' && cmd` sets the
+* variables on `cd` and leaves `cmd` without them, and it fails SILENTLY — the command still runs.
+*/
+function launchFallback$1(env, launch, cwd) {
+	const carried = envFallback$1(env, launch);
+	const command = carried.kind === "dropped" ? void 0 : carried.command;
+	const composed = cwd ? cdPrefixed$1(cwd, command) : command;
+	if (carried.kind === "dropped") return {
+		kind: "dropped",
+		variables: carried.variables,
+		command: composed
+	};
+	return {
+		kind: "carried",
+		command: composed
+	};
+}
+/** `cd <dir>` on its own, or chained ahead of the command that must run in that directory. */
+function cdPrefixed$1(cwd, command) {
+	const cd = `cd ${shellQuote$1(cwd)}`;
+	return command === void 0 ? cd : `${cd} && ${command}`;
+}
+/**
+* The floating-pane refusal — the `'pane:float'` placement's answer on a backend that has no
+* floating-pane concept (wezterm, herdr).
+*
+* Its own module rather than a member of `mux.ts` for the reason every other seam type is not a
+* class: `mux.ts` is the CONTRACT and carries no runtime value, so putting the one class the
+* contract's refusal needs there would make every consumer of the types import a value too. It is
+* the core-surface parallel of `CaptureUnsupportedError` (`template-capture.ts`) and
+* `AgentLifecycleUnsupportedError` (`agent.ts`), and it rides the `.` barrel rather than a subpath
+* because the verb it refuses — `open` — is on the surface everybody gets.
+*/
+/**
+* A floating pane asked of a backend that cannot open one (`open` with `at: 'pane:float'` on wezterm
+* or herdr). A refusal, never a substitution: the nearest thing those backends could open is a tiled
+* split, which takes a share of the region and resizes its other panes — exactly the property a float
+* exists to avoid — so a caller would get back a pane whose id satisfies them and whose behavior does
+* not. There is no truthful degrade, so there is no degrade.
+*
+* PORTABLE and exit-code-free by design, the exact mirror of `AgentLifecycleUnsupportedError`. The
+* DECISION to refuse is the library's, made inside each adapter's `open` — the one place that sees
+* both the backend and the requested placement. How the refusal SURFACES (the exit code, the fix
+* hint, the exact sentence) is the CLI's, which catches this and re-raises its own
+* `backend-unsupported` error. `backend` names the backend so a caller composes the message without
+* re-deriving it; the terse `message` is a factual log line.
+*/
+var FloatingPanesUnsupportedError$1 = class extends Error {
+	backend;
+	constructor(backend) {
+		super(`${backend} cannot open a floating pane`);
+		this.backend = backend;
+		this.name = "FloatingPanesUnsupportedError";
+	}
+};
+/**
+* Refuse a `'pane:float'` open on the backend named — the single spelling of the refusal, called by
+* every adapter that lacks the capability so the two cannot drift into two different messages.
+*
+* Takes the NAME rather than the adapter: it is called from inside `open`, where the adapter object is
+* still being constructed on some backends, and the name is the only thing the error carries anyway.
+*/
+function refuseFloatingPane$1(backend) {
+	throw new FloatingPanesUnsupportedError$1(backend);
+}
+/**
+* Run `open` with the caller's focus put back where it was — the one spelling of the `'restored'`
+* behavior, so the four adapters that need it cannot drift into four subtly different dances.
+*
+* `read` names the pane the caller is on and is called BEFORE anything moves, which is the only
+* moment it is the answer we want. `restore` is the backend's own focus verb. Both are the
+* adapter's, because "which pane is the client on" and "put the client there" are the two things no
+* two multiplexers spell alike.
+*
+* **`read` answering `undefined` means the restore is skipped, not guessed.** A session no client
+* has attached to reports exactly that: nothing was stolen, so nothing is put back, and inventing a
+* focus move to a pane picked by heuristic would be worse than the theft it exists to undo — it
+* would move a user who was never moved.
+*
+* **The restore runs even when `open` throws**, via `finally`. A half-finished open is exactly the
+* case where a caller is least equipped to notice their view has moved, and the alternative — a
+* focus move left standing only on the failure path — is the kind of state that gets found weeks
+* later. The throw still propagates; only the focus is cleaned up.
+*
+* Returns whatever `open` returned, so it wraps an existing route without changing its shape.
+*/
+function restoringFocus$1(io, open) {
+	const restoreTo = io.read();
+	try {
+		return open();
+	} finally {
+		if (restoreTo !== void 0) io.restore(restoreTo);
+	}
+}
+/**
+* The pane the sole attached client is on, read out of a listing — the `read` half of
+* `restoringFocus` for a backend whose focus authority is a per-row `focused` flag rather than a
+* client listing.
+*
+* Presence-checked field by field, for `isPaneFocused`'s reason: a row that carries no focus field
+* has said nothing, and folding that into "not focused" would let this pick the WRONG pane to
+* restore to. It answers `undefined` unless exactly one row claims focus — more than one claimant
+* means the listing is reporting focus per layer rather than per client (zellij's `is_focused` does
+* exactly that), and a restore aimed at a guess is a focus move the caller never asked for.
+*/
+function soleFocusedPane$1(rows, focused, id) {
+	const claimants = rows.filter((r) => focused(r) === true);
+	return claimants.length === 1 ? id(claimants[0]) : void 0;
+}
+/**
+* The pane-relocation refusals — `movePane`'s and `breakPane`'s answer on a backend that cannot
+* render them (zellij and otty for both, cmux for the move alone).
+*
+* Its own module rather than a member of `mux.ts` for the reason every other seam refusal is:
+* `mux.ts` is the CONTRACT and carries no runtime value, so putting the classes the contract's
+* refusals need there would make every consumer of the types import a value too. It rides the `.`
+* barrel beside `floating.ts`, `resize.ts` and `zoom.ts` because the verbs it refuses are core pane
+* control, on the surface everybody gets.
+*
+* TWO errors and two capability reads rather than one of each, because these are two capabilities
+* and one backend has exactly one of them: cmux can promote a surface into a space of its own
+* (`break-pane`) and has nothing that puts one beside a NAMED pane on a NAMED side. A single
+* `canRelocatePanes` would have to answer `false` there and lose the half cmux really has.
+*/
+/**
+* A move asked of a backend that cannot put a pane beside another one. A refusal, never a
+* substitution, for `PaneZoomUnsupportedError`'s reason: the nearest thing an incapable backend
+* could do is open a NEW pane at the destination and tear the old one down, which loses the
+* scrollback, the running process and the pane's identity — everything the caller was moving.
+*
+* The three refusers do NOT refuse for the same reason, and the distinction is kept in each
+* adapter's own note rather than blurred here:
+*
+* - **zellij has no cross-container move at all.** Read off the pinned 0.45.0 binary's own command
+*   inventory, not a docs page: `zellij action move-pane [-p <id>] [DIRECTION]` rotates a pane
+*   WITHIN its tab, and no verb in `zellij action --help` names a destination tab or session.
+* - **cmux has two container moves and neither is this one.** `move-surface --surface <s> --pane <p>`
+*   moves a surface into another PANE CONTAINER, where it lands as a tab ordered by
+*   `--before`/`--after`/`--index` — never beside a named pane on a named side; `split-off` /
+*   `drag-surface-to-split --surface <s> <left|right|up|down>` splits a surface off inside its OWN
+*   pane and takes no destination at all. cmux HAS moves; it has no destination this member can
+*   render. (Source-read at `ae18c88`, never driven — see #128.)
+* - **otty documents no move verb a program can drive.** Its CLI reference names `move` for the TAB
+*   tier only, with no flag list anywhere in the 141-page corpus, and its pane relocation is
+*   published as a mouse gesture ("drag a pane to the tab strip") and a right-click menu item. That
+*   is `setPaneZoom`'s trap exactly.
+*
+* PORTABLE and exit-code-free by design, the exact mirror of `PaneZoomUnsupportedError`. The
+* DECISION to refuse is the library's, made inside each adapter's `movePane` — the one place that
+* sees the backend. How the refusal SURFACES (the exit code, the fix hint, the exact sentence) is
+* the caller's.
+*/
+var PaneMoveUnsupportedError$1 = class extends Error {
+	backend;
+	constructor(backend) {
+		super(`${backend} cannot move a pane`);
+		this.backend = backend;
+		this.name = "PaneMoveUnsupportedError";
+	}
+};
+/**
+* A break-out asked of a backend that cannot promote a pane into a space of its own. Separate from
+* `PaneMoveUnsupportedError` because the capabilities are separate — see the module note.
+*
+* Its two refusers, again for different reasons:
+*
+* - **zellij**, whose 0.45.0 command inventory carries no break verb under any spelling.
+* - **otty**, whose only documented break-out is the GUI ("Move Tab to New Window" in the right-click
+*   menu, and tearing a pane off by dragging it outside the window).
+*/
+var PaneBreakUnsupportedError$1 = class extends Error {
+	backend;
+	constructor(backend) {
+		super(`${backend} cannot break a pane out`);
+		this.backend = backend;
+		this.name = "PaneBreakUnsupportedError";
+	}
+};
+/**
+* Refuse a `movePane` on the backend named — the single spelling of the refusal, called by every
+* adapter that lacks the capability so they cannot drift into three different messages.
+*
+* Takes the NAME rather than the adapter, for `refusePaneZoom`'s reason: it is called from inside an
+* adapter method while the adapter object is still being constructed on some backends, and the name
+* is the only thing the error carries anyway.
+*/
+function refusePaneMove$1(backend) {
+	throw new PaneMoveUnsupportedError$1(backend);
+}
+/** Refuse a `breakPane` on the backend named — `refusePaneMove`'s twin, one member over. */
+function refusePaneBreak$1(backend) {
+	throw new PaneBreakUnsupportedError$1(backend);
+}
+/**
+* The seam's own precondition on a wait pattern: EXACTLY ONE of `match`/`regex`, and a `regex` that
+* compiles.
+*
+* Enforced here, at the seam, rather than per adapter, for `assertRatioInRange`'s reason — it is a
+* universal property of what a wait pattern IS, true on every backend, not a per-backend policy. Both
+* halves matter for portability in different ways: the one-of rule is refusable by herdr's CLI and by
+* nothing at all on a polling backend, so leaving it to the backend would make the same call fail on
+* one and silently pick a winner on another; and compiling the source turns a MALFORMED pattern into
+* the same loud failure everywhere, instead of a herdr refusal on one backend and a poll that throws
+* on its first read somewhere else.
+*
+* What it deliberately does NOT check is dialect: a pattern using ECMAScript-only syntax compiles here
+* and is then herdr's own to accept or refuse (see `MuxWaitOptions.regex`). Validating against the
+* intersection of two regex engines would mean shipping a third one.
+*/
+function assertWaitPattern$1(opts) {
+	const hasMatch = opts.match != null;
+	const hasRegex = opts.regex != null;
+	if (hasMatch && hasRegex) throw new Error("wait pattern must be one of match or regex — got both");
+	if (!hasMatch && !hasRegex) throw new Error("wait pattern must be one of match or regex — got neither");
+	if (opts.match != null && opts.match === "") throw new Error("wait pattern match must not be empty");
+	if (opts.regex != null) try {
+		new RegExp(opts.regex);
+	} catch (err) {
+		throw new Error(`wait pattern regex is not a valid expression: ${opts.regex} — ${err.message}`);
+	}
+}
+/**
+* Whether `output` satisfies the pattern, and the single line to point at when it does.
+*
+* The match runs against the WHOLE snapshot, not line by line, so a regex that spans a newline still
+* hits — that is why `matchedLine` is derived separately and left absent when no single line carries
+* the match on its own. Pure, so the tricky half is testable with no multiplexer at all, exactly as
+* `template-capture`'s geometry derivation is.
+*/
+function matchWaitPattern$1(output, opts) {
+	assertWaitPattern$1(opts);
+	const hit = (text) => opts.match != null ? text.includes(opts.match) : new RegExp(opts.regex).test(text);
+	if (!hit(output)) return {
+		matched: false,
+		output
+	};
+	const line = output.split("\n").find(hit);
+	return {
+		matched: true,
+		output,
+		...line != null ? { matchedLine: line } : {}
+	};
+}
+/**
+* `waitForOutput` for a backend with NO native wait — poll its own `read` until the pattern matches or
+* the deadline passes. tmux, WezTerm and Zellij all route their seam method straight through here, so
+* the three share one cadence, one deadline rule and one liveness rule rather than three copies that
+* can drift; herdr overrides it with its native primitive.
+*
+* **Reads first, sleeps second.** The snapshot on screen when the call arrives is searched before any
+* sleeping, so a pattern already printed returns immediately — the seam's stated "existing output
+* counts" rule, and the same order herdr's native wait documents for itself.
+*
+* **A gone pane throws instead of timing out**, which is `nudge`'s rule for the same reason: a dead
+* pane and a quiet one both read back empty, so without the liveness probe every dead peer would be
+* reported as a timeout — a shape the caller reads as "still working" — and the real cause would be
+* buried. Probed BEFORE the first read (so a pane that was already gone fails at once rather than
+* after the full timeout) and again after the deadline (so a pane that died mid-wait is not reported as
+* one that merely stayed quiet). Never probed per poll: that would double every backend's query load
+* for a fact that only changes the verdict at the end.
+*/
+async function pollForOutput$1(adapter, exec, target, opts) {
+	assertWaitPattern$1(opts);
+	const pollMs = opts.pollMs ?? 150;
+	const now = opts.now ?? (() => Date.now());
+	const sleep = opts.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+	const readOpts = opts.lines != null ? { lines: opts.lines } : void 0;
+	assertPaneLive$1(adapter, exec, target);
+	const deadline = now() + opts.timeoutMs;
+	let output = "";
+	for (;;) {
+		output = adapter.read(exec, target, readOpts).text;
+		const result = matchWaitPattern$1(output, opts);
+		if (result.matched) return result;
+		if (now() >= deadline) break;
+		await sleep(pollMs);
+	}
+	assertPaneLive$1(adapter, exec, target);
+	return {
+		matched: false,
+		output
+	};
+}
+/** The liveness probe both ends of a poll share, throwing `nudge`'s named failure rather than letting a
+* dead pane be reported as a quiet one. */
+function assertPaneLive$1(adapter, exec, target) {
+	if (!adapter.paneExists(exec, target)) throw new Error(`wait failed: pane ${target.id} no longer exists — the pane is gone, not quiet.`);
+}
+/**
+* The pane-zoom refusal — `setPaneZoom`'s answer on a backend that cannot render an absolute zoom
+* (cmux, otty).
+*
+* Its own module rather than a member of `mux.ts` for the reason every other seam refusal is:
+* `mux.ts` is the CONTRACT and carries no runtime value, so putting the one class the contract's
+* refusal needs there would make every consumer of the types import a value too. It rides the `.`
+* barrel beside `floating.ts` and `resize.ts` because the verb it refuses is core pane control, on
+* the surface everybody gets.
+*/
+/**
+* A zoom asked of a backend that cannot render one. A refusal, never a substitution: the nearest
+* thing an incapable backend could do is resize the pane to fill its region, which permanently
+* resizes the siblings and leaves no state to restore — so the caller would get back a pane that
+* satisfies "big" and violates everything else they assumed. There is no truthful degrade, so there
+* is no degrade.
+*
+* The two refusers do NOT refuse for the same reason, and the distinction is kept in each adapter's
+* own note rather than blurred here:
+*
+* - **cmux has no pane-zoom verb at all.** Read from cmux's Swift source at HEAD `ae18c88`, not from
+*   a live binary: no zoom/maximize verb in `CLI/cmux.swift` or `CMUXCLI+CommandSuggestions.swift`,
+*   and the control socket's nine pane methods (`pane.break` `pane.create` `pane.focus` `pane.join`
+*   `pane.last` `pane.list` `pane.resize` `pane.surfaces` `pane.swap`) carry no `pane.zoom`. The
+*   capability exists only as a GUI keybinding (`ShortcutAction.toggleSplitZoom`, ⌘⇧↩), which is
+*   exactly why `isPaneZoomed` answers `undefined` there rather than `false`. Its tmux-compat
+*   `resize-pane` shim is the trap this refusal exists to avoid: `-Z` is not in its `boolFlags`, an
+*   unrecognized short flag is pushed into `positional` rather than erroring, and the resize dispatch
+*   has no final `else` — so `cmux resize-pane -Z -t <pane>` resolves the pane, does nothing, and
+*   exits 0. Upstream PR #353 would add the verb and is still unmerged.
+* - **otty has the verb and does not document how to drive it.** `otty pane zoom` is named once on
+*   docs.otty.sh/reference/cli ("Panes additionally have `split`…, `zoom`, `resize`, …") with no flag
+*   list, no example, and no `--on`/`--off`/`--toggle` anywhere on the page; its sibling verbs
+*   `split` and `resize` DO get their flags spelled out in that same sentence. Nothing in the docs
+*   reports zoom state back either, so neither half of an absolute set can be rendered: not the
+*   write, whose vocabulary is unknown, and not the read the write would have to be guarded by. A
+*   blind toggle is precisely what `setPaneZoom` refuses to be. One `otty pane zoom --help` on a
+*   machine with otty settles it — see issue #128 for the missing real-boundary suite.
+*
+* PORTABLE and exit-code-free by design, the exact mirror of `FloatingPanesUnsupportedError` and
+* `PaneResizeUnsupportedError`. The DECISION to refuse is the library's, made inside each adapter's
+* `setPaneZoom` — the one place that sees the backend. How the refusal SURFACES (the exit code, the
+* fix hint, the exact sentence) is the caller's. `backend` names the backend so a caller composes the
+* message without re-deriving it; the terse `message` is a factual log line.
+*/
+var PaneZoomUnsupportedError$1 = class extends Error {
+	backend;
+	constructor(backend) {
+		super(`${backend} cannot zoom a pane`);
+		this.backend = backend;
+		this.name = "PaneZoomUnsupportedError";
+	}
+};
+/**
+* Refuse a `setPaneZoom` on the backend named — the single spelling of the refusal, called by every
+* adapter that lacks the capability so the two cannot drift into two different messages.
+*
+* Takes the NAME rather than the adapter, for `refuseFloatingPane`'s reason: it is called from inside
+* an adapter method while the adapter object is still being constructed on some backends, and the
+* name is the only thing the error carries anyway.
+*/
+function refusePaneZoom$1(backend) {
+	throw new PaneZoomUnsupportedError$1(backend);
+}
+/**
+* cmux backend — detected via `$CMUX_WORKSPACE_ID`. Drives cmux's CLI through `cmux <verb> …`
+* (https://cmux.com/docs/api), the same synchronous-CLI shape tmux, herdr, wezterm, and zellij
+* already give `Exec`.
+*
+* cmux is a Ghostty-based macOS terminal with vertical tabs and notifications for AI coding agents.
+* Its hierarchy is Window → Workspace → Pane → Surface. A **Surface** is the terminal unit (a tab
+* within a pane), which maps to cyber-mux's `LivePane`. The env variable `$CMUX_SURFACE_ID` carries
+* the caller's surface identity — analogous to `$TMUX_PANE` or `$WEZTERM_PANE`.
+*
+* Probed from cmux's own Swift source (`manaflow-ai/cmux`, read at commit `71eb616d`) — the CLI's
+* argument parser (`CLI/cmux.swift`), its own verb inventory
+* (`CLI/CMUXCLI+CommandSuggestions.swift`), the server-side payload builders under
+* `Packages/macOS/CmuxControlSocket/`, and `docs/cli-contract.md`. cmux is not installed in this
+* sandbox (it is macOS-GUI-only), so nothing here carries the "verified against a live binary"
+* claim `mux.tmux.ts`/`mux.herdr.ts` make; it makes the same honest disclaimer `mux.wezterm.ts` and
+* `mux.zellij.ts` do, and issue #128 tracks the missing real-boundary suite that would settle it.
+* A source read is materially stronger than the docs read this file used to rest on, and it is
+* still not a verification.
+*
+* Prefer the source over https://cmux.com/docs/api when they disagree: that page documents 27 of
+* cmux's 162 top-level commands and never claimed to be an inventory, so absence from it is not
+* evidence a verb does not exist. That misreading is what issue #132 was originally filed on.
+*
+* Real capability shape that fell out of the probe:
+*
+* - **Surface is the terminal unit, not Pane.** cmux's "pane" holds multiple "surfaces" (tabs). The
+*   terminal a command runs in is a surface, so `CMUX_SURFACE_ID` is the self-identity env var and
+*   `LivePane.id` carries a surface id. `--at tab` maps to `cmux new-surface` (a new tab in the
+*   current pane); `--at pane:*` maps to `cmux new-pane` (a split, which creates a pane with one
+*   surface).
+* - **Workspace is a real tier.** `cmux workspace create` creates a genuinely separate workspace,
+*   reported as `OpenedPane.workspace`.
+* - **And there is a real tier ABOVE it.** `workspace-group` groups multiple top-level WORKSPACES into
+*   a named, collapsible sidebar section. This is the tier `MuxOpenOptions.workspaceGroup` targets, and
+*   it is why `group` is NOT the no-op this header used to justify: the old reasoning ("cmux's workspace
+*   tier already groups every surface in it, so there is nothing to add") is sound for Pane → Surface
+*   and simply does not reach the tier the flag is about. See `group` for the mapping.
+* - **Grouping OPENS a workspace, once per group id.** `workspace-group create` always mints a brand-new
+*   ANCHOR workspace for the group, so the first `group` call for a given id adds a visible workspace to
+*   the user's sidebar that the caller did not ask for. That is a real deviation from the seam's "as
+*   read-only in its side effects as `rename`, it opens nothing", declared here rather than hidden: the
+*   alternative was the silent drop this replaced, and cmux offers no membership-only create. It does
+*   NOT steal focus (`selectAnchor: false`), and later calls for the same id open nothing.
+* - **Env is native at the WORKSPACE tier only, and is not adopted yet.** `workspace create` takes
+*   `--env KEY=VALUE` (repeatable) and `--env-file <path>` (`cmux.swift:10429`,
+*   `parseWorkspaceEnvOptions`), and `docs/cli-contract.md` says that env is inherited by every pane,
+*   surface and split created later in the workspace. `new-surface` and `new-pane` take no env flag
+*   at all. This header used to claim "no `--env` on any route", which was wrong. Every route still
+*   rides the `envFallback` compensation (an `env K=V` prefix on the launch command, or a stderr
+*   warning when there is no command to ride): swapping a WORKING compensation for a native flag
+*   changes behavior on source-only evidence, which is the half of issue #132 held for someone with
+*   a Mac. The false claim is corrected here; the capability stays unclaimed until it is verified.
+* - **Splits CANNOT be sized.** `new-pane` accepts only `--type --direction --url --profile
+*   --placement --focus --workspace --window` (`cmux.swift:7263-7291`) — there is no `--size`, and it
+*   validates no unknown flag, so the `--size` this adapter used to send was accepted and ignored.
+*   The only sizing verb is `resize-pane`, which is cell-based rather than fractional and so cannot
+*   render a `ratio` either. `canSizeSplits` is therefore omitted, zellij's answer exactly, and a
+*   `ratio` is dropped to cmux's own even split.
+* - **`new-pane` takes no `--cwd` either** — the same silent ignore, and the asymmetry is real:
+*   `new-surface` DOES take `--cwd` (an alias of `--working-directory`, run through `resolvePath`,
+*   `cmux.swift:7299`) and so does `workspace create`, so only the `pane:*` route loses it. Dropping
+*   the flag alone would open the split in the wrong directory silently, so the route compensates the
+*   way `envFallback` does: a `cd <dir>` that rides the launch command, or is sent alone when there is
+*   none. That is a shell-level cd, not a native cwd — it lands in the surface's shell history, and it
+*   only means anything in a shell surface.
+* - **The listing verb is `list-panels`, not `list-panes`.** `list-panes` (`pane.list`) reports PANES
+*   — `{"panes":[…]}`, one row per geometric container, carrying surface ids as flat arrays and no
+*   title. `list-panels` (`surface.list`) reports SURFACES — `{"surfaces":[…]}` with per-row `ref`,
+*   `title`, `type`, `focused`, `pane_ref`, `selected_in_pane` (`ControlCommandCoordinator+Surface.swift:150-186`)
+*   — which is the tier `LivePane` maps to here. Note the key names: the id is `ref` (`surface_ref` is
+*   the spelling in CREATION payloads, not list rows) and focus is `focused`, not `is_focused`.
+* - **No live cwd anywhere in the listing.** The nearest field is `requested_working_directory`, on
+*   terminal surfaces only, and it is the directory requested at CREATION — reporting it as
+*   `LivePane.cwd` would become a quiet lie the moment the user `cd`s. So `cwd` is absent from a cmux
+*   pane listing, and the `lookup-listing-reports-cwd` scenario no longer carries a cmux row.
+* - **`new-pane` has no split-TARGET flag.** It splits the focused pane (or the biggest space); the
+*   `--workspace` flag specifies which workspace, but not which pane within it. So `from` — which
+*   pane a `pane:*` split lands beside — is honored by FOCUSING that surface first, the sole way to
+*   choose the split target. That is a real focus move, and the honest cost of getting the RIGHT
+*   pane split.
+* - **No pane zoom at any CLI or socket layer.** cmux binds "Toggle Pane Zoom" to ⌘⇧↩ in the GUI and
+*   exposes it nowhere a program can reach: no zoom verb in the CLI, no `pane.zoom` among the socket's
+*   nine pane methods, and no zoom field in the pane listing. `setPaneZoom` refuses BY NAME and
+*   `isPaneZoomed` answers `undefined` (never `false` — the user can zoom by hand). The tmux-compat
+*   `resize-pane -Z` is the trap: it parses, does nothing, and exits 0. See `setPaneZoom`.
+* - **No pane geometry adapter.** Neither `list-panes` nor `list-panels` reports position, so `regions`
+*   (`describeRegion`/`describeWorkspace`) is not implementable. `template save` refuses on cmux by
+*   naming the backend, the same optional-absence it handles for wezterm.
+* - **No git-worktree concept in the CLI.** No `worktree` subcommand, so — like tmux, wezterm, and
+*   zellij — this backend never binds a worktree to a workspace; callers fall back to plain git plus
+*   `open()`.
+* - **Naming is a TAB rename, and cmux's tab IS its surface.** `rename-surface` and `rename-pane`,
+*   which this adapter used to run, appear nowhere in cmux — not in the dispatch, not in the help
+*   text, not in `topLevelCommandNames`. The real verb is `rename-tab --surface <id> --title <text>`
+*   (`cmux.swift:6985` → `runRenameTab` `:11541`), a documented alias for `tab-action --action
+*   rename`, whose `--surface` is itself an alias for `--tab` and which accepts a `tab:<n>` or
+*   `surface:<n>` handle. **No pane rename exists at any layer** — the only rename verbs cmux has are
+*   `rename-tab`, `rename-window`, `rename-workspace`, and the socket API has no `pane.rename`,
+*   because a cmux pane is a geometric container with no name to set. So the `pane` tier retargets
+*   the pane's surface rather than refusing; see `rename`.
+* - **A workspace is created by `workspace create`, not `new-workspace`.** Both reach the same
+*   `workspace.create` method, but `new-workspace` hardcodes `honorJSONOutput: false`
+*   (`cmux.swift:7155`) and the JSON print is gated on it (`:10491`), so `cmux --json new-workspace`
+*   prints the human line `OK workspace:3` and never JSON — the adapter parsed `{}` out of it and
+*   threw on every call. The namespaced `workspace create` (`:11166`) honors `--json` and answers
+*   `{window_*, workspace_*, surface_*}` (`TerminalController+WorkspaceCreate.swift:156-198`). It also
+*   takes `--name`, so a workspace is NAMED AT BIRTH here rather than renamed afterwards.
+*   The payload carries **no `pane_ref`**, so a workspace open reports its own surface as
+*   `OpenedPane.tab` — which `group`'s lookup resolves, since it accepts either handle kind.
+* - **Closing an explicit surface needs its workspace.** With `--surface` given, `close-surface`
+*   resolves the surface *within* a workspace and throws "close-surface requires --workspace or
+*   --window with explicit --surface" when it has neither (`cmux.swift:7360-7377`). It falls back to
+*   `$CMUX_WORKSPACE_ID` first (`:7351`), so the flagless form this adapter used to send works
+*   whenever the caller is itself inside cmux — and fails for a library caller with no cmux env, and
+*   resolves against the WRONG workspace for a surface outside the caller's own. `teardown` now names
+*   the workspace whenever the adapter is bound to one.
+*/
+function createCmuxAdapter$1(deps) {
+	const adapter = {
+		name: "cmux",
+		/**
+		* `canBreakPanes` alone, and the split between the two flags is cmux's whole contribution to the
+		* shape of this member: it HAS a break-out (`break-pane` → `pane.break`, which detaches a surface
+		* into its own workspace) and has nothing that puts a surface beside a NAMED pane on a NAMED
+		* side, so `canMovePanes` is omitted and `movePane` refuses by name. One `canRelocatePanes` would
+		* have had to answer `false` here and throw away the half cmux really does.
+		*
+		* Declared on a SOURCE read at `ae18c88`, never on a live drive — the caveat every capability in
+		* this file carries, and the reason it is stated here rather than assumed from the pattern the
+		* other adapters set, where these flags are backed by a driven binary.
+		*/
+		canBreakPanes: true,
+		/**
+		* `false`, and cmux needs BOTH halves to be true to say otherwise. No creating verb documents a
+		* suppress-focus flag, so a new pane activates; and `new-pane` has no split-TARGET flag, so
+		* `from` is honored by focusing that surface first (see the header and `open` below) — a focus
+		* move made before the open even runs. Suppressing only one would still move the user, which
+		* the seam's own wording rules out.
+		*
+		* Read off cmux's documented CLI, NOT verified against a live binary — no cmux on the machine
+		* this was written on, matching the rest of this header.
+		*/
+		/**
+		* `'restored'`. The old `false` rested on two claims and only one of them survived: "no creating
+		* verb documents a suppress-focus flag" is wrong — every creating verb takes `--focus
+		* <true|false>` and `applyFocusOption` defaults it to FALSE (issue #167, read from cmux's Swift
+		* source, never driven) — while "`new-pane` has no split-TARGET flag, so `from` is honored by
+		* focusing that surface first" still holds, and that move happens before the open even runs.
+		*
+		* So this cannot be `'preserved'` on the `from` path whatever `--focus` does, and issue #152
+		* asked the question that resolves it: undo the move. The restore is what this declaration
+		* promises, and it is correct under BOTH readings of the unverified flag — if the new pane does
+		* not take focus, re-focusing the caller's own surface is a no-op; if it does, it is the fix.
+		*
+		* The `--focus false` flag itself is deliberately NOT passed here. That is #167's change, it
+		* needs a Mac to confirm, and passing an unverified flag would trade a behavior that is right
+		* either way for one that depends on being right about the source read.
+		*
+		* SOURCE-READ, not live: cmux is macOS-GUI-only and `live-backends` cannot exercise it (#128).
+		*/
+		focusOnOpen: "restored",
+		open(exec, opts) {
+			const at = opts.at ?? "tab";
+			if (at === "pane:float") refuseFloatingPane$1(adapter.name);
+			return restoringFocus$1({
+				read: () => soleFocusedPane$1(listCmuxSurfaces$1(exec), (r) => r.focused, (r) => r.id),
+				restore: (pane) => adapter.focus(exec, { id: pane })
+			}, () => {
+				if (at === "workspace") {
+					const args = [
+						"--json",
+						"workspace",
+						"create"
+					];
+					if (opts.cwd) args.push("--cwd", opts.cwd);
+					if (opts.label) args.push("--name", opts.label);
+					const out = exec("cmux", args);
+					if (!out) throw new Error(withReason$1(exec, "cmux workspace create failed"));
+					const parsed = parseCmuxOutput$1(out);
+					if (!parsed.workspace_ref) throw new Error("cmux workspace create did not report the workspace ref");
+					const surfaceId = parsed.surface_ref;
+					if (!surfaceId) throw new Error("cmux workspace create did not report the initial surface ref");
+					const opened = openedSurface$1(surfaceId, parsed.pane_ref, parsed.workspace_ref);
+					if (opts.workspaceGroup != null) adapter.group(exec, { id: opened.tab }, opts.workspaceGroup);
+					runLaunch$3$1(adapter, exec, opened, opts.env, opts.launch);
+					return opened;
+				}
+				if (at === "tab") {
+					const args = ["--json", "new-surface"];
+					if (opts.within) args.push("--pane", opts.within);
+					if (opts.cwd) args.push("--cwd", opts.cwd);
+					const out = exec("cmux", args);
+					if (!out) throw new Error(withReason$1(exec, "cmux new-surface failed"));
+					const parsed = parseCmuxOutput$1(out);
+					const surfaceId = parsed.surface_ref;
+					if (!surfaceId) throw new Error("cmux new-surface did not report the surface ref");
+					const opened = openedSurface$1(surfaceId, parsed.pane_ref, deps.workspace);
+					if (opts.label) adapter.rename(exec, opened, "tab", opts.label);
+					runLaunch$3$1(adapter, exec, opened, opts.env, opts.launch);
+					return opened;
+				}
+				if (opts.from) adapter.focus(exec, opts.from);
+				const out = exec("cmux", [
+					"--json",
+					"new-pane",
+					"--direction",
+					at === "pane:down" ? "down" : "right"
+				]);
+				if (!out) throw new Error(withReason$1(exec, "cmux new-pane failed"));
+				const parsed = parseCmuxOutput$1(out);
+				const surfaceId = parsed.surface_ref;
+				if (!surfaceId) throw new Error("cmux new-pane did not report the surface ref");
+				const opened = openedSurface$1(surfaceId, parsed.pane_ref, deps.workspace);
+				if (opts.label) adapter.rename(exec, opened, "pane", opts.label);
+				runLaunch$3$1(adapter, exec, opened, opts.env, opts.launch, opts.cwd);
+				return opened;
+			});
+		},
+		/**
+		* One command for BOTH tiers, because cmux has one nameable space here: the surface.
+		*
+		* `rename-surface`/`rename-pane`, which this used to run, do not exist — no dispatch, no help
+		* text, no entry in the CLI's own verb inventory. `rename-tab` is the real verb, and cmux's tab
+		* IS its surface (`--surface` is a documented alias for `--tab`, and `$CMUX_TAB_ID` aliases
+		* `$CMUX_SURFACE_ID`). The `pane` tier retargets rather than refusing, per the seam's rule that
+		* `rename` is REQUIRED: a cmux pane is a geometric container with no name at any layer, so the
+		* truthful realization of "name this pane" is to name the surface the user actually reads.
+		*
+		* `target.id` may be either handle kind and this never parses one to find out — the seam addresses
+		* the `tab` tier by `OpenedPane.tab`, which is a pane ref on a split and a surface ref on a
+		* workspace open, and under `--id-format uuids` neither kind is distinguishable by shape anyway.
+		* `resolveSurface` answers with the listing instead, which costs the one extra exec that buys a
+		* rename that works on both.
+		*/
+		rename(exec, target, _tier, name) {
+			const surface = resolveSurface$1(exec, target.id);
+			if (!surface) throw new Error(withReason$1(exec, `cmux could not resolve a surface to rename for ${target.id}`));
+			exec("cmux", [
+				"rename-tab",
+				"--surface",
+				surface,
+				"--title",
+				name
+			]);
+		},
+		group(exec, target, group) {
+			const workspace = paneToWorkspace$1(exec, target.id);
+			if (!workspace) throw new Error(withReason$1(exec, `cmux could not resolve the workspace holding ${target.id}`));
+			const out = exec("cmux", [
+				"--json",
+				"workspace-group",
+				"create",
+				"--name",
+				group,
+				"--idempotency-key",
+				group
+			]);
+			if (!out) throw new Error(withReason$1(exec, "cmux workspace-group create failed"));
+			const groupRef = parseGroupRef$1(out);
+			if (!groupRef) throw new Error("cmux workspace-group create did not report the group ref");
+			exec("cmux", [
+				"workspace-group",
+				"add",
+				"--group",
+				groupRef,
+				"--workspace",
+				workspace
+			]);
+		},
+		sendText(exec, target, text) {
+			exec("cmux", [
+				"send",
+				"--surface",
+				target.id,
+				text
+			]);
+		},
+		sendKeys(exec, target, keys) {
+			for (const key of keys) exec("cmux", [
+				"send-key",
+				"--surface",
+				target.id,
+				toCmuxKey$1(key)
+			]);
+		},
+		submit(exec, target, text) {
+			if (!text) {
+				adapter.sendKeys(exec, target, ["Enter"]);
+				return;
+			}
+			adapter.sendText(exec, target, text);
+			adapter.sendKeys(exec, target, ["Enter"]);
+		},
+		read(exec, target, opts) {
+			const args = [
+				"read-screen",
+				"--surface",
+				target.id
+			];
+			if (opts?.lines != null) args.push("--lines", String(opts.lines));
+			return { text: exec("cmux", args) ?? "" };
+		},
+		waitForOutput(exec, target, opts) {
+			return pollForOutput$1(adapter, exec, target, opts);
+		},
+		focus(exec, target) {
+			exec("cmux", [
+				"focus-panel",
+				"--panel",
+				target.id
+			]);
+		},
+		teardown(exec, target) {
+			const args = [
+				"close-surface",
+				"--surface",
+				target.id
+			];
+			if (deps.workspace) args.push("--workspace", deps.workspace);
+			exec("cmux", args);
+		},
+		paneExists(exec, target) {
+			return listCmuxSurfaces$1(exec).some((s) => s.id === target.id);
+		},
+		isPaneFocused(exec, target) {
+			const found = listCmuxSurfaces$1(exec).find((s) => s.id === target.id);
+			if (!found) return void 0;
+			return typeof found.focused === "boolean" ? found.focused : void 0;
+		},
+		/**
+		* REFUSED BY NAME — cmux has no pane-zoom verb, so there is nothing to drive and nothing
+		* truthful to substitute. No `canZoomPanes` above is the declaration; this is the enforcement,
+		* the same pairing `'pane:float'` uses.
+		*
+		* Read from cmux's Swift source at HEAD `ae18c88`, NOT from a live binary, which is this whole
+		* file's standing disclaimer — but the read here is exhaustive rather than a failure to find
+		* something. A case-insensitive scan of `CLI/` for `zoom|maximi[sz]e|fullscreen` returns only
+		* `cmux canvas zoom` (viewport magnification) and `cmux browser zoom` (web page zoom); the flat
+		* verb table in `CMUXCLI+CommandSuggestions.swift` carries thirteen `*-pane` verbs and no zoom;
+		* and the control socket's pane methods are exactly nine (`pane.break` `pane.create`
+		* `pane.focus` `pane.join` `pane.last` `pane.list` `pane.resize` `pane.surfaces` `pane.swap`),
+		* with no `pane.zoom` at any layer. The capability exists only as a GUI keybinding
+		* (`ShortcutAction.toggleSplitZoom`, ⌘⇧↩) and a command-palette entry, neither of which the
+		* socket exposes. Upstream issue #351 asked for the CLI verb and was closed on the keybinding
+		* alone; PR #353, which would add it, is still unmerged, and issue #2100 is still open.
+		*
+		* **Emulating it through the tmux-compat shim is the specific trap this refusal exists for.**
+		* `cmux resize-pane -Z -t <pane>` looks like it should work and is a SILENT NO-OP: `-Z` is not
+		* in that verb's `boolFlags`, `parseTmuxArguments` pushes an unrecognized short flag into
+		* `positional` rather than erroring, and the resize dispatch chain has no final `else`. So it
+		* resolves the pane, does nothing, and exits 0 — a green that zoomed nothing. Refusing by name
+		* is the only answer that tells the caller the truth.
+		*/
+		setPaneZoom() {
+			refusePaneZoom$1("cmux");
+		},
+		/**
+		* `undefined` — cmux cannot be ASKED, which is not the same as "not zoomed", and the difference
+		* is real here rather than pedantic: a user can zoom a pane with ⌘⇧↩ this instant and no cmux
+		* CLI or socket call would report it. `paneListPayload` emits `id ref index focused surface_ids
+		* surface_refs selected_surface_id selected_surface_ref surface_count pixel_frame columns rows
+		* cell_width_px cell_height_px cell_width_points cell_height_points dock_scope` and no zoom key;
+		* `window_zoomed_flag` appears nowhere in the CLI or socket sources (its only hits are
+		* `RemoteTmuxWindowMirror*`, where cmux CONSUMES a remote tmux server's zoom state as a tmux
+		* client rather than exposing its own).
+		*
+		* So this answers `undefined` on every surface, `isPaneFocused`'s wezterm shape — never `false`,
+		* which would be a confident lie about a pane the user has zoomed by hand. Contrast
+		* `LivePane.floating`, which IS `false` by construction on the backends that cannot float,
+		* because those backends genuinely have only tiled panes.
+		*/
+		isPaneZoomed() {},
+		/**
+		* Refused BY NAME, and NOT because cmux cannot move a pane — it has two container moves, and
+		* neither one takes this member's destination.
+		*
+		* - `move-surface --surface <s> --pane <p>` moves a surface into another PANE CONTAINER, where it
+		*   lands as one of that container's TABS, ordered by `--before`/`--after`/`--index`. There is no
+		*   side, because nothing is split: the destination pane keeps its geometry and gains a tab.
+		* - `split-off` / `drag-surface-to-split --surface <s> <left|right|up|down>` DOES split, and takes
+		*   no destination at all — it splits the surface off inside its own pane, wherever that is.
+		*
+		* So "beside pane X, on side S" is the one thing cmux's move verbs cannot spell between them.
+		* Substituting either would satisfy the caller's id and violate the placement they asked for,
+		* which is the trade `MuxAdapter.movePane` refuses. Read from cmux's Swift source at HEAD
+		* `ae18c88` (`CLI/cmux.swift`, `CLI/CMUXCLI+MoveTabToNewWorkspace.swift`), never driven — the
+		* standing caveat this whole header carries.
+		*
+		* RECHECK TRIGGER: a cmux verb that names a destination surface AND a split direction. #128 is
+		* the missing real-boundary suite.
+		*/
+		movePane() {
+			refusePaneMove$1("cmux");
+		},
+		/**
+		* `break-pane --surface <id> --focus false` → the socket's `pane.break`, which detaches a surface
+		* into a NEW WORKSPACE (`sourceWorkspace.detachSurface(...)` then
+		* `tabManager.addWorkspace(fromDetachedSurface:)`, with rollback on failure) and answers
+		* `{window_*, workspace_*, pane_*, surface_*}` — every id this member needs.
+		*
+		* **`at` collapses UPWARD here, the mirror of tmux's downward collapse, and the seam's own
+		* `open` already makes both kinds.** A cmux surface IS a tab, so there is no "give this surface
+		* its own tab" to ask for; `pane.break` is the only break cmux has, and it always lands the
+		* surface alone in a fresh workspace — which satisfies `'tab'` by over-delivering rather than by
+		* failing. The returned `OpenedPane` reports the new workspace, so a caller that asked for a tab
+		* sees exactly where it landed rather than being told a comfortable lie.
+		*
+		* `--surface` is passed ALWAYS and that is load-bearing: with neither `--pane` nor `--surface`,
+		* `pane.break` breaks out the FOCUSED surface — a silent wrong-pane break for any library caller
+		* whose focus is not where it thinks. `--workspace` is the SOURCE context (it is what `--surface`
+		* is resolved within, not a destination), so it rides only when this adapter is bound to one,
+		* exactly as `teardown` sends it.
+		*
+		* `--focus false` is explicit even though cmux's own default is `false`: `runTmuxCompatCommand`
+		* validates no unknown flag, so nothing here would report a typo, and the explicit value is what
+		* makes the intent auditable.
+		*
+		* Read from cmux's Swift source at `ae18c88` — the CLI dispatch (`cmux.swift:27398`), the
+		* coordinator (`ControlCommandCoordinator+Pane.swift`, the `.broken` case) and the app path —
+		* and NEVER DRIVEN, like every other cmux member. That is why `canBreakPanes` is declared on a
+		* source read and says so, rather than on the live evidence the other four capable backends
+		* carry.
+		*/
+		breakPane(exec, target, at) {
+			const args = [
+				"--json",
+				"break-pane",
+				"--surface",
+				target.id,
+				"--focus",
+				"false"
+			];
+			if (deps.workspace) args.push("--workspace", deps.workspace);
+			const out = exec("cmux", args);
+			if (!out) throw new Error(withReason$1(exec, `cmux could not break out surface ${target.id} into its own ${at}`));
+			const parsed = parseCmuxOutput$1(out);
+			if (!parsed.surface_ref) throw new Error("cmux break-pane did not report the surface ref");
+			return openedSurface$1(parsed.surface_ref, parsed.pane_ref, parsed.workspace_ref);
+		},
+		listPanes(exec) {
+			return listCmuxSurfaces$1(exec).map((s) => {
+				const pane = {
+					id: s.id,
+					mux: "cmux",
+					floating: false
+				};
+				if (s.title) pane.label = s.title;
+				return pane;
+			});
+		}
+	};
+	return withJumpHistory$1(adapter);
+}
+createCmuxAdapter$1({});
+function parseCmuxOutput$1(out) {
+	try {
+		return JSON.parse(out);
+	} catch {
+		return {};
+	}
+}
+/**
+* The group ref `workspace-group create` reports, out of its `{ group, created }` envelope.
+*
+* `ref` first because cmux's DEFAULT `--id-format` is `refs`, which strips `id` from any object that
+* carries a sibling `ref` — so under the plain `--json` this adapter sends, `workspace_group:N` is the
+* only id present. `id` is read as a fallback rather than ignored: it is what an `--id-format uuids`
+* or `both` response carries, and `workspace-group add --group` accepts either spelling.
+*/
+function parseGroupRef$1(out) {
+	let parsed;
+	try {
+		parsed = JSON.parse(out);
+	} catch {
+		return;
+	}
+	if (!parsed || typeof parsed !== "object") return void 0;
+	const group = parsed.group;
+	return group?.ref ?? group?.id;
+}
+/**
+* The workspace holding a pane — the lookup `group` needs and no other member does.
+*
+* `cmux identify` cannot answer this. Its `--surface` flag does not DERIVE a workspace: the workspace
+* comes from `--workspace` or `$CMUX_WORKSPACE_ID`, and `--surface` is only validated against it, so
+* for a space outside the caller's own workspace `identify` reports `"caller": null` and exits 0 — a
+* silent wrong answer, which is the one thing a lookup must never give. `list-panes` does not report
+* an owning workspace either; it takes one as an input FILTER.
+*
+* So this goes through `rpc`, cmux's documented raw-socket verb (`docs/cli-contract.md`, which carries
+* a worked `surface_id` example): `surface.list` resolves its target workspace FROM a `pane_id` or
+* `surface_id` when given no workspace, and echoes it at the top level of the response. The
+* first-class alternative is a sweep — `workspace list`, then `list-panels --workspace` per row — which
+* is what cmux itself does internally, at one round trip per workspace instead of one total.
+*
+* `rpc` skips the id-format pass unless asked, so the response carries BOTH `workspace_ref` and
+* `workspace_id`; the ref is preferred for the reason `parseGroupRef` prefers it.
+*
+* **The tab id is not always a PANE, and the answer is verified rather than assumed.** `group` takes a
+* TAB id, which on this backend is a pane ref for a split (`pane.create` reports `pane_ref`) and a
+* SURFACE ref for a workspace open (`workspace.create` reports no pane, so `openedSurface` falls back
+* to the surface). The coordinator resolves a `kind:N` selector through a handle registry that is
+* keyed by the ref STRING and not by kind, so a surface handle passed as `pane_id` resolves to a UUID
+* that names no pane — and the routing then quietly falls back to the CALLER's own workspace, the
+* silent wrong answer this lookup exists to avoid.
+*
+* So each attempt is checked against its own result: a correctly routed `surface.list` returns the
+* workspace CONTAINING the handle, so its rows must carry that handle as a surface or as a pane. When
+* they do not, the routing fell back and the answer is discarded; the surface spelling is tried next,
+* and a second miss reports nothing rather than a workspace nobody asked about.
+*
+* Read off cmux's own Swift source, NOT verified against a live binary — see the header.
+*/
+function paneToWorkspace$1(exec, tabId) {
+	return workspaceHolding$1(exec, { pane_id: tabId }, tabId) ?? workspaceHolding$1(exec, { surface_id: tabId }, tabId);
+}
+/** One `surface.list` routing attempt, kept only when its rows actually contain `tabId`. */
+function workspaceHolding$1(exec, params, tabId) {
+	const out = exec("cmux", [
+		"rpc",
+		"surface.list",
+		JSON.stringify(params)
+	]);
+	if (!out) return void 0;
+	let parsed;
+	try {
+		parsed = JSON.parse(out);
+	} catch {
+		return;
+	}
+	if (!parsed || typeof parsed !== "object") return void 0;
+	const shape = parsed;
+	const workspace = shape.workspace_ref ?? shape.workspace_id;
+	if (!workspace) return void 0;
+	return (Array.isArray(shape.surfaces) ? shape.surfaces : []).some((row) => {
+		if (!row || typeof row !== "object") return false;
+		const item = row;
+		return item.ref === tabId || item.id === tabId || item.pane_ref === tabId || item.pane_id === tabId;
+	}) ? workspace : void 0;
+}
+/**
+* Every surface in the caller's workspace — the one read `listPanes`, `paneExists`, `isPaneFocused`
+* and `rename` all share.
+*
+* `list-panels` (`surface.list`), NOT `list-panes` (`pane.list`). The two verbs report different
+* tiers and different shapes: `list-panes` answers `{"panes":[…]}`, one row per geometric container,
+* carrying surface ids as flat arrays, no title and no focus per surface. This function used to read
+* that verb and to require a top-level ARRAY of panes each holding an array of surface OBJECTS —
+* a shape cmux never emits, so it returned `[]` for every real response and took all three members
+* down with it: an always-empty listing, a `paneExists` that was always false, and an `isPaneFocused`
+* that was always unknown.
+*
+* `ref` before `id` for the reason `parseGroupRef` gives: the default `--id-format refs` strips `id`
+* from any object carrying a sibling `ref`, and `--id-format uuids` does the reverse, so reading both
+* is what makes this work under either.
+*/
+function listCmuxSurfaces$1(exec) {
+	const out = exec("cmux", ["--json", "list-panels"]);
+	if (!out) return [];
+	let parsed;
+	try {
+		parsed = JSON.parse(out);
+	} catch {
+		return [];
+	}
+	if (!parsed || typeof parsed !== "object") return [];
+	const rows = parsed.surfaces;
+	if (!Array.isArray(rows)) return [];
+	const surfaces = [];
+	for (const row of rows) {
+		if (!row || typeof row !== "object") continue;
+		const item = row;
+		const id = item.ref ?? item.id;
+		if (!id) continue;
+		const surface = { id };
+		if (item.title) surface.title = item.title;
+		if (typeof item.focused === "boolean") surface.focused = item.focused;
+		const pane = item.pane_ref ?? item.pane_id;
+		if (pane) surface.pane = pane;
+		if (item.selected_in_pane === true) surface.selected = true;
+		surfaces.push(surface);
+	}
+	return surfaces;
+}
+/**
+* The surface a `rename` names, given either a surface handle or a pane handle.
+*
+* A surface handle answers itself. A pane handle answers the surface that pane is SHOWING
+* (`selected_in_pane`), falling back to its first — a pane with several tabs has no single name, and
+* the one the user is looking at is the only defensible choice among them. Neither kind is parsed:
+* the listing is what says which is which, so a UUID under `--id-format uuids` resolves exactly as a
+* `surface:7` ref does.
+*/
+function resolveSurface$1(exec, id) {
+	const surfaces = listCmuxSurfaces$1(exec);
+	if (surfaces.some((s) => s.id === id)) return id;
+	const inPane = surfaces.filter((s) => s.pane === id);
+	if (inPane.length === 0) return void 0;
+	return (inPane.find((s) => s.selected) ?? inPane[0])?.id;
+}
+function openedSurface$1(surfaceId, paneRef, workspace) {
+	const opened = {
+		id: surfaceId,
+		tab: paneRef ?? surfaceId
+	};
+	if (workspace) opened.workspace = workspace;
+	return opened;
+}
+/**
+* Run the caller's launch command in the freshly opened surface, carrying whatever the route could
+* not set natively.
+*
+* `cwd` is passed ONLY by the `pane:*` route, the one route with no `--cwd` flag to send. Both
+* compensations — the env prefix and the `cd` — and the order they compose in are `launchFallback`'s
+* (`env-fallback.ts`); this route hands it what it lost and submits what comes back. `mux.otty.ts`
+* calls the same function for the same reason, which is why the rule lives there and not here.
+*/
+function runLaunch$3$1(adapter, exec, target, env, launch, cwd) {
+	const fallback = launchFallback$1(env, launch, cwd);
+	if (fallback.kind === "dropped") process.stderr.write(`env (${fallback.variables.join(", ")}) could not be set on this cmux surface — cmux has no --env flag on new-pane/new-surface, and its workspace --env is not adopted yet
+`);
+	if (fallback.command !== void 0) adapter.submit(exec, target, fallback.command);
+}
+/**
+* The core key vocabulary's cmux spelling. cmux uses lowercase key names: enter, tab, escape, etc.
+*/
+const CMUX_KEY_RENAMES$1 = {
+	Enter: "enter",
+	Tab: "tab",
+	Escape: "escape",
+	Backspace: "backspace",
+	Space: "space",
+	Up: "up",
+	Down: "down",
+	Left: "left",
+	Right: "right",
+	"C-c": "ctrl+c"
+};
+function toCmuxKey$1(key) {
+	return CMUX_KEY_RENAMES$1[key] ?? key.toLowerCase();
+}
+/**
+* The seam's own precondition on `MuxOpenOptions.ratio`: a fraction STRICTLY between 0 and 1.
+*
+* `ratio` is the fraction kept by the ORIGINAL pane. Outside `0 < ratio < 1` there is no split it can
+* name: `1 - ratio` goes negative above 1 (tmux `-l -50%` / wezterm `--percent -50`), and 0 or 1 hands
+* one side the whole region and the other nothing — a mistake, never an intent worth honoring. Left
+* unrendered these produce a silently broken split, not an error, which is the exact silent-wrong
+* output this seam's loud-over-quiet preference exists to refuse.
+*
+* Enforced HERE, at the seam, rather than left to each caller, because the invariant is a universal
+* property of what a ratio IS — true on every backend — not a per-caller policy. (The DEGRADE policy —
+* what a caller does when a backend cannot size a split at all — genuinely stays the caller's, unchanged;
+* range validity and degrade policy are different questions.) A caller cannot reach an adapter with an
+* out-of-range ratio and have it silently rendered; `template`'s schema still refuses one earlier, per
+* node, with a path-qualified message, so the two layers do different jobs and the seam is the backstop.
+*
+* The guard lives WITH the rendering: it is called by each backend's size render helper, so a backend
+* that cannot size a split (zellij) renders no ratio and so never reaches this guard — a dropped value
+* is never checked, valid or not, which is the same as the even-default degrade its callers already take.
+*/
+function assertRatioInRange$1(ratio) {
+	if (!Number.isFinite(ratio) || ratio <= 0 || ratio >= 1) throw new Error(`ratio must be strictly between 0 and 1 — got ${ratio}`);
+}
+/**
+* The READ WINDOW: how much of a pane a capture asks for, and whether rows sat above what came back.
+*
+* Both halves live here because they are one question. A capture is bounded — by the caller's `lines`,
+* or by the backend's own default (the viewport on all four) — and "was anything dropped" is a
+* property of that bound. Unbind the window (`lines: 'all'`) and the answer is `false` by
+* construction, with no probe to spend.
+*
+* The truncation rule itself is shared by every adapter so the four backends answer
+* `MuxReadResult.truncated` by one definition rather than four that can drift — the same reason
+* `pollForOutput` owns one poll cadence for the three polling backends.
+*
+* Pure, and deliberately so: the tricky half of the answer is a row count, testable with no
+* multiplexer at all (`template-capture`'s geometry derivation is the precedent). Each adapter owns
+* only the one thing that genuinely differs — how its backend spells "one row deeper".
+*/
+/**
+* How many terminal ROWS a capture carries.
+*
+* A trailing newline is a terminator, not an empty row: `capture-pane` and `dump-screen` both end
+* their output with one, so counting it would make every capture look one row longer than the screen
+* and — worse — would compare unequal against a probe that happened not to end with one. An empty
+* capture is zero rows, not one.
+*/
+function capturedRows$1(text) {
+	if (text === "") return 0;
+	return (text.endsWith("\n") ? text.slice(0, -1) : text).split("\n").length;
+}
+/**
+* Whether `capture` omitted older rows, judged against `deeper` — the SAME read taken one row further
+* back.
+*
+* More rows in the deeper read means there was output above the captured window that the caller did
+* not receive. An equal (or smaller) count means the deeper read had nothing more to give: the
+* backend clamped at the top of what it holds, so the caller has everything there is.
+*
+* Row counts, not text equality, because the two reads are not required to render the shared rows
+* identically — herdr's deeper probe reads a different `--source`, and a backend may re-wrap. What
+* both reads DO agree on is how many rows they returned, and that is the whole question.
+*/
+function isReadTruncated$1(capture, deeper) {
+	return capturedRows$1(deeper) > capturedRows$1(capture);
+}
+/**
+* The row count that stands in for "the whole scrollback" on a backend whose read takes a NUMBER and
+* has no all-history token of its own (WezTerm's `--start-line`, herdr's `--lines`) — tmux (`-S -`)
+* and Zellij (`--full`) say it exactly and never reach for this.
+*
+* A million rows is past any real pane's history (tmux's own `history-limit` defaults to 2000) and
+* both backends CLAMP an over-deep window to what they hold rather than failing, so this reads as
+* "everything" without pretending to be a precise number. It stays under a u32, which is what herdr's
+* CLI parses `--lines` as.
+*/
+const FULL_SCROLLBACK_LINES$1 = 1e6;
+const right$1 = (rect) => rect.x + rect.width;
+const bottom$1 = (rect) => rect.y + rect.height;
+const HORIZONTAL$1 = {
+	direction: "right",
+	start: (r) => r.x,
+	end: right$1
+};
+const VERTICAL$1 = {
+	direction: "down",
+	start: (r) => r.y,
+	end: bottom$1
+};
+/**
+* The lowest cut on this axis that separates the panes cleanly, or `undefined` if none does.
+*
+* Taking the LOWEST rather than any is what produces a right-comb for an n-ary row: three panes side
+* by side cut first into `[a][b c]`, then `[b][c]` — the exact tree `desugar`'s `comb` emits for
+* `arrange: even-horizontal`, reached from the opposite direction.
+*
+* A candidate is any pane's start edge. It separates cleanly when every pane lies wholly before it
+* or wholly after it, and both sides have something in them.
+*/
+function findCut$1(panes, axis) {
+	const candidates = [...new Set(panes.map((p) => axis.start(p.rect)))].sort((a, b) => a - b);
+	for (const at of candidates) {
+		const first = panes.filter((p) => axis.end(p.rect) <= at);
+		const second = panes.filter((p) => axis.start(p.rect) >= at);
+		if (first.length === 0 || second.length === 0) continue;
+		if (first.length + second.length !== panes.length) continue;
+		return {
+			direction: axis.direction,
+			ratio: ratioOf$1(panes, second, axis),
+			first,
+			second
+		};
+	}
+}
+/**
+* The fraction of the split region kept by `first` — the schema's `ratio`.
+*
+* Measured as the COMPLEMENT of what `second` occupies, over the whole region: `1 - second/total`.
+* The obvious `first / (first + second)` is subtly wrong on any backend that draws a divider, and
+* the arithmetic says why — tmux splitting a 50-row region reports 34 + 15, with the 51st row eaten
+* by the divider. `first / (first + second)` reads 34/49 = 0.69; the true split was 0.7, and the
+* divider row belongs to neither pane's height while still costing the region a row.
+*
+* Taking the complement puts that row back where the backend's own arithmetic puts it: tmux's `-l`
+* sizes the NEW pane, so `second` is exactly the fraction asked for and `first` keeps the rest,
+* divider included. That reads 1 - 15/50 = 0.7 — the number the split was actually made with. On a
+* backend with no divider (herdr) the two formulas agree, so nothing is traded for the fix.
+*
+* Both checked against live binaries: this recovers tmux's `-l 40%`/`-l 30%` splits as 0.6/0.7
+* exactly, and reproduces herdr's to within the cell it rounds to.
+*/
+function ratioOf$1(all, second, axis) {
+	const total = extent$1(all, axis);
+	if (total <= 0) return .5;
+	return 1 - extent$1(second, axis) / total;
+}
+/** How far a group of panes reaches along an axis — its bounding box on that axis. */
+function extent$1(panes, axis) {
+	const starts = panes.map((p) => axis.start(p.rect));
+	const ends = panes.map((p) => axis.end(p.rect));
+	return Math.max(...ends) - Math.min(...starts);
+}
+/**
+* Cut the region into a binary tree, recursively.
+*
+* **`right` is tried before `down`, and the order is load-bearing on a grid.** A 2x2 is genuinely
+* ambiguous — cutting it vertically first and horizontally first both describe the same screen, and
+* neither is more true. Columns-then-rows is the tie-break because that is what `desugar`'s `tiled`
+* emits, so a tiled pool exports back as the tree it was built from rather than its transpose.
+*
+* A region no cut separates cannot come out of a multiplexer: both backends build regions BY
+* splitting, so every region they can report is guillotine-cuttable by construction. Reaching the
+* throw means the geometry did not come from where we think it did — which is worth saying loudly
+* rather than papering over with a tree that misplaces the user's panes.
+*/
+function partition$1(panes) {
+	if (panes.length === 1) return {
+		type: "pane",
+		pane: panes[0]
+	};
+	const cut = findCut$1(panes, HORIZONTAL$1) ?? findCut$1(panes, VERTICAL$1);
+	if (!cut) throw new Error(`this region's panes do not form a splittable tree (${panes.length} panes: ${panes.map((p) => p.id).join(", ")}) — export can only capture a region built by splitting`);
+	return {
+		type: "split",
+		direction: cut.direction,
+		ratio: cut.ratio,
+		first: partition$1(cut.first),
+		second: partition$1(cut.second)
+	};
+}
+/**
+* The split a pane sits DIRECTLY inside, with the numbers a resize needs — or `undefined` when the
+* region has no split at all (a single-pane region: nothing to take a fraction of).
+*
+* **The target is always one WHOLE side of the split it encloses.** That falls out of the guillotine
+* derivation rather than being asserted: a leaf's parent is the last cut before it, so whichever side
+* of that cut the target lands on holds the target and nothing else. The OTHER side may be a group of
+* panes, which is why it is reported as an extent rather than a pane — a backend sizes the target, and
+* the group on the far side takes what is left.
+*
+* **Extents, not ratios alone, because the backends need different arithmetic.** tmux's
+* `resize-pane -x/-y` takes CELLS, so it needs the split region's extent to turn a fraction into one;
+* herdr's `pane resize --amount` takes a ratio DELTA, so it needs the fraction the split is at now.
+* Reporting both raw facts keeps the per-backend conversion in the adapter that owns it — the same
+* split `MuxOpenOptions.ratio` already makes, where the seam's number is one thing and each backend's
+* rendering of it is another.
+*
+* **`extent` includes the divider a backend draws.** It is the split region's own span, so on tmux
+* `targetExtent + otherExtent` falls one short of it and on herdr the two add up exactly. Neither
+* adapter hard-codes which: the divider is `extent - targetExtent - otherExtent`, measured from the
+* rects the backend just reported.
+*/
+function enclosingSplit$1(panes, paneId) {
+	if (!panes.some((p) => p.id === paneId)) throw new Error(`pane ${paneId} is not in the region described (${panes.map((p) => p.id).join(", ")})`);
+	let node = partition$1(panes);
+	while (node.type === "split") {
+		const split = node;
+		const targetIsFirst = holds$1(split.first, paneId);
+		const side = targetIsFirst ? split.first : split.second;
+		const other = targetIsFirst ? split.second : split.first;
+		if (side.type !== "pane") {
+			node = side;
+			continue;
+		}
+		const axis = split.direction === "right" ? HORIZONTAL$1 : VERTICAL$1;
+		return {
+			direction: split.direction,
+			targetIsFirst,
+			firstRatio: split.ratio,
+			extent: extent$1(leaves$1(split), axis),
+			targetExtent: extent$1([side.pane], axis),
+			otherExtent: extent$1(leaves$1(other), axis)
+		};
+	}
+}
+/** Whether `paneId` is somewhere under `node`. */
+function holds$1(node, paneId) {
+	return leaves$1(node).some((p) => p.id === paneId);
+}
+/** Every pane under `node`, in order. */
+function leaves$1(node) {
+	return node.type === "pane" ? [node.pane] : [...leaves$1(node.first), ...leaves$1(node.second)];
+}
+/**
+* The synchronous twin of the library's `normalizeWorktreePath`, for the one caller that cannot await:
+* a multiplexer adapter keying its worktree bindings inside the synchronous `Exec` convention. Both
+* resolve through the native `realpath`, so a binding keyed here matches a root the library listed.
+* Falls back to `resolve` for a path not on disk, where there is no link to follow.
+*/
+function normalizeWorktreePathSync$1(path) {
+	try {
+		return realpathSync.native(path);
+	} catch {
+		return resolve(path);
+	}
+}
+/**
+* herdr backend — detected via `$HERDR_ENV`. herdr (https://herdr.dev) is an agent-aware terminal
+* multiplexer that also reports real busy-state (working / idle / blocked / done); this adapter
+* only drives its pane lifecycle, not the state feed. Talks to herdr's own CLI (`herdr pane ...`)
+* rather than its Unix-socket API, so it composes with this codebase's synchronous `Exec`
+* convention exactly like the tmux adapter — no new client/transport needed.
+*
+* The pane lifecycle (split/run/read/close) is verified against a live herdr binary; `pane split`
+* returns a JSON `pane_info` envelope whose id is extracted in `parsePaneId`.
+*
+* **Verified against 0.8.2** (protocol 20), re-probed against a live server by re-running
+* `mux.herdr.integration.test.ts` — the real-boundary suite, not a hand check. Everything this
+* adapter drives held: the split/read/run/send-keys lifecycle, `pane wait-output`'s success and
+* error envelopes, `pane list`/`get`/`layout`, `workspace create`/`tab create`, and the `env` and
+* worktree parameter sets below. The per-claim markers that follow name the version each was LAST
+* established against — a claim still reading 0.7.4/0.7.5/0.8.0 is one a later release gave no
+* occasion to re-measure (no attached client, or no live agent in the pane), not one that failed.
+*
+* What 0.8.2 did NOT re-establish, stated so the claim above is not read wider than it is: the two
+* current-pane-context opens (`at:'tab'`, `at:'pane:right'`) skip when the suite runs INSIDE a herdr
+* pane, and they are the only cases that exercise `--current`. 0.8.2 fixed `pane current`, `pane
+* get`, and `pane layout --current` to resolve the CALLING pane rather than another client's focused
+* pane (herdr #2297, #2298) — but that fix names none of `pane split`, which is where this file's one
+* `--current` sits. So the 0.7.4 caveat on it below stands, unmeasured against 0.8.2 rather than
+* re-confirmed.
+*/
+const herdrMuxAdapter$1 = withJumpHistory$1({
+	name: "herdr",
+	canSizeSplits: true,
+	/**
+	* Every creating verb this adapter issues carries `--no-focus`, so no open moves the user.
+	*
+	* `workspace create` and `tab create` have carried it from the start. `pane split` did NOT, and
+	* measuring it against a live 0.8.2 is what settled whether that was a hole: with the client
+	* focused on the pane being split, a bare `herdr pane split` left focus exactly where it was, and
+	* so did the same command with `--no-focus`. herdr's split simply does not activate what it
+	* creates. So the flag added there is a measured NO-OP today, and it is passed anyway — the seam
+	* now DECLARES this property, and a declaration backed by a backend default is one a future herdr
+	* release can falsify without anything here having to be wrong first. Every route saying what it
+	* wants is what makes the boolean above enforceable rather than incidental.
+	*
+	* No focus move to undo on top of that: `pane split <id>` names its target directly, so herdr
+	* never has to VISIT a pane to choose which one gets split.
+	*/
+	/**
+	* `true` — `herdr pane zoom <PANE_ID> --on|--off`, the one backend on this seam whose native verb is
+	* already ABSOLUTE rather than a toggle. Driven live on 0.9.0, and pinned to the 0.8.0 CI pin from
+	* that binary's OWN bundled schema rather than from a version guess: `herdr api schema --json` on
+	* 0.8.0 (protocol 19) carries `pane.zoom` with `PaneZoomParams { mode, pane_id }`, and its
+	* `PaneLayoutSnapshot` REQUIRES both `zoomed: boolean` and `focused_pane_id: string` — the two
+	* fields `isPaneZoomed` composes. So neither half of this member depends on a herdr newer than the
+	* one `pull-request.yml` drives. (0.8.0 could not be driven directly here: it answers a 0.9.0
+	* server with `protocol_mismatch`, and herdr has no throwaway-server mode to start an old one
+	* beside it.)
+	*/
+	canZoomPanes: true,
+	/**
+	* `true` for both, and herdr is the one backend that spells them as a SINGLE verb: `herdr pane
+	* move <PANE_ID>`, whose own usage prints three mutually exclusive forms —
+	* `--tab <id> --split right|down [--target-pane <id>]`, `--new-tab [--workspace <id>]`, and
+	* `--new-workspace`. Driven live on 0.9.0 in a throwaway workspace for all three.
+	*
+	* Pinned to the 0.8.0 CI pin against that binary directly rather than by a version guess: the
+	* v0.8.0 release binary's `pane move --help` lists exactly the same option set (`--tab --split
+	* --target-pane --ratio --new-tab --workspace --new-workspace --label --tab-label
+	* --focus --no-focus`), so neither member depends on a herdr newer than the one
+	* `pull-request.yml` drives.
+	*/
+	canMovePanes: true,
+	canBreakPanes: true,
+	/**
+	* `'preserved'`: `--no-focus` is a real flag on `workspace create`, `tab create` and `pane split`,
+	* and every route passes it. `pane split --pane` names the anchor directly, so no route has to
+	* focus a pane in order to choose one — there is nothing to undo on top of the suppression.
+	*/
+	focusOnOpen: "preserved",
+	open(exec, opts) {
+		const at = opts.at ?? "tab";
+		const label = opts.label ? ["--label", opts.label] : [];
+		const env = envFlags$1(opts.env);
+		let opened;
+		if (at === "workspace") {
+			const out = exec("herdr", [
+				"workspace",
+				"create",
+				"--cwd",
+				opts.cwd,
+				...label,
+				...env,
+				"--no-focus"
+			]);
+			if (!out) throw new Error(withReason$1(exec, "herdr workspace create failed"));
+			opened = parseRootPaneId$1(out, "herdr workspace create");
+		} else if (at === "tab") {
+			const out = exec("herdr", [
+				"tab",
+				"create",
+				...opts.within ? ["--workspace", opts.within] : [],
+				"--cwd",
+				opts.cwd,
+				...label,
+				...env,
+				"--no-focus"
+			]);
+			if (!out) throw new Error(withReason$1(exec, "herdr tab create failed"));
+			opened = parseRootPaneId$1(out, "herdr tab create");
+		} else if (at === "pane:float") refuseFloatingPane$1(herdrMuxAdapter$1.name);
+		else {
+			const direction = at === "pane:down" ? "down" : "right";
+			const from = opts.from ? [opts.from.id] : ["--current"];
+			const size = opts.ratio != null ? ["--ratio", toHerdrRatio$1(opts.ratio)] : [];
+			const out = exec("herdr", [
+				"pane",
+				"split",
+				...from,
+				"--direction",
+				direction,
+				"--cwd",
+				opts.cwd,
+				...size,
+				...env,
+				"--no-focus"
+			]);
+			if (!out) throw new Error(withReason$1(exec, "herdr pane split failed"));
+			opened = parsePaneId$1(out);
+			if (opts.label) herdrMuxAdapter$1.rename(exec, opened, "pane", opts.label);
+		}
+		if (opts.launch) herdrMuxAdapter$1.submit(exec, opened, opts.launch);
+		return opened;
+	},
+	rename(exec, target, tier, name) {
+		exec("herdr", [
+			tier,
+			"rename",
+			target.id,
+			name
+		]);
+	},
+	group() {},
+	worktree: herdrWorktreeCapability$1(),
+	sendText(exec, target, text) {
+		exec("herdr", [
+			"pane",
+			"send-text",
+			target.id,
+			text
+		]);
+	},
+	sendKeys(exec, target, keys) {
+		exec("herdr", [
+			"pane",
+			"send-keys",
+			target.id,
+			...keys
+		]);
+	},
+	submit(exec, target, text) {
+		if (!text) {
+			exec("herdr", [
+				"pane",
+				"send-keys",
+				target.id,
+				"Enter"
+			]);
+			return;
+		}
+		exec("herdr", [
+			"pane",
+			"run",
+			target.id,
+			text
+		]);
+	},
+	/**
+	* 0.8.0 added a `truncated` boolean to the read result, and it is REQUIRED in the socket schema's
+	* `PaneReadResult` — but it is not reachable from here, and that is a fact about the CLI rather than
+	* a choice: `herdr pane read` prints the pane's bare TEXT, no envelope, and its only 0.8.0 additions
+	* are `--format`/`--ansi`/`--raw`, which select the text's escaping. There is no `--json`. So the
+	* flag rides the socket API this adapter deliberately does not speak, and the one CLI surface that
+	* does hand back the envelope is `pane wait-output` (`.result.read.truncated` — seen live on 0.8.0).
+	* Surfacing truncation therefore costs a return-shape change, not a flag; see issue #100, which owns
+	* it across all four backends. Noted here so the next reader does not re-derive the dead end.
+	*/
+	read(exec, target, opts) {
+		if (opts?.lines === "all") {
+			const text = paneRead$1(exec, target, "recent", FULL_SCROLLBACK_LINES$1);
+			return opts.truncation ? {
+				text,
+				truncated: false
+			} : { text };
+		}
+		const text = paneRead$1(exec, target, "visible", opts?.lines);
+		if (!opts?.truncation) return { text };
+		return {
+			text,
+			truncated: isReadTruncated$1(text, paneRead$1(exec, target, "recent", capturedRows$1(text) + 1))
+		};
+	},
+	/**
+	* The one backend with a NATIVE wait: `pane wait-output` blocks in herdr itself (arrived in 0.7.5,
+	* still native in 0.8.0), so no poll loop is run here and no snapshot is pulled across the CLI
+	* boundary on every tick.
+	*
+	* `--source visible` is pinned rather than left to herdr's own default (`recent_unwrapped`, verified
+	* against 0.7.5 — the help still says `recent` in 0.8.0). The seam's rule is that a wait searches exactly what
+	* `read` returns, and `read` pins `visible` here; taking the default would make the same wait mean a
+	* different snapshot on this backend than on every polling one.
+	*
+	* Telling a TIMEOUT (an answer) from a broken wait (a failure) is the whole difficulty, because herdr
+	* spells both the same way: exit 1 with an error envelope on stderr, so `Exec` yields `null` for
+	* either. Two tiers answer it, in order:
+	*
+	* 1. **The envelope's `code`**, when the runner captured stderr into `lastError` (re-verified against
+	*    0.8.0: `{"error":{"code":"timeout",…}}` vs `{"error":{"code":"pane_not_found",…}}`). Exact.
+	* 2. **A live pane that actually consumed the deadline**, when it did not. `Exec.lastError` is
+	*    specified as a diagnostic and NEVER a control-flow signal — a runner that discards stderr must
+	*    still work — so the code cannot be the only answer. Liveness alone is not enough either, and the
+	*    reason is a whole released version of the backend: herdr 0.7.4 has no `pane wait-output` at all,
+	*    so it answers with clap's usage text (not an envelope) INSTANTLY, and a liveness-only rule reads
+	*    that as "timed out" — a silently wrong answer for a wait that never ran. Elapsed time is the fact
+	*    that separates them and needs no stderr: a wait that returns in a fraction of its own timeout did
+	*    not wait. Both must hold — the pane is live AND the deadline was spent — or this throws.
+	*
+	* A timeout costs ONE extra `read`, because herdr's timeout envelope carries no snapshot and the seam
+	* promises the caller the evidence its verdict was reached on. It is taken at the deadline, so it is
+	* the same "last look at the pane" a polling backend returns, one poll interval later.
+	*/
+	async waitForOutput(exec, target, opts) {
+		assertWaitPattern$1(opts);
+		const now = opts.now ?? (() => Date.now());
+		const pattern = opts.match != null ? ["--match", opts.match] : ["--regex", opts.regex];
+		const args = [
+			"pane",
+			"wait-output",
+			target.id,
+			"--source",
+			"visible",
+			"--timeout",
+			String(opts.timeoutMs)
+		];
+		args.push(...pattern);
+		if (opts.lines != null) args.push("--lines", String(opts.lines));
+		const started = now();
+		const out = exec("herdr", args);
+		if (out == null) {
+			if (!isHerdrWaitTimeout$1(exec, target, opts.timeoutMs, now() - started)) throw new Error(withReason$1(exec, `herdr pane wait-output failed for pane ${target.id}`));
+			const readOpts = opts.lines != null ? { lines: opts.lines } : void 0;
+			return {
+				matched: false,
+				output: herdrMuxAdapter$1.read(exec, target, readOpts).text
+			};
+		}
+		return parseWaitOutput$1(out);
+	},
+	focus(exec, target) {
+		const { workspaceId, tabId } = parsePaneLocation$2$1(exec("herdr", [
+			"pane",
+			"get",
+			target.id
+		]), target.id);
+		exec("herdr", [
+			"workspace",
+			"focus",
+			workspaceId
+		]);
+		exec("herdr", [
+			"tab",
+			"focus",
+			tabId
+		]);
+	},
+	teardown(exec, target) {
+		exec("herdr", [
+			"pane",
+			"close",
+			target.id
+		]);
+	},
+	paneExists(exec, target) {
+		return exec("herdr", [
+			"pane",
+			"read",
+			target.id,
+			"--source",
+			"visible"
+		]) !== null;
+	},
+	isPaneFocused(exec, target) {
+		const out = exec("herdr", [
+			"pane",
+			"get",
+			target.id
+		]);
+		if (out == null) return void 0;
+		try {
+			const focused = JSON.parse(out)?.result?.pane?.focused;
+			return typeof focused === "boolean" ? focused : void 0;
+		} catch {
+			return;
+		}
+	},
+	/**
+	* `pane zoom <id> --on|--off` — herdr is the only backend here whose own verb is absolute, so no
+	* toggle has to be composed. It is idempotent too: a second `--on` on an already-zoomed pane
+	* answered `{"changed":false,"focus_changed":false}` on a live 0.9.0.
+	*
+	* **The guard is still not optional, and this is the backend that proves why.** herdr's zoom is a
+	* TAB-tier fact — `pane layout` reports one `zoomed` for the whole tab — and `--off` names the pane
+	* to FOCUS, not the pane to unzoom. Measured on 0.9.0 in a throwaway workspace: with p2 zoomed,
+	* `herdr pane zoom p3 --off` unzoomed **p2** and moved focus to p3. So an unguarded
+	* `setPaneZoom(p3, false)` — a request that asks for nothing, since p3 was never zoomed — would
+	* silently unzoom a pane the caller never named. Reading first turns that into the no-op the seam
+	* promises.
+	*
+	* `--on` moves focus to the pane (`focus_changed: true` on the same probe), which
+	* `MuxAdapter.setPaneZoom` declares rather than compensates; `--off` on the zoomed pane moves
+	* nothing, since that pane already holds the focus.
+	*/
+	setPaneZoom(exec, target, zoomed) {
+		if (herdrMuxAdapter$1.isPaneZoomed(exec, target) === zoomed) return;
+		if (exec("herdr", [
+			"pane",
+			"zoom",
+			target.id,
+			zoomed ? "--on" : "--off"
+		]) == null) throw new Error(withReason$1(exec, `herdr could not ${zoomed ? "zoom" : "unzoom"} pane ${target.id}`));
+	},
+	/**
+	* `pane layout --pane <id>`, whose payload carries `zoomed` for the TAB plus `focused_pane_id` —
+	* so the per-pane answer the seam promises is the conjunction, tmux's shape under different key
+	* names. Verified live on 0.9.0.
+	*
+	* `pane list` is deliberately NOT the source, and its absence is why `LivePane` grew no `zoomed`
+	* column: a live 0.9.0 `herdr pane list` carries no zoom key on any record at all, so the only
+	* read herdr has costs one call PER TAB. See `MuxAdapter.isPaneZoomed`.
+	*
+	* Parsed defensively, exactly as `isPaneFocused` is: null output, an error envelope, a missing or
+	* non-boolean `zoomed`, or a parse failure all fold to `undefined` rather than a false `false`.
+	*/
+	isPaneZoomed(exec, target) {
+		const out = exec("herdr", [
+			"pane",
+			"layout",
+			"--pane",
+			target.id
+		]);
+		if (out == null) return void 0;
+		try {
+			const layout = JSON.parse(out)?.result?.layout;
+			if (typeof layout?.zoomed !== "boolean") return void 0;
+			return layout.zoomed === true && layout.focused_pane_id === target.id;
+		} catch {
+			return;
+		}
+	},
+	/**
+	* `pane move <src> --tab <dst tab> --split <side> --target-pane <dst> --no-focus`.
+	*
+	* The DESTINATION PANE's tab has to be resolved first, because `--tab` is not optional: herdr
+	* refuses the command outright without it (its usage line is `move <pane_id> --tab <tab_id>
+	* --split right|down …`, and the flagless form printed usage and did nothing on 0.9.0). The seam's
+	* destination is a pane, so `pane get <dst>` supplies the tab and the pane rides along as
+	* `--target-pane` — which is what makes the placement the caller's rather than herdr's, since
+	* `--tab` alone splits whichever pane that tab happens to have focused.
+	*
+	* `--no-focus` for the reason every other route here passes it: a driver moving a pane should not
+	* drag the human's view along. Measured on 0.9.0 — the destination tab's own focused pane was
+	* unchanged afterwards.
+	*
+	* herdr NO-OPS a move into the tab the pane is already in, `--target-pane` or not
+	* (`{"changed":false}` on 0.9.0, with the pane left exactly where it was). That is reported as it
+	* happened: the returned `OpenedPane` is the pane's real, unchanged location rather than the one
+	* the caller asked for.
+	*/
+	movePane(exec, target, destination, side) {
+		const { tabId } = parsePaneRecord$1(exec("herdr", [
+			"pane",
+			"get",
+			destination.id
+		]));
+		if (!tabId) throw new Error(`herdr could not resolve the tab of destination pane ${destination.id}`);
+		const out = exec("herdr", [
+			"pane",
+			"move",
+			target.id,
+			"--tab",
+			tabId,
+			"--split",
+			side,
+			"--target-pane",
+			destination.id,
+			"--no-focus"
+		]);
+		if (!out) throw new Error(withReason$1(exec, `herdr could not move pane ${target.id} to ${destination.id}`));
+		return parseMovedPane$1(out, "herdr pane move");
+	},
+	/**
+	* `pane move <src> --new-tab|--new-workspace --no-focus` — the same verb as `movePane`, a disjoint
+	* flag set, which is why the seam keeps them as two members rather than one.
+	*
+	* **`--new-workspace` REWRITES THE PANE ID**, and this is the backend that forced `breakPane` to
+	* return an `OpenedPane` at all: herdr ids are workspace-scoped, so on 0.9.0 `pane move wRT:p2
+	* --new-workspace` answered with the same terminal carrying the id `wRV:p1`. The old id keeps
+	* resolving as an alias and disappears from `pane list` — see `parseMovedPane`. `--new-tab` keeps
+	* the id and changes only the tab.
+	*
+	* Both forms mint a fresh space even when the pane is ALREADY alone in its tab — measured, a
+	* second `--new-tab` moved `wRD:t3` to `wRD:t4` — which is where herdr differs from tmux's no-op,
+	* a difference `MuxAdapter.breakPane` declares rather than hides.
+	*/
+	breakPane(exec, target, at) {
+		const out = exec("herdr", [
+			"pane",
+			"move",
+			target.id,
+			at === "workspace" ? "--new-workspace" : "--new-tab",
+			"--no-focus"
+		]);
+		if (!out) throw new Error(withReason$1(exec, `herdr could not break out pane ${target.id} into its own ${at}`));
+		return parseMovedPane$1(out, "herdr pane move");
+	},
+	listPanes(exec) {
+		const out = exec("herdr", ["pane", "list"]);
+		if (!out) return [];
+		let panes;
+		try {
+			panes = JSON.parse(out)?.result?.panes;
+		} catch {
+			return [];
+		}
+		if (!Array.isArray(panes)) return [];
+		return panes.filter((p) => typeof p?.pane_id === "string").map((p) => {
+			const harness = p.agent || void 0;
+			const label = p.label || void 0;
+			const agentStatus = toAgentStatus$1(p.agent_status);
+			return {
+				id: p.pane_id,
+				mux: "herdr",
+				floating: false,
+				...harness !== void 0 ? { harness } : {},
+				...agentStatus !== void 0 ? { agentStatus } : {},
+				...p.cwd !== void 0 ? { cwd: p.cwd } : {},
+				...label !== void 0 ? { label } : {}
+			};
+		});
+	},
+	regions: {
+		describeRegion(exec, target) {
+			return herdrRegionPanes$1(exec, target.id, herdrPaneDetails$1(exec));
+		},
+		/**
+		* `pane resize --direction <d> --amount <f>` — a signed DELTA on the enclosing split's ratio,
+		* which is why the current ratio has to be read first. herdr's `--direction` names where the
+		* DIVIDER moves, not which pane grows: `right`/`down` raise the split's ratio and `left`/`up`
+		* lower it, whichever side of it the `--pane` sits on. So the target's side never enters the
+		* direction — only the sign of the delta does.
+		*
+		* The current ratio is derived from the RECTS, not read off `layout.splits[].ratio`, for
+		* `describeRegion`'s reason exactly: the splits array is flat and its parent links live only in
+		* an undocumented id convention (`split_1_0`), so matching a pane to its split there would bet on
+		* a spelling herdr never promised. The rects say the same thing in a fact it does promise.
+		*
+		* Verified against a live herdr 0.8.2 (`mux.herdr.integration.test.ts`), which is also where the
+		* `--direction` semantics above were established: `--direction right --amount 0.1` moved a 0.5
+		* split to 0.6 whether the `--pane` was the left one or the right one, and on a nested region
+		* `--direction down` resized the enclosing stacked split rather than the outer one.
+		*/
+		resizePane(exec, target, ratio) {
+			const split = enclosingSplit$1(herdrRegionPanes$1(exec, target.id, herdrPaneDetails$1(exec)), target.id);
+			if (!split) throw new Error(`herdr pane ${target.id} is the only pane in its region — there is no split to resize`);
+			const delta = toHerdrResizeDelta$1(split, ratio);
+			if (delta === 0) return;
+			const direction = herdrResizeDirection$1(split.direction, delta);
+			if (exec("herdr", [
+				"pane",
+				"resize",
+				"--pane",
+				target.id,
+				"--direction",
+				direction,
+				"--amount",
+				String(Math.abs(delta))
+			]) === null) throw new Error(withReason$1(exec, `herdr could not resize pane ${target.id}`));
+		},
+		/**
+		* herdr HAS a workspace tier, so the workspace is a fact the backend holds rather than one
+		* cyber-mux has to reconstruct: the caller's pane names its `workspace_id`, `tab list --workspace`
+		* enumerates that workspace's tabs, and `pane list --workspace` hands back every pane already
+		* stamped with the tab it sits in. No grouping tag is read here and none is written — the tier IS
+		* the group, which is exactly why `open` ignores `workspaceGroup` on this backend.
+		*
+		* The one indirection: geometry is per-PANE (`pane layout --pane`), never per-tab, so each tab's
+		* rects are fetched through any one pane that sits in it. That is safe and race-free, and both
+		* halves were established against 0.7.4: `pane layout` reports live geometry for an UNFOCUSED tab
+		* in a DIFFERENT workspace, so nothing has to be focused first and nothing moves while this runs.
+		*
+		* herdr's own native per-tab layout export would be the obvious road — it takes a `tab_id` — but
+		* `layout` is still NOT a CLI verb in 0.8.0 (its top-level help lists no such subcommand); it is
+		* socket-API-only, and this adapter speaks the CLI by design (so it composes with the synchronous
+		* `Exec` seam). The road is closed, hence the pane indirection.
+		*/
+		describeWorkspace(exec, target) {
+			const { workspaceId } = parsePaneRecord$1(exec("herdr", [
+				"pane",
+				"get",
+				target.id
+			]));
+			if (!workspaceId) throw new Error(withReason$1(exec, `herdr could not resolve the workspace around pane ${target.id}`));
+			const out = exec("herdr", [
+				"tab",
+				"list",
+				"--workspace",
+				workspaceId
+			]);
+			if (!out) throw new Error(withReason$1(exec, `herdr could not enumerate the tabs of workspace ${workspaceId}`));
+			let reported;
+			try {
+				reported = JSON.parse(out)?.result?.tabs;
+			} catch {
+				throw new Error(`herdr tab list returned unparseable output: ${out.slice(0, 200)}`);
+			}
+			if (!Array.isArray(reported) || reported.length === 0) throw new Error(`herdr reported no tabs in workspace ${workspaceId}: ${out.slice(0, 200)}`);
+			const details = herdrPaneDetails$1(exec, workspaceId);
+			const tabs = [];
+			for (const reportedTab of reported) {
+				if (typeof reportedTab?.tab_id !== "string") continue;
+				const tabId = reportedTab.tab_id;
+				const anchor = [...details].find(([, detail]) => detail.tab === tabId)?.[0];
+				if (!anchor) throw new Error(`herdr reported no panes in tab ${tabId} of workspace ${workspaceId}`);
+				const tab = {
+					id: tabId,
+					panes: herdrRegionPanes$1(exec, anchor, details)
+				};
+				if (typeof reportedTab.label === "string" && reportedTab.label !== "") tab.label = reportedTab.label;
+				tabs.push(tab);
+			}
+			if (tabs.length === 0) throw new Error(`herdr reported no usable tabs in workspace ${workspaceId}: ${out.slice(0, 200)}`);
+			return tabs;
+		}
+	},
+	agentLifecycle: { waitForState(exec, target, opts) {
+		const until = opts.until ?? [];
+		const status = parseReachedAgentStatus$1(exec("herdr", [
+			"agent",
+			"wait",
+			target.id,
+			...until.flatMap((state) => ["--until", state]),
+			...opts.timeoutMs != null ? ["--timeout", String(opts.timeoutMs)] : []
+		]));
+		if (!status) throw new Error(withReason$1(exec, `herdr agent wait reported no reached agent_status for pane ${target.id}`));
+		return status;
+	} }
+});
+/**
+* The set of `agent_status` values herdr reports — unchanged through 0.8.0, whose socket schema still
+* declares `AgentStatus` as exactly this enum, and whose `agent wait --until` still lists exactly these
+* five values. The runtime witness of the `AgentStatus`
+* type, so a string read off a herdr envelope can be NARROWED to it rather than cast. A value outside
+* this set is treated as absent (the feed said something this build does not model), never forced into
+* the type.
+*/
+const AGENT_STATUSES$1 = [
+	"idle",
+	"working",
+	"blocked",
+	"done",
+	"unknown"
+];
+/** A value narrowed to `AgentStatus`, or `undefined` for anything else (a non-string, an empty string,
+* or a status this build does not model) — the normalization both the listing and the wait share. */
+function toAgentStatus$1(value) {
+	return typeof value === "string" && AGENT_STATUSES$1.includes(value) ? value : void 0;
+}
+/**
+* The `AgentStatus` a `herdr agent wait` run reached, read defensively from its JSON envelope —
+* `{"result":{"agent":{…,"agent_status":"idle",…},"type":"agent_info"}}` (verified against 0.7.5), so
+* the reached status lives at `.result.agent.agent_status`. Every unresolvable shape — `out` is null
+* (an Exec failure), the JSON does not parse, or the field is missing/empty/unmodeled — folds to
+* `undefined`, exactly as `parsePaneRecord`/`isPaneFocused` fold, so the caller states its own failure.
+*/
+function parseReachedAgentStatus$1(out) {
+	if (out == null) return void 0;
+	try {
+		return toAgentStatus$1(JSON.parse(out)?.result?.agent?.agent_status);
+	} catch {
+		return;
+	}
+}
+/**
+* The rects of the region `paneId` sits in, joined with the cwd/label half.
+*
+* Two sources, because herdr splits the answer across two verbs: `pane layout` reports the region's
+* rects (`layout.panes[].rect`) but carries no cwd and no label, while `pane list` carries both and
+* no geometry. Neither alone can build a template — hence `details` is passed IN, so a caller reading
+* many tabs pays for that list once rather than once per tab.
+*
+* `layout.splits[]` is deliberately ignored even though it reports `direction` and `ratio` outright.
+* It is FLAT — `[{id:"split_0_root",...},{id:"split_1_0",...}]` — so the tree is recoverable only by
+* parsing the parent out of that id string, a convention herdr's CLI help never documents and could
+* respell without warning. The rects say the same thing in a fact herdr does promise, so the
+* derivation runs off those; see `RegionInspector.describeRegion` in `mux.ts`.
+*/
+function herdrRegionPanes$1(exec, paneId, details) {
+	const out = exec("herdr", [
+		"pane",
+		"layout",
+		"--pane",
+		paneId
+	]);
+	if (!out) throw new Error(withReason$1(exec, `herdr could not describe the region around pane ${paneId}`));
+	let reported;
+	try {
+		reported = JSON.parse(out)?.result?.layout?.panes;
+	} catch {
+		throw new Error(`herdr pane layout returned unparseable output: ${out.slice(0, 200)}`);
+	}
+	if (!Array.isArray(reported) || reported.length === 0) throw new Error(`herdr pane layout reported no panes for ${paneId}: ${out.slice(0, 200)}`);
+	return reported.filter((p) => typeof p?.pane_id === "string").map((p) => {
+		const detail = details.get(p.pane_id);
+		const pane = {
+			id: p.pane_id,
+			rect: {
+				x: p.rect?.["x"] ?? 0,
+				y: p.rect?.["y"] ?? 0,
+				width: p.rect?.["width"] ?? 0,
+				height: p.rect?.["height"] ?? 0
+			}
+		};
+		if (detail?.cwd) pane.cwd = detail.cwd;
+		if (detail?.label) pane.label = detail.label;
+		return pane;
+	});
+}
+/**
+* Each pane's cwd, label and tab, keyed by pane id — the half `pane layout` does not report.
+*
+* `workspace` scopes the list to one workspace when the caller has one to scope by; omitting it lists
+* every pane herdr can see, which is what a single-region read wants (it keys by pane id and never
+* cares which workspace a pane came from).
+*/
+function herdrPaneDetails$1(exec, workspace) {
+	const details = /* @__PURE__ */ new Map();
+	const out = exec("herdr", [
+		"pane",
+		"list",
+		...workspace ? ["--workspace", workspace] : []
+	]);
+	if (!out) return details;
+	let panes;
+	try {
+		panes = JSON.parse(out)?.result?.panes;
+	} catch {
+		return details;
+	}
+	if (!Array.isArray(panes)) return details;
+	for (const pane of panes) {
+		if (typeof pane?.pane_id !== "string") continue;
+		details.set(pane.pane_id, {
+			cwd: pane.cwd,
+			label: pane.label,
+			tab: pane.tab_id
+		});
+	}
+	return details;
+}
+/**
+* herdr's repeatable `--env KEY=VALUE` — spelled the same way by exactly three verbs: `pane split`,
+* `workspace create` and `tab create`, each backed by a native `env` Record in the socket schema
+* (protocol 16).
+*
+* `worktree create`/`worktree open` are deliberately NOT in that list: their params are
+* `[base, branch, cwd, focus, label, path, workspace_id]` and
+* `[branch, cwd, focus, label, path, workspace_id]` — no `env` — and herdr rejects the flag with
+* `unknown option: --env`. A caller needing env on that route uses the command-prefix fallback.
+* Re-verified against 0.8.0: both param sets are unchanged in protocol 19's schema, and a live
+* `worktree create --env` there still answers `unknown option: --env`.
+*/
+function envFlags$1(env) {
+	return env ? Object.entries(env).flatMap(([k, v]) => ["--env", `${k}=${v}`]) : [];
+}
+/**
+* The seam's `ratio` as the SIGNED delta `pane resize --amount` wants, in the same fraction-of-the-
+* split-region units herdr's own `--ratio` uses at birth.
+*
+* Both numbers are the FIRST side's fraction, so the target's side is folded in here (`1 - ratio` when
+* the target is the second side) and the direction below reads only the sign. Measured against the
+* split's current ratio as `region-tree.ts` derives it, never against `layout.splits[].ratio` — one
+* definition of "what this split is at" seam-wide is what makes a resize to the ratio a region was
+* just described at a no-op.
+*/
+function toHerdrResizeDelta$1(split, ratio) {
+	assertRatioInRange$1(ratio);
+	const delta = (split.targetIsFirst ? ratio : 1 - ratio) - split.firstRatio;
+	return Math.round(delta * 1e6) / 1e6;
+}
+/**
+* Which way herdr moves the divider for a delta of this sign, on a split of this axis.
+*
+* `right`/`down` RAISE the enclosing split's ratio and `left`/`up` lower it — established against a
+* live 0.8.2 rather than read off `--help`, which lists the four values and says nothing about what
+* they move. The axis picks the pair because herdr resolves `--direction` against the nearest ancestor
+* split on that axis: asking `right` of a pane inside a stacked split walks past it to the outer one,
+* which would resize a split the caller never named.
+*/
+function herdrResizeDirection$1(axis, delta) {
+	if (axis === "right") return delta > 0 ? "right" : "left";
+	return delta > 0 ? "down" : "up";
+}
+/**
+* `--ratio` takes the seam's number VERBATIM — herdr sizes the ORIGINAL pane, so no inversion, unlike
+* tmux's `-l` and wezterm's `--percent`. The guard is the same one those two render helpers call: the
+* seam refuses an out-of-range ratio here rather than pass `--ratio 5` (or `0`) through to a split herdr
+* would then size wrong.
+*/
+function toHerdrRatio$1(ratio) {
+	assertRatioInRange$1(ratio);
+	return String(ratio);
+}
+/**
+* Launch a command in a worktree's root pane, carrying env the worktree verb could not set at birth.
+* The prefix-or-warn rule is the seam's (`env-fallback.ts`); this is the one route that invokes it,
+* because it is the one route that loses env. With a command, env rides in as a prefix; with none and
+* env asked for, it warns to stderr (stdout stays machine-readable) rather than dropping in silence.
+*/
+function carryLaunch$1(exec, target, env, launch) {
+	const fallback = envFallback$1(env, launch);
+	if (fallback.kind === "dropped") {
+		process.stderr.write(`env (${fallback.variables.join(", ")}) could not be set on this worktree's workspace and no command was given to carry it — herdr worktree create/open take no env parameter
+`);
+		return;
+	}
+	if (fallback.command !== void 0) herdrMuxAdapter$1.submit(exec, target, fallback.command);
+}
+/**
+* `herdr pane split` emits a JSON envelope, not a bare id:
+* `{"id":"cli:pane:split","result":{"pane":{"pane_id":"w3:pB", ...},"type":"pane_info"}}`.
+* The pane id herdr's other `pane` subcommands accept lives at `.result.pane.pane_id`. Extract it —
+* passing the whole blob downstream lands it in a filename and blows the path length limit.
+*/
+function parsePaneId$1(out) {
+	return parseOpenedPane$1(out, "herdr pane split", "pane");
+}
+/**
+* `herdr pane get <id>` emits `{"result":{"pane":{"workspace_id":...,"tab_id":...,...}}}`, or an
+* error envelope when the id no longer names a live pane. Every unresolvable shape — `out` is null
+* (an Exec failure), the JSON does not parse, or a field is missing/empty/not a string — folds to the
+* field simply being absent, so each caller states its OWN failure rather than inheriting one
+* phrased for somebody else's verb.
+*/
+function parsePaneRecord$1(out) {
+	if (out == null) return {};
+	try {
+		const pane = JSON.parse(out)?.result?.pane;
+		return {
+			workspaceId: nonEmpty$1(pane?.workspace_id),
+			tabId: nonEmpty$1(pane?.tab_id)
+		};
+	} catch {
+		return {};
+	}
+}
+function nonEmpty$1(value) {
+	return typeof value === "string" && value !== "" ? value : void 0;
+}
+/**
+* The `code` of a herdr error envelope, when the runner captured one — how a wait's TIMEOUT (an answer)
+* is told from any other failure (a throw). Read from `Exec.lastError` because that is where herdr's
+* envelope lands: it is written to stderr with exit 1, so stdout is `null` for every failure alike and
+* the code is the only thing that separates them. Defensive throughout — no reason, unparseable JSON, or
+* a missing/non-string code all answer `undefined`, which routes to the throw rather than to a silent
+* "timed out" the backend never said.
+*/
+/**
+* How much of its own timeout a wait must actually spend before a failure is believed to BE that
+* timeout. A fraction rather than the whole, because process start-up and clock granularity make an
+* exact-or-greater comparison flaky on a real runner; wide enough that the case it exists to catch — a
+* herdr with no `wait-output` subcommand, which returns in milliseconds — is nowhere near it.
+*/
+const HERDR_WAIT_ELAPSED_RATIO$1 = .9;
+/**
+* Whether a failed `pane wait-output` was the DEADLINE passing rather than the wait breaking — the
+* two-tier rule `waitForOutput` documents, kept out of the method so the tiers read as one decision.
+*
+* The envelope's code answers when the runner captured one. Otherwise the answer needs two facts, and
+* neither alone is enough: the pane must be LIVE (a gone pane is a failure, `pollForOutput`'s rule) and
+* the call must have SPENT the deadline (a wait that returned instantly never ran — herdr 0.7.4, whose
+* usage text for an unknown subcommand is not an envelope to read a code from).
+*/
+function isHerdrWaitTimeout$1(exec, target, timeoutMs, elapsedMs) {
+	const code = herdrErrorCode$1(exec.lastError);
+	if (code != null) return code === "timeout";
+	if (elapsedMs < timeoutMs * HERDR_WAIT_ELAPSED_RATIO$1) return false;
+	return herdrMuxAdapter$1.paneExists(exec, target);
+}
+function herdrErrorCode$1(reason) {
+	if (!reason) return void 0;
+	try {
+		return nonEmpty$1(JSON.parse(reason)?.error?.code);
+	} catch {
+		return;
+	}
+}
+/**
+* A successful `pane wait-output` envelope: the snapshot it matched in, and the line it matched on.
+*
+* `matched` is `true` by construction — herdr exits 0 only on a match, so reaching here IS the match;
+* the parse only fills in the evidence. Defensive for the same reason `parsePaneRecord` is: a herdr
+* build that reshapes the envelope degrades to a match with no snapshot, never to a failed wait.
+*/
+function parseWaitOutput$1(out) {
+	let text;
+	let line;
+	try {
+		const result = JSON.parse(out)?.result;
+		text = nonEmpty$1(result?.read?.text);
+		line = nonEmpty$1(result?.matched_line);
+	} catch {}
+	return {
+		matched: true,
+		output: text ?? "",
+		...line != null ? { matchedLine: line } : {}
+	};
+}
+/**
+* The pane's workspace and tab, or a throw — so `focus` never issues a workspace/tab switch against a
+* pane it couldn't actually resolve.
+*/
+function parsePaneLocation$2$1(out, id) {
+	const { workspaceId, tabId } = parsePaneRecord$1(out);
+	if (!workspaceId || !tabId) throw new Error(`peer's pane ${id} could not be resolved to beam to`);
+	return {
+		workspaceId,
+		tabId
+	};
+}
+/**
+* herdr binds a git worktree to a workspace as a first-class record, and that binding is what its UI
+* groups a repo's checkouts by. Only `worktree create`/`worktree open` produce it: `git worktree add`
+* followed by `workspace create --cwd <checkout>` yields a workspace herdr does not know is a
+* worktree at all, left out of the group. Hence this capability — see `WorktreeWorkspaceCapability`
+* for what it deliberately does not own.
+*
+* Every call pins the source repo with `--cwd <primaryRoot>` rather than relying on the caller's
+* ambient process cwd (matching how the git adapter always passes `-C <primaryRoot>`), and opens
+* with `--no-focus` so spawning never steals the caller's attention.
+*/
+function herdrWorktreeCapability$1() {
+	return {
+		createInWorkspace(exec, opts) {
+			const args = [
+				"worktree",
+				"create",
+				"--cwd",
+				opts.primaryRoot,
+				"--branch",
+				opts.branch,
+				"--path",
+				opts.path
+			];
+			if (opts.base) args.push("--base", opts.base);
+			if (opts.label) args.push("--label", opts.label);
+			args.push("--no-focus");
+			const out = exec("herdr", args);
+			if (!out) throw new Error(withReason$1(exec, "herdr worktree create failed"));
+			const created = parseWorktreeWorkspace$1(out, "herdr worktree create");
+			carryLaunch$1(exec, created.target, opts.env, opts.launch);
+			return created;
+		},
+		openInWorkspace(exec, opts) {
+			const args = [
+				"worktree",
+				"open",
+				"--cwd",
+				opts.primaryRoot,
+				"--path",
+				opts.path
+			];
+			if (opts.label) args.push("--label", opts.label);
+			args.push("--no-focus");
+			const out = exec("herdr", args);
+			if (!out) throw new Error(withReason$1(exec, "herdr worktree open failed"));
+			const opened = parseWorktreeWorkspace$1(out, "herdr worktree open");
+			carryLaunch$1(exec, opened.target, opts.env, opts.launch);
+			return opened;
+		},
+		bindings(exec, opts) {
+			return parseWorktreeBindings$1(exec("herdr", [
+				"worktree",
+				"list",
+				"--cwd",
+				opts.primaryRoot
+			]));
+		},
+		releaseWorkspace(exec, workspace, opts) {
+			if (opts?.group === false) {
+				exec("herdr", [
+					"workspace",
+					"close",
+					workspace
+				]);
+				return;
+			}
+			if (exec("herdr", [
+				"workspace",
+				"close",
+				workspace,
+				"--group"
+			]) !== null) return;
+			exec("herdr", [
+				"workspace",
+				"close",
+				workspace
+			]);
+		}
+	};
+}
+/**
+* `herdr workspace create` and `herdr tab create` both emit their new root pane at
+* `.result.root_pane.pane_id` (a different path than `pane split`'s `.result.pane.pane_id`).
+* `label` names the command in error messages (e.g. "herdr workspace create").
+*/
+function parseRootPaneId$1(out, label) {
+	return parseOpenedPane$1(out, label, "root_pane");
+}
+/**
+* Every pane herdr emits carries its own `workspace_id` alongside its `pane_id`, on EVERY route —
+* `workspace create` (which reports the workspace it just made), `tab create` (the workspace the tab
+* was created in), and `pane split` (the workspace the split landed in, i.e. the caller's). Re-verified
+* against herdr 0.8.0. That is why the workspace costs no extra call: it rides in on the same output
+* the pane id is already read from, so probing for it separately would buy nothing and cost a round
+* trip per open.
+*
+* The pane id is required — a route that cannot name its pane has failed. The workspace is NOT: it
+* is read opportunistically and left absent when missing rather than throwing, so a herdr build that
+* stops emitting it degrades to "cannot say" instead of breaking `open` outright. Absent is a
+* meaning this seam already has (`OpenedPane.workspace`); a hard failure here would be inventing a
+* new one for a field no caller is required to use.
+*/
+function parseOpenedPane$1(out, label, key) {
+	let pane;
+	try {
+		pane = JSON.parse(out)?.result?.[key];
+	} catch {
+		throw new Error(`${label} returned unparseable output: ${out.slice(0, 200)}`);
+	}
+	return openedPaneFromRecord$1(pane, out, label, key);
+}
+/**
+* The `OpenedPane` inside one herdr pane record, split out of `parseOpenedPane` so the relocation
+* routes can reuse the validation without reusing the PATH: `pane move` reports its pane one level
+* deeper (`result.move_result.pane`) than every creating route does. `path` names where the record
+* came from so a failure says which field was missing, and `out` is carried only to quote the
+* envelope back.
+*/
+function openedPaneFromRecord$1(pane, out, label, path) {
+	const paneId = pane?.pane_id;
+	if (typeof paneId !== "string" || paneId === "") throw new Error(`${label} output had no result.${path}.pane_id: ${out.slice(0, 200)}`);
+	const tab = pane?.tab_id;
+	if (typeof tab !== "string" || tab === "") throw new Error(`${label} output had no result.${path}.tab_id: ${out.slice(0, 200)}`);
+	const workspace = pane?.workspace_id;
+	return typeof workspace === "string" && workspace !== "" ? {
+		id: paneId,
+		tab,
+		workspace
+	} : {
+		id: paneId,
+		tab
+	};
+}
+/**
+* The pane a `herdr pane move` answers with, at `result.move_result.pane` — the relocated pane's
+* CURRENT identity, which on herdr is not always the one that went in.
+*
+* Reading it is not bookkeeping: herdr pane ids are WORKSPACE-SCOPED, so a move that crosses a
+* workspace boundary rewrites the id (measured live on 0.9.0 — `pane move wRE:p1 --tab wRD:t1`
+* answered `wRD:p4`). The old id still RESOLVES afterwards, as an alias that reports the new one, so
+* a caller holding it is not obviously broken — it is simply absent from `pane list` (measured),
+* which is what makes a stale handle fail silently rather than loudly. This envelope is the only
+* place the new id appears.
+*/
+function parseMovedPane$1(out, label) {
+	let pane;
+	try {
+		pane = JSON.parse(out)?.result?.move_result?.pane;
+	} catch {
+		throw new Error(`${label} returned unparseable output: ${out.slice(0, 200)}`);
+	}
+	return openedPaneFromRecord$1(pane, out, label, "move_result.pane");
+}
+/**
+* `herdr worktree create` and `herdr worktree open` emit the same envelope: the root pane at
+* `.result.root_pane.pane_id` (as `workspace create` does), the checkout at
+* `.result.worktree.{path,branch}`, and the bound workspace at `.result.workspace.workspace_id`.
+* That workspace id IS the binding — the whole reason to route through these instead of plain git.
+* `label` names the command in error messages (e.g. "herdr worktree create").
+*
+* The root pane is read through `parseOpenedPane`, NOT re-parsed here: `root_pane` is the same record
+* `workspace create` emits, so it carries the same `tab_id`, and one spelling is what keeps the two
+* routes from disagreeing about a field both report. That tab is the region's root tab — what lets a
+* caller handed this workspace group or rename it without reaching for the pane id, which would be
+* green on tmux and silently broken on herdr.
+*/
+function parseWorktreeWorkspace$1(out, label) {
+	let parsed;
+	try {
+		parsed = JSON.parse(out);
+	} catch {
+		throw new Error(`${label} returned unparseable output: ${out.slice(0, 200)}`);
+	}
+	const result = parsed?.result;
+	const target = parseOpenedPane$1(out, label, "root_pane");
+	const workspace = result?.workspace?.workspace_id;
+	const path = result?.worktree?.path;
+	const branch = result?.worktree?.branch;
+	if (typeof path !== "string" || path === "" || typeof branch !== "string" || branch === "") throw new Error(`${label} output had no result.worktree.{path,branch}: ${out.slice(0, 200)}`);
+	if (typeof workspace !== "string" || workspace === "") throw new Error(`${label} output had no result.workspace.workspace_id: ${out.slice(0, 200)}`);
+	return {
+		target,
+		worktree: {
+			root: resolve(path),
+			branch
+		},
+		workspace
+	};
+}
+/**
+* `herdr worktree list` reports every worktree of the repo, each carrying `open_workspace_id` ONLY
+* while a workspace is currently open on it. Everything else it reports (branch, linked, prunable)
+* is herdr re-reading git — deliberately ignored here; git answers those for every backend.
+* Defensive like `listPanes`: a query that cannot be read reports nothing rather than throwing.
+*/
+function parseWorktreeBindings$1(out) {
+	const bindings = /* @__PURE__ */ new Map();
+	if (!out) return bindings;
+	let parsed;
+	try {
+		parsed = JSON.parse(out);
+	} catch {
+		return bindings;
+	}
+	const worktrees = parsed?.result?.worktrees ?? [];
+	if (!Array.isArray(worktrees)) return bindings;
+	for (const entry of worktrees) {
+		const path = entry?.path;
+		const workspace = entry?.open_workspace_id;
+		if (typeof path === "string" && path !== "" && typeof workspace === "string" && workspace !== "") bindings.set(normalizeWorktreePathSync$1(path), workspace);
+	}
+	return bindings;
+}
+/**
+* One spelling of `pane read`, taken by `read` for the snapshot AND for its truncation probe — so the
+* two differ only in the source and depth they are meant to differ in. `lines` omitted takes herdr's
+* own default window for the source.
+*/
+function paneRead$1(exec, target, source, lines) {
+	const args = [
+		"pane",
+		"read",
+		target.id,
+		"--source",
+		source
+	];
+	if (lines != null) args.push("--lines", String(lines));
+	return exec("herdr", args) ?? "";
+}
+/**
+* The agent-wait STATE-SET refusal — what an `AgentLifecycle` backend answers when it has the native
+* wait but cannot express the state set the caller asked for.
+*
+* Its own module rather than a member of `agent.ts` for the reason `floating.ts`/`zoom.ts`/`resize.ts`
+* are their own modules: the adapters throw it, and `agent.ts` imports `backend.ts`, which imports
+* every adapter — so an adapter reaching into `agent.ts` for the class would close a cycle. The class
+* lives here and RIDES OUT on the `cyber-mux/agent` subpath (re-exported by `agent.ts`), because the
+* capability it belongs to is that subpath's and deliberately not on the core barrel.
+*/
+/**
+* A wait asked for states the backend's native wait cannot name. Distinct from
+* `AgentLifecycleUnsupportedError`, and the distinction is the whole point: that one says *this
+* backend has no agent wait at all*; this one says *it has one, and its vocabulary is narrower than
+* what you asked for*. Collapsing them would tell a caller on otty to "run it on herdr" when the fix
+* is to drop one state from `until`.
+*
+* **Refused by NAME rather than silently narrowed**, which is the only honest answer available. A
+* backend that waits on `idle` alone, handed `until: ['idle', 'blocked']`, has exactly three options:
+* wait for `idle` only and return it (a wait that ends on a state the caller did not ask for — the
+* plausible-wrong-answer shape), wait for all of them (impossible, there is no flag), or say so. It
+* says so.
+*
+* PORTABLE and exit-code-free by design, the same shape every other seam refusal takes. `backend`
+* names the backend, `requested` the set that was asked for, and `supported` the set the backend can
+* actually end a wait on — so a caller composes the fix without re-deriving any of it.
+*/
+var AgentWaitStatesUnsupportedError$1 = class extends Error {
+	backend;
+	requested;
+	supported;
+	constructor(backend, requested, supported) {
+		super(`${backend} can only end an agent wait on ${supported.join(", ")} — asked for ${requested.join(", ")}`);
+		this.backend = backend;
+		this.requested = requested;
+		this.supported = supported;
+		this.name = "AgentWaitStatesUnsupportedError";
+	}
+};
+/**
+* Refuse an `until` set a backend's native wait cannot express — the single spelling of the refusal,
+* so a second backend with a narrow vocabulary cannot drift into a second message.
+*
+* Takes the backend NAME rather than the adapter, for `refuseFloatingPane`/`refusePaneZoom`'s reason:
+* it is called from inside an adapter method while the adapter object is still being constructed, and
+* the name is the only thing the error carries anyway.
+*/
+function refuseAgentWaitStates$1(backend, requested, supported) {
+	throw new AgentWaitStatesUnsupportedError$1(backend, requested, supported);
+}
+/**
+* Whether `until` is satisfiable by a backend whose native wait ends on exactly `supported`.
+*
+* An EMPTY or omitted `until` is satisfiable by construction: the seam defines it as *take the
+* backend's own default*, and a backend never restates that default in the command it runs — so there
+* is nothing to check. A non-empty set is satisfiable only when every state in it is one the backend
+* can end on; a set that names a state the backend cannot reach would otherwise end the wait on a
+* state nobody asked for.
+*/
+function agentWaitStatesSatisfiable$1(until, supported) {
+	if (!until || until.length === 0) return true;
+	return until.every((state) => supported.includes(state));
+}
+/**
+* otty backend — detected via `$OTTY_PANE_ID`. Drives otty's CLI through `otty pane <verb> …`
+* (https://docs.otty.sh/reference/cli), the same synchronous-CLI shape the other backends use.
+*
+* otty is a native terminal-centric workspace app with integrated multiplexing (Windows > Tabs >
+* Splits > Panes). Its hierarchy maps onto cyber-mux's placement tiers as:
+* - **Workspace** → Window (a new window, spawned via `otty open`)
+* - **Tab** → Tab (a new tab via `otty tab new`)
+* - **Pane** → Pane (a split via `otty pane split`)
+*
+* The env variable `$OTTY_PANE_ID` carries the caller's pane identity — analogous to `$TMUX_PANE`
+* or `$WEZTERM_PANE`. `$OTTY_SOCKET` is the IPC socket path (detection hint only).
+*
+* Probed from the otty docs only — otty is a GUI-only app not installed in this sandbox, so
+* nothing here carries the "verified against a live binary" claim `mux.tmux.ts`/`mux.herdr.ts`
+* make; it makes the same honest disclaimer the other GUI-based adapters do.
+*
+* Real capability shape from the docs:
+*
+* - **Pane is the terminal unit.** `OTTY_PANE_ID` is the self-identity env var and `LivePane.id`
+*   carries a pane id. `--at tab` maps to `otty tab new`; `--at pane:*` maps to `otty pane split`.
+* - **Window is the workspace tier.** `otty open` ALWAYS creates a genuinely separate window —
+*   there is no `--new-window` flag on it — reported as `OpenedPane.workspace`. It names the window
+*   at birth with the documented `--title`.
+* - **No `--env` on any route.** Like wezterm/zellij/cmux, env is native at no tier, so every open
+*   rides the `envFallback` compensation (an `env K=V` prefix on the launch command, or a stderr
+*   warning when there is no command to ride).
+* - **`--cwd` is REAL on `pane split` and unevidenced on `tab new`** (#163) — and the two halves rest
+*   on different ground, which is the whole point of splitting them.
+*   `/reference/cli` mentions `--cwd` nowhere, and #163 read that silence as a fabricated flag on
+*   both routes. It is not: `/agents/orchestration` gives
+*   `otty pane split --direction right --cwd "$PWD" --no-focus --json` as a hand-runnable command, so
+*   the split route's `--cwd` is documented by otty itself and STAYS. That page also settles what the
+*   reference is worth here — it demonstrates two flags (`--cwd`, `--no-focus`) the reference omits,
+*   and the reference's window/tab/pane section is prose plus examples with no flag table at all, so
+*   it enumerates nothing and its silence proves nothing. Measured 2026-09-08 over all 141 URLs in
+*   `docs.otty.sh/sitemap.xml`: `--cwd` and `--no-focus` each occur on exactly ONE page, that one.
+*   `tab new` gets no such rescue. Nothing on any of the 141 pages shows a working directory on it —
+*   the only `tab new` with flags is `--command`/`--title` — and otty publishes no source to settle
+*   it, so the flag is neither evidenced nor disproven. So this route takes the answer that is
+*   CORRECT UNDER BOTH READINGS instead of betting on either: `--cwd` is dropped and the directory
+*   rides a `cd` on the command line, which works whether or not the flag exists, where sending a
+*   flag otty does not take fails EVERY `--at tab` open outright. That is the shape `mux.cmux.ts`
+*   landed for the same wall (see `runLaunch`); it is a shell-level cd, so it lands in the tab's
+*   shell history and only means anything in a shell pane. If someone with a Mac runs
+*   `otty tab new --help` and finds `--cwd`, this route should go back to the native flag.
+*   The WORKSPACE tier is unaffected either way: `otty open [path]` takes the directory as a
+*   documented POSITIONAL and always did.
+* - **Split direction is a VALUE, not a flag.** `otty pane split --direction <right|left|up|down>`;
+*   `pane:right`/`pane:down` map to `right`/`down`. There is no `--bottom` in that vocabulary.
+* - **Splits CAN be sized** — `otty pane split --size` is documented as the NEW pane's share, so
+*   `ratio` (the fraction kept by the ORIGINAL) inverts to `1 - ratio`, the same inversion
+*   `mux.cmux.ts` and `mux.wezterm.ts` document. otty's units are a WHOLE PERCENT over a documented
+*   10-90 range, not cmux's 0-1 fraction. `canSizeSplits` is true.
+* - **Naming a tab happens at birth.** `otty tab new --title` is documented, so `--at tab` names the
+*   tab in the creating call instead of a follow-up `rename` — the same fix `open` at the window
+*   tier already makes with its own `--title`.
+* - **`send-keys` mixes text and key tokens.** `otty pane send-keys --pane <id> -- "text" key:Enter`
+*   can do both in one call. We implement `sendText` and `sendKeys` separately per the contract.
+* - **No pane-tier `rename`.** The reference scopes the shared verbs as "show, list, new, close,
+*   focus, rename (window/tab), move (tab)" and then enumerates what panes have *additionally* —
+*   "split, zoom, resize, send-keys, send-text, run, exec, wait, and capture". `rename` is in
+*   neither list for `pane`, so this adapter names a tab and REFUSES to name a pane, exactly as
+*   `mux.wezterm.ts` does for the same reason.
+* - **`otty pane zoom` exists and cannot be driven from the docs.** The reference names the verb once
+*   and gives it no flags, no example, and no read-back field, while spelling out the flags of its
+*   neighbours `split` and `resize`. An absolute zoom needs a write vocabulary and a state read and
+*   the docs supply neither, so `setPaneZoom` refuses BY NAME rather than guessing a flag otty may
+*   silently ignore. `otty pane zoom --help` on a real machine settles it; see `setPaneZoom`.
+* - **No pane geometry adapter.** `otty panes --json` does not report position, so `regions` is not
+*   implementable. `template save` refuses on otty by naming the backend.
+* - **A NATIVE agent-lifecycle wait exists, and it is `otty pane wait`** — not the `otty watch:<agent>`
+*   issue #134 proposed, whose positional is an agent session id no documented pane read can produce.
+*   `pane wait` is pane-selected, blocking, and on an agent pane blocks on what the agent itself
+*   reports, so `agentLifecycle` is PRESENT here — otty is the second backend with the capability
+*   after herdr. It ends on `idle` alone; see `agentLifecycle` below for the three named limits.
+* - **No git-worktree concept in the CLI.** No `worktree` subcommand, so — like tmux, wezterm,
+*   zellij, and cmux — this backend never binds a worktree to a workspace; callers fall back to
+*   plain git plus `open()`.
+*/
+function createOttyAdapter$1(deps) {
+	const adapter = {
+		name: "otty",
+		/**
+		* `true`. otty's `pane split` documents `--size`, and unlike its sibling `pane resize` (which
+		* counts CELLS, and is why `resizePane` stays refused) `--size` is a SHARE of the split region —
+		* a unit the seam's `ratio` can be converted into without knowing the region's extent, which is
+		* the one thing otty cannot report.
+		*
+		* The conversion is not the identity, and the direction of it is the whole risk here: `--size` is
+		* the NEW pane's share while `ratio` is the fraction kept by the ORIGINAL, so it inverts —
+		* see `toOttySize`.
+		*
+		* Read off otty's documented CLI, NOT verified against a live binary — no otty on the machine
+		* this was written on, matching the rest of this header.
+		*/
+		canSizeSplits: true,
+		/**
+		* `false`, and this is an ADAPTER-WIDE floor: the declaration is one bit covering every tier, so
+		* it can only be `true` when no tier steals focus. `tab new` and `open` document no
+		* suppress-focus flag, and `from` is honored by focusing the target pane first (`open` below),
+		* so an open moves the user twice over.
+		*
+		* The `pane split` half of that reason is now known to be WRONG and is left standing only
+		* because it does not move this bit: `--no-focus` IS real on `pane split` — otty's
+		* `/agents/orchestration` runs `otty pane split --direction right --cwd "$PWD" --no-focus
+		* --json` — and this adapter does not pass it. Found while settling #163's `--cwd`; acting on it
+		* is a behavior change on a different seam member and belongs to its own unit of work (#133 is
+		* where this declaration was set).
+		*
+		* Read off otty's documented CLI, NOT verified against a live binary — no otty on the machine
+		* this was written on, matching the rest of this header.
+		*/
+		/**
+		* `'restored'`. The old `false` gave two reasons and one of them is gone: `pane split` DOES take
+		* `--no-focus` — otty's own `/agents/orchestration` page runs `otty pane split --direction right
+		* --cwd "$PWD" --no-focus --json` (issue #172) — while `tab new` and `open` still document none,
+		* and `from` is still honored by FOCUSING the anchor pane first because otty's split has no
+		* target flag. That anchor move happens before the open runs, so no flag on the open can
+		* suppress it.
+		*
+		* Undoing it is what issue #152 asked for and what this declares. The restore is right whether
+		* or not the documented flag behaves as documented: if the new pane does not take focus,
+		* re-focusing the caller's own pane is a no-op; if it does, it is the fix.
+		*
+		* `--no-focus` itself is deliberately NOT passed here — that is #172's change, it needs a Mac to
+		* confirm, and an unverified flag would make the outcome depend on being right about a docs
+		* read that this behavior does not need.
+		*
+		* DOCS-READ, not live: otty is macOS/Windows-GUI-only and `live-backends` cannot exercise it
+		* (#128).
+		*/
+		focusOnOpen: "restored",
+		open(exec, opts) {
+			const at = opts.at ?? "tab";
+			if (at === "pane:float") refuseFloatingPane$1(adapter.name);
+			if (opts.ratio != null) assertRatioInRange$1(opts.ratio);
+			return restoringFocus$1({
+				read: () => soleFocusedPane$1(listOttyPanes$1(exec), (r) => r.is_focused, (r) => r.id),
+				restore: (pane) => adapter.focus(exec, { id: pane })
+			}, () => {
+				if (at === "workspace") {
+					const args = ["open"];
+					if (opts.label) args.push("--title", opts.label);
+					if (opts.cwd) args.push(opts.cwd);
+					const out = exec("otty", args);
+					if (!out) throw new Error(withReason$1(exec, "otty open failed"));
+					const parsed = parseOttyOutput$1(out);
+					if (!parsed.window_id) throw new Error("otty open did not report the window id");
+					const paneId = parsed.pane_id;
+					if (!paneId) throw new Error("otty open did not report the initial pane id");
+					const opened = openedPane$1$1(paneId, parsed.tab_id, parsed.window_id);
+					runLaunch$2$1(adapter, exec, opened, opts.env, opts.launch);
+					return opened;
+				}
+				if (at === "tab") {
+					const args = ["tab", "new"];
+					if (opts.label) args.push("--title", opts.label);
+					const out = exec("otty", args);
+					if (!out) throw new Error(withReason$1(exec, "otty tab new failed"));
+					const parsed = parseOttyOutput$1(out);
+					const paneId = parsed.pane_id;
+					if (!paneId) throw new Error("otty tab new did not report the pane id");
+					const opened = openedPane$1$1(paneId, parsed.tab_id, deps.window);
+					runLaunch$2$1(adapter, exec, opened, opts.env, opts.launch, opts.cwd);
+					return opened;
+				}
+				if (opts.from) adapter.focus(exec, opts.from);
+				const args = [
+					"pane",
+					"split",
+					"--direction",
+					at === "pane:down" ? "down" : "right"
+				];
+				if (opts.cwd) args.push("--cwd", opts.cwd);
+				if (opts.ratio != null) {
+					const { size, requested } = toOttySize$1(opts.ratio);
+					if (size !== requested) process.stderr.write(`otty sizes a split between 10% and 90% — ratio ${opts.ratio} asked for a ${requested}% new pane, so ${size}% was used instead\n`);
+					args.push("--size", String(size));
+				}
+				const out = exec("otty", args);
+				if (!out) throw new Error(withReason$1(exec, "otty pane split failed"));
+				const parsed = parseOttyOutput$1(out);
+				const paneId = parsed.pane_id;
+				if (!paneId) throw new Error("otty pane split did not report the pane id");
+				const opened = openedPane$1$1(paneId, parsed.tab_id, deps.window);
+				if (opts.label) process.stderr.write(`otty cannot name a pane — "${opts.label}" was not set on pane ${opened.id}\n`);
+				runLaunch$2$1(adapter, exec, opened, opts.env, opts.launch);
+				return opened;
+			});
+		},
+		rename(exec, target, tier, name) {
+			if (tier === "tab") {
+				exec("otty", [
+					"tab",
+					"rename",
+					"--tab",
+					target.id,
+					"--title",
+					name
+				]);
+				return;
+			}
+			throw new Error(`otty cannot name a pane (only a window or tab) — asked to rename ${target.id}`);
+		},
+		group() {},
+		sendText(exec, target, text) {
+			exec("otty", [
+				"pane",
+				"send-keys",
+				"--pane",
+				target.id,
+				"--",
+				text
+			]);
+		},
+		sendKeys(exec, target, keys) {
+			const keyTokens = keys.map((k) => `key:${toOttyKey$1(k)}`);
+			exec("otty", [
+				"pane",
+				"send-keys",
+				"--pane",
+				target.id,
+				"--",
+				...keyTokens
+			]);
+		},
+		submit(exec, target, text) {
+			if (!text) {
+				adapter.sendKeys(exec, target, ["Enter"]);
+				return;
+			}
+			exec("otty", [
+				"pane",
+				"send-keys",
+				"--pane",
+				target.id,
+				"--",
+				text,
+				"key:Enter"
+			]);
+		},
+		read(exec, target, opts) {
+			const args = [
+				"pane",
+				"capture",
+				"--pane",
+				target.id
+			];
+			if (opts?.lines != null) args.push("--lines", String(opts.lines));
+			return { text: exec("otty", args) ?? "" };
+		},
+		waitForOutput(exec, target, opts) {
+			return pollForOutput$1(adapter, exec, target, opts);
+		},
+		focus(exec, target) {
+			exec("otty", [
+				"pane",
+				"focus",
+				"--pane",
+				target.id
+			]);
+		},
+		teardown(exec, target) {
+			exec("otty", [
+				"pane",
+				"close",
+				"--pane",
+				target.id
+			]);
+		},
+		paneExists(exec, target) {
+			return listOttyPanes$1(exec).some((p) => p.id === target.id);
+		},
+		isPaneFocused(exec, target) {
+			const found = listOttyPanes$1(exec).find((p) => p.id === target.id);
+			if (!found) return void 0;
+			return typeof found.is_focused === "boolean" ? found.is_focused : void 0;
+		},
+		/**
+		* REFUSED BY NAME — and for a DIFFERENT reason from cmux's, which is why the two are not
+		* collapsed into one note. otty HAS the verb; what it does not have is any documented way to
+		* drive it absolutely. No `canZoomPanes` above is the declaration; this is the enforcement.
+		*
+		* **And the reference is not the whole corpus, which is the first thing #163 established here** —
+		* `/agents/orchestration` demonstrates `--cwd` and `--no-focus` on `pane split`, two flags
+		* `/reference/cli` omits entirely. So that page was checked for this member too, and it does not
+		* mention zoom at ALL: the word appears nowhere on it, and the `otty pane …` commands it runs by
+		* hand are `list`, `split`, `run`, `exec`, `capture`, `wait` and `close`. The one page that has
+		* been shown to carry flags the reference drops carries nothing for `zoom`.
+		*
+		* `zoom` is named exactly once on the whole CLI reference — "Panes additionally have `split`
+		* (`--direction right|left|up|down`), `zoom`, `resize`, `send-keys`, `send-text`, `run`, `exec`,
+		* `wait`, and `capture`" — with no flag list, no example, and no `--on`/`--off`/`--toggle`
+		* anywhere on the page. Its neighbors `split` and `resize` get their flags spelled out in that
+		* same sentence, so the omission is the docs' own, not a reading failure. Nothing in the docs
+		* reports zoom state back either: `otty panes --json` is documented but its row fields never
+		* are, and `/reference/keybindings` gives one binding, "Zoom / unzoom split ⌘⇧↩", doing both
+		* directions — which HINTS a toggle and settles nothing about the CLI.
+		*
+		* Both halves of an absolute set are therefore missing: the write, whose vocabulary is unknown,
+		* and the read that write would have to be guarded by. Guessing a spelling would ship a flag
+		* otty may silently ignore — the exact silent-success failure `mux.cmux.ts` documents on its
+		* `resize-pane -Z` shim — and a bare `otty pane zoom` fired blind is the toggle
+		* `MuxAdapter.setPaneZoom` exists to refuse to be: it could be asked for "big" and deliver
+		* "small". This is `resizePane`'s refusal shape exactly: a backend with the neighbouring
+		* primitive but not the fact the seam's verb needs does not get the verb.
+		*
+		* **One command settles it** on a machine with otty: `otty pane zoom --help`. If it takes an
+		* absolute on/off, this becomes a two-line implementation and the declaration flips; if it is a
+		* bare toggle, the refusal stands until `otty panes --json` is shown to carry a zoom field. See
+		* issue #128 for the missing real-boundary suite that would run it.
+		*/
+		setPaneZoom() {
+			refusePaneZoom$1("otty");
+		},
+		/**
+		* `undefined` — no documented zoom field on any otty listing, so the backend cannot be asked.
+		* Never `false`: otty's own keybinding reference shows a user can zoom a split with ⌘⇧↩, so a
+		* `false` here would be a confident lie about a pane they just zoomed. `isPaneFocused`'s wezterm
+		* shape, and the same distinction `mux.cmux.ts` draws.
+		*
+		* This is a docs-read answer like the rest of this file, and it is the half that would change
+		* first: if `otty panes --json` turns out to carry a zoom column, this member can answer for
+		* real even while `setPaneZoom` stays refused, because a read needs no flag vocabulary.
+		*/
+		isPaneZoomed() {},
+		/**
+		* Refused BY NAME, and this is `setPaneZoom`'s refusal one member over rather than a claim that
+		* otty cannot relocate panes. It plainly can — the docs publish it as a MOUSE GESTURE ("drag a
+		* pane onto the tab strip to move it out into its own new tab", "drag it outside the window to
+		* tear it off") and as a right-click menu item ("Move Tab to New Window"). What they do not
+		* publish is a way for a program to ask.
+		*
+		* The CLI reference names `move` for the TAB tier only — "Common subcommands across the three:
+		* `show`, `list`, `new`, `close`, `focus`, `rename` (window/tab), `move` (tab)" — with no flag
+		* list, no example, and no destination grammar anywhere in the corpus; `/agents/orchestration`,
+		* the one page that carries flags the reference drops (`--cwd`, `--no-focus`), names neither
+		* verb. So the write vocabulary is unknown and there is no read to verify a guess landed
+		* against. A blind guess at a destination flag is exactly what a refusal is for: otty's parser
+		* would either fail or, worse, ignore it.
+		*
+		* RECHECK TRIGGER: `otty tab move --help` and `otty pane --help` on a machine with otty — see
+		* issue #128 for the missing real-boundary suite. Absence from a docs page is not evidence a
+		* verb does not exist, and this refusal claims only that nothing publishes how to drive one.
+		*/
+		movePane() {
+			refusePaneMove$1("otty");
+		},
+		/** Refused BY NAME, for `movePane`'s reason: the break-out is a GUI gesture with no CLI spelling. */
+		breakPane() {
+			refusePaneBreak$1("otty");
+		},
+		listPanes(exec) {
+			return listOttyPanes$1(exec).map((p) => {
+				const pane = {
+					id: p.id,
+					mux: "otty",
+					floating: false
+				};
+				if (p.cwd) pane.cwd = p.cwd;
+				if (p.title) pane.label = p.title;
+				return pane;
+			});
+		},
+		/**
+		* The native agent-lifecycle wait — otty is the SECOND backend to have one, after herdr, and it
+		* is a different primitive from the one issue #134 named.
+		*
+		* **Not `otty watch:<agent> <id>`, which is what #134 proposed and what the earlier verdict on it
+		* measured.** That command's positional is an AGENT SESSION id ("the one from Agent History" —
+		* `/workflows/cli-usage`), not a pane id; its whole flag table is `--interval-ms`,
+		* `--timeout-secs`, `--unknown-timeout-secs`, `-v` with no pane selector; the agent KIND is baked
+		* into the verb (`watch:claude` / `watch:codex` / `watch:opencode`); and no documented CLI read
+		* maps a pane id to either fact — otty binds them the other way, internally, by process tree
+		* (`/agents/supported-agents`). All of that still holds, and it is why `watch:` is not used here.
+		*
+		* **`otty pane wait` is the one that fits, and it was missed the first time round.** It is
+		* pane-selected with the same `--pane <id|index>` every other pane verb takes, it blocks, and on
+		* an agent pane the state it blocks on is the AGENT's own:
+		*
+		* > It exits 0 as soon as the pane is idle. For a pane running a coding agent, idle is what the
+		* > agent reports — an agent owns its terminal for its whole life, so "back at a shell prompt"
+		* > never happens there. […] A pane that can report neither exits 6 and says so; a timeout exits
+		* > 9 naming the panes still busy. — `/workflows/cli-usage`
+		*
+		* `/agents/orchestration` lists it beside `watch:` for the same job ("Block until a build, a
+		* pane, a tab or another agent is idle — `otty pane wait` / `otty watch:<agent>`") and
+		* `/agents/skills` says the same in prose. That is `AgentLifecycle`'s contract exactly: native,
+		* blocking, per-pane, on a state the backend derives itself — so this capability is PRESENT
+		* rather than absent, and no `read()`-polling lookalike is involved.
+		*
+		* **Three things this cannot do, each named rather than papered over:**
+		*
+		* 1. **It ends on `idle` and nothing else**, so any `until` naming another state is refused BY
+		*    NAME (`refuseAgentWaitStates`). Narrowing it silently would end the wait on a state the
+		*    caller did not ask for.
+		* 2. **Exit codes are invisible through the `Exec` seam.** otty distinguishes satisfied (0) from
+		*    no-reportable-state (6), no-such-pane (4) and timeout (9) by exit code alone, and `Exec`
+		*    returns `string | null` with no code. So this tells satisfied from not-satisfied — the
+		*    distinction the seam needs — and folds the three failures into one throw whose message
+		*    carries otty's own words via `withReason`. It does NOT branch on `exec.lastError`: that is
+		*    documented diagnostic-only and a runner is free never to set it, so a guard keyed on it
+		*    would be a live no-op.
+		* 3. **A pane with NO agent answers `idle` when its shell is at a prompt.** That is a real
+		*    divergence from herdr, which throws `agent_not_found`, and it cannot be guarded here: the
+		*    "which agent sits in which" read `/agents/orchestration` credits to `otty pane list` has no
+		*    documented output schema anywhere in the 141 pages, so there is no field to check. A caller
+		*    that waits on a pane it did not start an agent in gets shell-idle under an agent name.
+		*
+		* Read off otty's documented CLI over all 141 URLs in `docs.otty.sh/sitemap.xml`, measured
+		* 2026-09-08 — NOT verified against a live binary, matching this file's header. #128 tracks the
+		* missing real-boundary suite; one `otty pane wait --help` on a Mac settles the flag table.
+		*/
+		agentLifecycle: { waitForState(exec, target, opts) {
+			if (!agentWaitStatesSatisfiable$1(opts.until, OTTY_WAIT_STATES$1)) refuseAgentWaitStates$1(adapter.name, opts.until ?? [], OTTY_WAIT_STATES$1);
+			const args = [
+				"pane",
+				"wait",
+				"--pane",
+				target.id
+			];
+			if (opts.timeoutMs != null) args.push("--timeout-secs", String(toOttyTimeoutSecs$1(opts.timeoutMs)));
+			if (exec("otty", args) === null) throw new Error(withReason$1(exec, `otty pane wait did not reach idle for pane ${target.id}`));
+			return "idle";
+		} }
+	};
+	return withJumpHistory$1(adapter);
+}
+createOttyAdapter$1({});
+function parseOttyOutput$1(out) {
+	try {
+		return JSON.parse(out);
+	} catch {
+		return {};
+	}
+}
+function listOttyPanes$1(exec) {
+	const out = exec("otty", ["panes", "--json"]);
+	if (!out) return [];
+	let parsed;
+	try {
+		parsed = JSON.parse(out);
+	} catch {
+		return [];
+	}
+	if (!Array.isArray(parsed)) return [];
+	const panes = [];
+	for (const p of parsed) if (p?.pane_id) panes.push({
+		id: p.pane_id,
+		title: p.title,
+		cwd: p.cwd,
+		is_focused: p.is_focused
+	});
+	return panes;
+}
+function openedPane$1$1(paneId, tabId, window) {
+	const opened = {
+		id: paneId,
+		tab: tabId ?? paneId
+	};
+	if (window) opened.workspace = window;
+	return opened;
+}
+/**
+* Run the caller's launch command in the freshly opened space, carrying whatever the route could not
+* set natively.
+*
+* `cwd` is passed by the `tab` route ALONE — the one route with no working-directory flag to send
+* (the header says why). The other two routes pass none, and for the same reason: they already set
+* the directory natively — `pane split --cwd`, and `otty open [path]`'s positional — so a `cd` there
+* would push into shell history a directory the pane is already in.
+*
+* Both compensations — the env prefix and the `cd` — and the order they compose in are
+* `launchFallback`'s (`env-fallback.ts`); this route hands it what it lost and submits what comes
+* back. `mux.cmux.ts` calls the same function for the same reason, which is why the rule lives there
+* and not here.
+*/
+function runLaunch$2$1(adapter, exec, target, env, launch, cwd) {
+	const fallback = launchFallback$1(env, launch, cwd);
+	if (fallback.kind === "dropped") process.stderr.write(`env (${fallback.variables.join(", ")}) could not be set on this otty pane — otty has no --env flag on pane split/tab new/open
+`);
+	if (fallback.command !== void 0) adapter.submit(exec, target, fallback.command);
+}
+/**
+* The `AgentStatus` values `otty pane wait` can end a wait on — exactly one.
+*
+* otty's own state vocabulary is wider than this (its hooks report `processing | idle | awaiting`, per
+* `/reference/cli`; `/vt/osc/osc-26` spells the same report a second way as
+* `running | awaiting-approval | finished`, an inconsistency inside otty's own docs that nothing here
+* has to resolve). None of that is reachable: `pane wait` takes no `--until`, and the only end
+* condition any page states for it is idle. So this is what the WAIT can promise, not what otty knows.
+*/
+const OTTY_WAIT_STATES$1 = ["idle"];
+/**
+* The seam's `timeoutMs` as otty's `--timeout-secs`, rounded UP and floored at one second.
+*
+* Both halves guard the same failure, and it is the one that matters: `--timeout-secs 0` is otty's
+* spelling for *wait forever*, which is what OMITTING `timeoutMs` already means at the seam. So a
+* sub-second bound must never round to 0 — that would silently convert a caller's bounded wait into an
+* unbounded one, in a command that blocks. Rounding up costs at most 999ms of extra patience;
+* rounding down costs the timeout entirely.
+*
+* The granularity loss is otty's, not this adapter's: herdr's `--timeout` takes milliseconds and is
+* passed through verbatim.
+*/
+function toOttyTimeoutSecs$1(timeoutMs) {
+	return Math.max(1, Math.ceil(timeoutMs / 1e3));
+}
+/** otty's documented `--size` range on `pane split`: a whole percent, 10 through 90. */
+const OTTY_MIN_SIZE$1 = 10;
+const OTTY_MAX_SIZE$1 = 90;
+/**
+* The seam's `ratio` as otty's `--size`, plus what was asked for before the range clamp.
+*
+* Two conversions, both of which are silent wrong-sized panes when wrong:
+*
+* - **The inversion.** `ratio` is the fraction kept by the ORIGINAL pane; otty's `--size` is *"the
+*   NEW pane's share"*, so the value passed is `1 - ratio`. That is the same direction `mux.cmux.ts`
+*   (`--size`) and `mux.wezterm.ts` (`--percent`) already document, and the OPPOSITE of herdr's
+*   `--ratio`, which sizes the original and passes through verbatim.
+* - **The units.** cmux takes a 0-1 fraction; otty documents a whole percent over the range 10-90,
+*   so this scales and rounds like `toWeztermSize` and then clamps into otty's range. A ratio
+*   outside `0 < ratio < 1` is refused by the seam's own guard before either happens.
+*
+* The clamp is reported back so the caller can be told (see `open`): otty rejects a `--size` outside
+* 10-90, so a ratio like `0.95` has no faithful rendering — the choice is a near miss it is told
+* about, or a split that does not open at all.
+*
+* Read off otty's documented CLI, NOT verified against a live binary — no otty on the machine this
+* was written on, matching this file's header. #128 tracks the missing live suite.
+*/
+function toOttySize$1(ratio) {
+	assertRatioInRange$1(ratio);
+	const requested = Math.round((1 - ratio) * 100);
+	return {
+		requested,
+		size: Math.min(OTTY_MAX_SIZE$1, Math.max(OTTY_MIN_SIZE$1, requested))
+	};
+}
+/**
+* The core key vocabulary's otty spelling. otty uses PascalCase key names: Enter, Tab, Escape, etc.
+*/
+const OTTY_KEY_RENAMES$1 = { "C-c": "Ctrl+c" };
+function toOttyKey$1(key) {
+	return OTTY_KEY_RENAMES$1[key] ?? key;
+}
+/**
+* rmux backend — an async Rust reimplementation of the tmux command language (`Helvesec/rmux`),
+* detected via `$RMUX`.
+*
+* **A near-copy of `mux.tmux.ts`, on purpose.** rmux reimplements ~90 commands under tmux's own
+* names, flags, target syntax and `#{…}` format vocabulary, so the argv this adapter emits is
+* tmux's argv with a different binary in front of it. The alternative — one shared implementation
+* parameterized by binary name — was considered and REJECTED; the reasoning is in the ADR log
+* (`.agents/spec/design/decisions`, `136-rmux-adapter`). The short form: rmux is a separate project
+* that TRACKS tmux rather than a tmux version, so every future divergence would land as a
+* conditional inside the tmux adapter, which is the seam's own argument against emulation; and the
+* two already differ in the one member that matters most here (`canFloatPanes`), whose long
+* justification on each side is about a *different binary's* command set. A shared file could not
+* carry both verification claims honestly, and this repo's comments are verification claims.
+*
+* **Probed against a live binary — rmux 0.10.0, 2026-08-26**, on an isolated socket
+* (`rmux -L … new-session -d`), not read off documentation. Every claim below that says "verified"
+* names a command that was actually run. What was NOT covered: nothing was driven on Windows or
+* macOS (rmux runs natively on both, and that portability is the strategic reason this backend
+* exists), and no rmux version other than 0.10.0 was exercised.
+*/
+/**
+* The rmux window user option `MuxOpenOptions.workspaceGroup` is stored in — the same `@`-prefixed
+* user option tmux uses, because rmux implements tmux's user-option mechanism unchanged.
+*
+* Verified live on 0.10.0: `set-option -w -t @0 @cm_ws grp1` then `list-windows -F '#{@cm_ws}'`
+* read `grp1` back, and `list-windows -f '#{==:#{@cm_ws},grp1}'` filtered SERVER-SIDE to that
+* window. Both halves matter — the read alone would leave the filter a docs claim.
+*
+* Deliberately the SAME option name as tmux's (`TMUX_WORKSPACE_GROUP_OPTION`), not a namespaced
+* twin: the tag identifies a cyber-mux workspace group, and the two backends never share a server,
+* so a second spelling would buy nothing and cost a way for the two to drift. Named here rather
+* than spelled at each use so this adapter's write side and every read side cannot drift.
+* Server-lifetime, like every window: it dies with the rmux daemon, along with the windows it tags.
+*/
+const RMUX_WORKSPACE_GROUP_OPTION$1 = "@cm_ws";
+/**
+* The rmux window user option a grouped window's OWN name is stored in — the name the caller gave
+* the tab, beside the group id, because rmux inherits tmux's single `window_name` field and so
+* inherits the problem it creates.
+*
+* See `TMUX_TAB_NAME_OPTION` in `mux.tmux.ts` for the full argument; it transfers intact, because
+* the constraint is tmux's data model and rmux reimplements that model. In brief: a caller that
+* composes a display name out of a tab's name (`pool - editor`) has destroyed `editor`, splitting
+* on the separator is ambiguous, and reading the display name verbatim re-prefixes it on every
+* round trip. So the original is stored here and read back from here.
+*
+* Verified live on 0.10.0 alongside the group tag: `set-option -w -t @0 @cm_tab editor` read back
+* through `display-message -p -t %1 '#{@cm_tab}'` as `editor`.
+*/
+const RMUX_TAB_NAME_OPTION$1 = "@cm_tab";
+/** rmux backend — detected via `$RMUX`. */
+const rmuxMuxAdapter$1 = withJumpHistory$1({
+	name: "rmux",
+	canSizeSplits: true,
+	/**
+	* Every route passes `-d`, so no open moves the attached client — the same answer tmux gives, and
+	* for the same reason, since rmux reimplements tmux's command language and inherits the behavior
+	* along with the flag. Verified live on 0.10.0 rather than inherited from that resemblance, on an
+	* isolated socket: a bare `split-window` in a session focused on `%0` left `%1` active, `-d` left
+	* focus on `%0`, and `-P -F` printed the new id either way. `new-window -d` was already here.
+	*
+	* There is no focus move to undo on top of that, as on tmux: `-t` targets the pane to split
+	* directly, so rmux never has to VISIT a pane to choose it. And no third route to cover — rmux has
+	* no `new-pane`, so `pane:float` is refused before any command is issued.
+	*/
+	/**
+	* `true` — `resize-pane -Z`, inherited from tmux's command language along with the rest of it, and
+	* verified live on 0.10.0 rather than assumed from the resemblance: `resize-pane (resizep)
+	* [-DLMRTUZ] …` in the usage line, and driving `-Z` against a three-pane window on an isolated
+	* socket flipped `#{window_zoomed_flag}` and grew `#{pane_width}` from 40 to 80. `-Z` on a window
+	* already zoomed on a DIFFERENT pane just unzooms it, exactly as tmux's does, which is why
+	* `setPaneZoom` selects the pane first.
+	*/
+	canZoomPanes: true,
+	/**
+	* `true` for both, and re-measured on a live rmux 0.10.0 rather than inherited from the command
+	* language it shares with tmux: `move-pane -d -h -s %1 -t %2` carried %1 into @1 and left the
+	* client on @0, and `break-pane -d -s %1 -P -F` answered `@2 %1`. The `-s` source is honored as
+	* named on both — no ACTIVE-pane trap, unlike `resize-pane -Z`.
+	*/
+	canMovePanes: true,
+	canBreakPanes: true,
+	/**
+	* `'preserved'`, not merely "restored": every creating route passes `-d`, and `-t` names the pane
+	* to split directly, so nothing has to VISIT a pane to choose a target. Nothing moves at any
+	* instant — the strongest of the three values, and the same one tmux earns for the same reason.
+	*/
+	focusOnOpen: "preserved",
+	open(exec, opts) {
+		const at = opts.at ?? "tab";
+		const window = at === "workspace" || at === "tab";
+		if (at === "pane:float") refuseFloatingPane$1(rmuxMuxAdapter$1.name);
+		const env = opts.env ? Object.entries(opts.env).flatMap(([k, v]) => ["-e", `${k}=${v}`]) : [];
+		const group = window && opts.workspaceGroup != null;
+		const format = "#{pane_id}	#{window_id}";
+		let args;
+		if (window) args = [
+			"new-window",
+			"-d",
+			...env,
+			"-c",
+			opts.cwd,
+			"-P",
+			"-F",
+			format
+		];
+		else {
+			const from = opts.from ? ["-t", opts.from.id] : [];
+			const size = opts.ratio != null ? ["-l", toRmuxSize$1(opts.ratio)] : [];
+			args = [
+				"split-window",
+				"-d",
+				at === "pane:down" ? "-v" : "-h",
+				...from,
+				...size,
+				...env,
+				"-c",
+				opts.cwd,
+				"-P",
+				"-F",
+				format
+			];
+		}
+		if (window && opts.label) args.splice(1, 0, "-n", opts.label);
+		const out = exec("rmux", args);
+		if (!out) throw new Error(withReason$1(exec, `rmux ${args[0]} failed`));
+		const [pane, windowId] = splitOpenReport$1$1(out, args[0]);
+		const target = {
+			id: pane,
+			tab: windowId
+		};
+		if (group && windowId) rmuxMuxAdapter$1.group(exec, { id: windowId }, opts.workspaceGroup);
+		if (!window && opts.label) rmuxMuxAdapter$1.rename(exec, target, "pane", opts.label);
+		if (opts.launch) rmuxMuxAdapter$1.submit(exec, target, opts.launch);
+		return target;
+	},
+	rename(exec, target, tier, name) {
+		if (tier === "tab") {
+			exec("rmux", [
+				"rename-window",
+				"-t",
+				target.id,
+				name
+			]);
+			return;
+		}
+		exec("rmux", [
+			"select-pane",
+			"-t",
+			target.id,
+			"-T",
+			name
+		]);
+	},
+	group(exec, target, group, name) {
+		exec("rmux", [
+			"set-option",
+			"-w",
+			"-t",
+			target.id,
+			RMUX_WORKSPACE_GROUP_OPTION$1,
+			group
+		]);
+		if (name !== void 0) exec("rmux", [
+			"set-option",
+			"-w",
+			"-t",
+			target.id,
+			RMUX_TAB_NAME_OPTION$1,
+			name
+		]);
+	},
+	sendText(exec, target, text) {
+		exec("rmux", [
+			"send-keys",
+			"-t",
+			target.id,
+			"-l",
+			text
+		]);
+	},
+	sendKeys(exec, target, keys) {
+		exec("rmux", [
+			"send-keys",
+			"-t",
+			target.id,
+			...keys.map(toRmuxKey$1)
+		]);
+	},
+	submit(exec, target, text) {
+		if (!text) {
+			exec("rmux", [
+				"send-keys",
+				"-t",
+				target.id,
+				"Enter"
+			]);
+			return;
+		}
+		rmuxMuxAdapter$1.sendText(exec, target, text);
+		exec("rmux", [
+			"send-keys",
+			"-t",
+			target.id,
+			"Enter"
+		]);
+	},
+	read(exec, target, opts) {
+		const text = capturePane$1$1(exec, target, opts?.lines);
+		if (!opts?.truncation) return { text };
+		if (opts.lines === "all") return {
+			text,
+			truncated: false
+		};
+		return {
+			text,
+			truncated: isReadTruncated$1(text, capturePane$1$1(exec, target, (opts.lines ?? 0) + 1))
+		};
+	},
+	waitForOutput(exec, target, opts) {
+		return pollForOutput$1(rmuxMuxAdapter$1, exec, target, opts);
+	},
+	focus(exec, target) {
+		const { sessionName, windowId } = parsePaneLocation$1$1(exec("rmux", [
+			"list-panes",
+			"-a",
+			"-F",
+			"#{pane_id} #{session_name} #{window_id}"
+		]), target.id);
+		exec("rmux", [
+			"switch-client",
+			"-t",
+			sessionName
+		]);
+		exec("rmux", [
+			"select-window",
+			"-t",
+			windowId
+		]);
+		exec("rmux", [
+			"select-pane",
+			"-t",
+			target.id
+		]);
+	},
+	teardown(exec, target) {
+		exec("rmux", [
+			"kill-pane",
+			"-t",
+			target.id
+		]);
+	},
+	paneExists(exec, target) {
+		if (exec("rmux", [
+			"has-session",
+			"-t",
+			target.id
+		]) !== null) return true;
+		return (exec("rmux", [
+			"list-panes",
+			"-a",
+			"-F",
+			"#{pane_id}"
+		]) ?? "").split("\n").includes(target.id);
+	},
+	isPaneFocused(exec, target) {
+		const out = exec("rmux", [
+			"list-panes",
+			"-a",
+			"-F",
+			"#{pane_id} #{pane_active} #{window_active} #{session_attached}"
+		]);
+		if (!out) return void 0;
+		const line = out.split("\n").find((l) => l.split(" ")[0] === target.id);
+		if (!line) return void 0;
+		const [, paneActive, windowActive, sessionAttached] = line.split(" ");
+		if (paneActive === void 0 || windowActive === void 0 || sessionAttached === void 0) return void 0;
+		return paneActive === "1" && windowActive === "1" && sessionAttached !== "0";
+	},
+	/**
+	* `resize-pane -Z`, tmux's toggle under tmux's name — so this is `mux.tmux.ts`'s `setPaneZoom`
+	* verbatim in shape, and every step of it was re-measured on a live rmux 0.10.0 rather than carried
+	* over: with `%1` zoomed, `resize-pane -Z -t %2` left every pane at `z=0` and `%1` still active
+	* (the zoom follows the ACTIVE pane, not the named one), while `select-pane -t %2` unzoomed the
+	* window and moved the active pane, after which `-Z -t %2` zoomed `%2` to the full 80 columns.
+	*
+	* The state is read first because the seam's member is absolute and rmux's verb is a toggle; the
+	* unzoom path needs no `select-pane`, since the guard has already established that this pane is
+	* the zoomed one and therefore the active one.
+	*/
+	setPaneZoom(exec, target, zoomed) {
+		if (rmuxMuxAdapter$1.isPaneZoomed(exec, target) === zoomed) return;
+		if (zoomed && exec("rmux", [
+			"select-pane",
+			"-t",
+			target.id
+		]) === null) throw new Error(withReason$1(exec, `rmux could not select pane ${target.id}`));
+		if (exec("rmux", [
+			"resize-pane",
+			"-Z",
+			"-t",
+			target.id
+		]) === null) throw new Error(withReason$1(exec, `rmux could not ${zoomed ? "zoom" : "unzoom"} pane ${target.id}`));
+	},
+	/**
+	* `#{window_zoomed_flag}` AND `#{pane_active}`, for tmux's reason and confirmed on rmux 0.10.0
+	* rather than inherited: the flag is per WINDOW and read `1` on all three panes of a zoomed window,
+	* so the pane that is actually big is the window's ACTIVE one and the per-pane answer is the
+	* conjunction.
+	*
+	* Read out of the `list-panes -a` listing `isPaneFocused` already uses rather than
+	* `display-message -p -t <pane>`, which answers a pane that no longer exists with a blank line and
+	* exit code 0 — indistinguishable from a real answer whose fields did not expand. A missing LINE is
+	* unambiguous, and `undefined` is then the honest report rather than a false `false`.
+	*
+	* `#{session_attached}` is deliberately not part of this, unlike `isPaneFocused`'s answer: a pane
+	* is zoomed in its window whether or not any client is looking.
+	*/
+	isPaneZoomed(exec, target) {
+		const out = exec("rmux", [
+			"list-panes",
+			"-a",
+			"-F",
+			"#{pane_id} #{window_zoomed_flag} #{pane_active}"
+		]);
+		if (!out) return void 0;
+		const line = out.split("\n").find((l) => l.split(" ")[0] === target.id);
+		if (!line) return void 0;
+		const [, zoomedFlag, paneActive] = line.split(" ");
+		return zoomedFlag === "1" && paneActive === "1";
+	},
+	/**
+	* `move-pane -s <src> -t <dst>` with `-h`/`-v` for the side — tmux's spelling, driven on rmux
+	* 0.10.0 rather than assumed from it. `-d` keeps the attached client where it is; measured, a
+	* `-d` move left both the client's window and the destination's active pane untouched, while
+	* without it rmux follows the pane.
+	*
+	* The re-read afterwards is `mux.tmux.ts`'s, for the same reason: rmux's `move-pane` has no
+	* `-P`/`-F`, so the window the pane landed in must be asked for, and asking confirms the pane
+	* survived.
+	*/
+	movePane(exec, target, destination, side) {
+		if (exec("rmux", [
+			"move-pane",
+			"-d",
+			side === "down" ? "-v" : "-h",
+			"-s",
+			target.id,
+			"-t",
+			destination.id
+		]) === null) throw new Error(withReason$1(exec, `rmux could not move pane ${target.id} to ${destination.id}`));
+		return rmuxPaneLocation$1(exec, target.id, "move");
+	},
+	/**
+	* `break-pane -s <src> -P -F`, which reports the pane and its new window in one call. Driven on
+	* 0.10.0: `break-pane -d -s %1` answered `@1 %1`, and a second break of the now-lone %1 answered
+	* `@1 %1` again — the same no-op tmux makes, which is why the seam declares that difference from
+	* herdr and wezterm rather than normalizing it.
+	*
+	* `at` is ignored for tmux's reason and not as an oversight: rmux has no workspace tier, so both
+	* tiers collapse onto a new Window, and the returned `OpenedPane` reports no `workspace` so a
+	* caller sees the collapse.
+	*/
+	breakPane(exec, target, _at) {
+		const out = exec("rmux", [
+			"break-pane",
+			"-d",
+			"-s",
+			target.id,
+			"-P",
+			"-F",
+			"#{pane_id} #{window_id}"
+		]);
+		if (!out) throw new Error(withReason$1(exec, `rmux could not break out pane ${target.id}`));
+		const [pane, window] = out.trim().split(" ");
+		if (!pane || !window) throw new Error(`rmux break-pane did not report the pane and window of ${target.id}`);
+		return {
+			id: pane,
+			tab: window
+		};
+	},
+	/**
+	* Tab-separated, not space — the same rule `describeRmuxRegion` follows, and for the same reason:
+	* `pane_current_path` and `pane_title` can both contain spaces, so a space-separated format makes
+	* both fields unrecoverable (`my worker` and `/repo/my dir` cannot be told apart by a space). A tab
+	* can appear in neither id nor command, and the two free-text fields are separated by one.
+	*/
+	listPanes(exec) {
+		const out = exec("rmux", [
+			"list-panes",
+			"-a",
+			"-F",
+			"#{pane_id}	#{pane_current_command}	#{pane_current_path}	#{pane_title}	#{host}"
+		]);
+		if (!out) return [];
+		return out.split("\n").filter(Boolean).map((line) => {
+			const [id, , cwd, title, host] = line.split("	");
+			const pane = {
+				id: id ?? "",
+				mux: "rmux",
+				floating: false
+			};
+			if (cwd) pane.cwd = cwd;
+			const label = paneLabel$1$1(title, host);
+			if (label) pane.label = label;
+			return pane;
+		}).filter((p) => p.id !== "");
+	},
+	regions: {
+		describeRegion(exec, target) {
+			return describeRmuxRegion$1(exec, target.id);
+		},
+		/**
+		* `resize-pane -x/-y` in CELLS, never `-x <percent>`. rmux reads a percentage against the WINDOW
+		* exactly as tmux does, while the seam's `ratio` is a fraction of the pane's own SPLIT REGION —
+		* the same number only in a two-pane window, so a nested layout would be sized against the wrong
+		* denominator. PROBED rather than inherited from the tmux adapter, because that is this backend's
+		* rule (see the header): on rmux 0.10.0 in a 200-column window, `-x 60%` produced a 120-column
+		* pane — 60% of the window — with the region's own split at a different fraction entirely.
+		*
+		* Verified against a live rmux 0.10.0 (`mux.rmux.integration.test.ts`): `-x` sizes the target pane
+		* and its sibling absorbs the difference, `-y` does the same on a stacked split, and a resize
+		* inside a nested region leaves the outer divider where it was — every case matching tmux 3.7c's
+		* behavior number for number, which is what makes the shared `toRmuxResizeCells` arithmetic honest
+		* rather than assumed.
+		*/
+		resizePane(exec, target, ratio) {
+			const split = enclosingSplit$1(describeRmuxRegion$1(exec, target.id), target.id);
+			if (!split) throw new Error(`rmux pane ${target.id} is the only pane in its region — there is no split to resize`);
+			const flag = split.direction === "right" ? "-x" : "-y";
+			if (exec("rmux", [
+				"resize-pane",
+				"-t",
+				target.id,
+				flag,
+				String(toRmuxResizeCells$1(split, ratio))
+			]) === null) throw new Error(withReason$1(exec, `rmux could not resize pane ${target.id}`));
+		},
+		/**
+		* rmux has NO workspace tier — `workspace` and `tab` both collapse onto a Window — so a workspace
+		* is not a fact this backend holds. What it holds is the grouping TAG the walk wrote
+		* (`MuxOpenOptions.workspaceGroup`, stored in a window user option), so the read here is
+		* literally *"which windows carry this group id"*.
+		*
+		* The tag, never the label. `list-windows -a` spans SESSIONS, so a bare name match would
+		* over-collect a same-named window from another session, and taking the workspace off a
+		* `<workspace> - <tab>` label is unsound in the first place (`acme - beta - main` splits two ways,
+		* both legal). `-f '#{==:#{@cm_ws},<id>}'` keys on what actually identifies the group, filtered
+		* server-side — verified live on rmux 0.10.0, which is the half a docs read could not settle.
+		*
+		* A window with NO tag is a workspace of ONE: the honest answer for a window nobody grouped, and
+		* it costs no further call — the caller's own window is the whole workspace.
+		*/
+		describeWorkspace(exec, target) {
+			const out = exec("rmux", [
+				"display-message",
+				"-p",
+				"-t",
+				target.id,
+				`#{window_id}\t#{${RMUX_WORKSPACE_GROUP_OPTION$1}}\t#{${RMUX_TAB_NAME_OPTION$1}}\t#{window_name}`
+			]);
+			if (!out) throw new Error(withReason$1(exec, `rmux could not resolve the workspace around pane ${target.id}`));
+			const [windowId, group, ownName, ...nameParts] = out.split("\n")[0].split("	");
+			if (!windowId) throw new Error(`rmux did not report the window around pane ${target.id}`);
+			if (!group) return [rmuxTab$1(exec, windowId, ownName, nameParts.join("	"))];
+			const listed = exec("rmux", [
+				"list-windows",
+				"-a",
+				"-F",
+				`#{window_id}\t#{${RMUX_TAB_NAME_OPTION$1}}\t#{window_name}`,
+				"-f",
+				`#{==:#{${RMUX_WORKSPACE_GROUP_OPTION$1}},${group}}`
+			]);
+			if (!listed) throw new Error(withReason$1(exec, `rmux could not enumerate the windows grouped as ${group}`));
+			const tabs = listed.split("\n").filter(Boolean).map((line) => line.split("	")).filter(([id]) => Boolean(id)).map(([id, own, ...rest]) => rmuxTab$1(exec, id, own, rest.join("	")));
+			if (tabs.length === 0) throw new Error(`rmux reported no windows grouped as ${group}`);
+			return tabs;
+		}
+	}
+});
+/**
+* One window, read as a tab: its id, the tab's OWN name, and its region's geometry.
+*
+* `ownName` is what `group` stored (`RMUX_TAB_NAME_OPTION`) and it WINS, because `windowName` is the
+* display name — on a grouped window that is the composed `pool - editor`, whose `editor` rmux's
+* single name field no longer holds. Reporting the display name instead would compound the prefix on
+* every capture/apply round trip (`pool - pool - editor`), and splitting it back apart is the unsound
+* parse the option exists to refuse.
+*
+* The window name is the FALLBACK, not a second guess: a window carrying no stored name is one nobody
+* composed a display name for, so its name already IS its own name.
+*/
+function rmuxTab$1(exec, windowId, ownName, windowName) {
+	const tab = {
+		id: windowId,
+		panes: describeRmuxRegion$1(exec, windowId)
+	};
+	const label = ownName || windowName;
+	if (label) tab.label = label;
+	return tab;
+}
+/**
+* Every pane of the region `id` names, with its rectangle. `id` is a pane id (that pane's own window)
+* or a window id (that window) — `list-panes -t` resolves both, which is what lets the region read and
+* the workspace read share one query instead of two that could drift apart.
+*
+* `-t` scopes `list-panes` to ONE window — the region tier, which is what capture captures. Without
+* `-a`, so this never reaches the panes of some other window.
+*
+* `#{pane_left}`/`#{pane_top}` are window-relative, and the widths exclude the divider column rmux
+* draws between panes — both verified live on 0.10.0, where an 80x24 window split side by side
+* reported `%0 0 0 39 24` and `%1 40 0 40 24` (39 + 40 = 79, not 80). That is exactly what
+* `RegionPane.rect` documents, so nothing is adjusted here. The check is not a formality: a backend
+* that INCLUDED the divider would silently shift every rect a captured template stores.
+*
+* Tab-separated, not space: `pane_current_path` and `pane_title` can both contain spaces, and
+* splitting a path on spaces is how a directory with one in it silently becomes the wrong pane.
+*/
+function describeRmuxRegion$1(exec, id) {
+	const out = exec("rmux", [
+		"list-panes",
+		"-t",
+		id,
+		"-F",
+		"#{pane_id}	#{pane_left}	#{pane_top}	#{pane_width}	#{pane_height}	#{pane_current_path}	#{pane_title}	#{host}"
+	]);
+	if (!out) throw new Error(withReason$1(exec, `rmux could not describe the region around pane ${id}`));
+	const panes = [];
+	for (const line of out.split("\n").filter(Boolean)) {
+		const [paneId, left, top, width, height, cwd, title, host] = line.split("	");
+		if (!paneId) continue;
+		const pane = {
+			id: paneId,
+			rect: {
+				x: Number(left),
+				y: Number(top),
+				width: Number(width),
+				height: Number(height)
+			}
+		};
+		if (cwd) pane.cwd = cwd;
+		const label = paneLabel$1$1(title, host);
+		if (label) pane.label = label;
+		panes.push(pane);
+	}
+	if (panes.length === 0) throw new Error(`rmux reported no panes in the region around pane ${id}`);
+	return panes;
+}
+/**
+* An rmux pane's label — its title, unless that title is the hostname rmux handed it.
+*
+* **rmux has no "unset title"**, exactly as tmux has none: it defaults `pane_title` to the hostname
+* (verified live on 0.10.0 — every pane of a fresh session reported the machine's hostname, and
+* `#{host}` reported the same string). Exporting that would label them all alike, and that label
+* would then resolve to every pane in the session — ambiguity manufactured out of nothing. A title
+* that differs from the host is one someone set (cyber-mux's own `select-pane -T` among them), so it
+* is the author's and survives.
+*
+* One home for the rule, called by BOTH reads — `listPanes` (which a name resolves against) and
+* `describeRmuxRegion` (which a capture exports). Two spellings of a heuristic this load-bearing is
+* how the listing and the capture come to disagree about which panes are named.
+*/
+function paneLabel$1$1(title, host) {
+	return title && title !== host ? title : void 0;
+}
+/**
+* The `-P -F '#{pane_id}\t#{window_id}'` report EVERY open asks for, split back into its two ids.
+* Tab-separated because neither id can contain a tab.
+*
+* A report that does not carry both throws rather than returning half an answer: the window is the
+* pane's tab, which `OpenedPane.tab` promises is always present, and it is also what a grouping open
+* tags. Guessing either would be worse than failing — a caller would name or group nothing and never
+* learn it.
+*/
+function splitOpenReport$1$1(out, command) {
+	const [pane, windowId] = out.split("	");
+	if (!pane || !windowId) throw new Error(`rmux ${command} did not report the new pane's id and window id`);
+	return [pane, windowId];
+}
+/**
+* Where a pane lives NOW, as the `OpenedPane` a relocation has to answer with — the read `move-pane`
+* cannot give, because rmux's has no `-P`/`-F` to report through. `mux.tmux.ts`'s `tmuxPaneLocation`
+* one binary over.
+*
+* Server-wide `list-panes -a` rather than `display-message -p`, which answers a pane that no longer
+* exists with a blank line and exit code 0 — a move that silently lost its pane would read as a
+* successful one. A missing LINE is unambiguous and throws.
+*/
+function rmuxPaneLocation$1(exec, id, verb) {
+	const line = (exec("rmux", [
+		"list-panes",
+		"-a",
+		"-F",
+		"#{pane_id} #{window_id}"
+	]) ?? "").split("\n").find((l) => l.split(" ")[0] === id);
+	if (!line) throw new Error(`rmux could not resolve pane ${id} after the ${verb}`);
+	const [, windowId] = line.split(" ");
+	if (!windowId) throw new Error(`rmux did not report a window for pane ${id} after the ${verb}`);
+	return {
+		id,
+		tab: windowId
+	};
+}
+/**
+* The seam's `ratio` as the CELL count `resize-pane -x/-y` wants for the target pane — rmux's copy of
+* the tmux adapter's `toTmuxResizeCells`, for the header's reason.
+*
+* Computed through the SECOND side rather than the target directly, because that is the definition
+* `ratioOf` (`region-tree.ts`) reads a live split back with, and a write that used the other formula
+* would not round-trip: rmux eats a column for the divider exactly as tmux does (probed on 0.10.0 —
+* a 200-column window splits into 119 + 80), so `first / (first + second)` and `1 - second / total`
+* disagree by that column. The divider is MEASURED rather than assumed to be one, so nothing here
+* depends on that probe staying true.
+*/
+function toRmuxResizeCells$1(split, ratio) {
+	assertRatioInRange$1(ratio);
+	const second = Math.round((split.targetIsFirst ? 1 - ratio : ratio) * split.extent);
+	if (!split.targetIsFirst) return second;
+	const divider = split.extent - split.targetExtent - split.otherExtent;
+	return split.extent - divider - second;
+}
+/**
+* `ratio` is the fraction kept by the ORIGINAL pane; rmux's `-l` sizes the NEW one, exactly as tmux's
+* does. So this INVERTS — `1 - ratio`. The direction was PROBED rather than inherited from the tmux
+* adapter: on rmux 0.10.0, `split-window -h -l 30%` in an 80-column window left the original at 55
+* columns and gave the new pane 24, which is the new pane taking the 30%. Reading the inversion off
+* the sibling adapter is how a shared-by-assumption number comes out silently backwards — a 0.333
+* template would size the original pane at 67%.
+*
+* Percent rather than cells: rmux takes `-l` as either, and a percentage is the only form that means
+* the same thing without first querying the region's size.
+*/
+function toRmuxSize$1(ratio) {
+	assertRatioInRange$1(ratio);
+	return `${Math.round((1 - ratio) * 100)}%`;
+}
+/**
+* The core vocabulary's rmux spelling. Exactly one member differs, and it was PROBED against the live
+* binary rather than inherited from `TMUX_KEY_RENAMES`: rmux has no `Backspace` key name, so it falls
+* through to tmux's unrecognized-token behavior and TYPES the word. Verified on 0.10.0 —
+* `send-keys 'echo DEFX'` then `send-keys Backspace` produced the line `echo DEFXBackspace`, while
+* the same sequence with `BSpace` produced `echo DEF`. So rmux's name for that key is `BSpace`, and
+* the rename is real behavior on this binary rather than a claim carried over from tmux(1).
+*
+* Deliberately a rename table, NOT a validation table: a token outside the core is forwarded
+* verbatim (the contract), so this must not reject what it does not recognize. Keeping a full rmux
+* key list here would make the passthrough a second vocabulary to maintain.
+*/
+const RMUX_KEY_RENAMES$1 = { Backspace: "BSpace" };
+/**
+* One spelling of the capture, taken by `read` for the snapshot AND for the one-row-deeper truncation
+* probe — so the two differ in exactly the number they disagree about and nothing else. `lines`
+* omitted is rmux's own default window: the visible screen, with no `-S` at all.
+*/
+function capturePane$1$1(exec, target, lines) {
+	const args = [
+		"capture-pane",
+		"-p",
+		"-t",
+		target.id
+	];
+	if (lines === "all") args.push("-S", "-");
+	else if (lines != null) args.push("-S", `-${lines}`);
+	return exec("rmux", args) ?? "";
+}
+function toRmuxKey$1(key) {
+	return RMUX_KEY_RENAMES$1[key] ?? key;
+}
+/**
+* `rmux list-panes -a -F '#{pane_id} #{session_name} #{window_id}'` lists every pane server-wide.
+* Resolving fails — no line's pane id matches `id` — when the pane no longer exists in the backend,
+* and that must throw so `focus` never issues a switch-client/select-window against a pane it
+* couldn't actually resolve.
+*/
+function parsePaneLocation$1$1(out, id) {
+	const line = (out ?? "").split("\n").find((l) => l.split(" ")[0] === id);
+	if (!line) throw new Error(`peer's pane ${id} could not be resolved to beam to`);
+	const [, sessionName, windowId] = line.split(" ");
+	return {
+		sessionName,
+		windowId
+	};
+}
+/**
+* The tmux window user option `MuxOpenOptions.workspaceGroup` is stored in. A user option (the
+* `@` prefix) is tmux's own mechanism for a value it stores but never interprets, so tmux carries
+* the tag without cyber-mux teaching it anything: it survives a window rename, and `list-windows`
+* both reads it back (`#{@cm_ws}`) and filters on it server-side (`-f '#{==:#{@cm_ws},<id>}'`).
+*
+* Named here rather than spelled at each use so the write side and every read side cannot drift.
+* Server-lifetime, like every window: it dies with the tmux server, along with the windows it tags.
+*/
+const TMUX_WORKSPACE_GROUP_OPTION$1 = "@cm_ws";
+/**
+* The tmux window user option a grouped window's OWN name is stored in — the name the caller gave the
+* tab, beside the group id, because tmux's single `window_name` field no longer holds it.
+*
+* tmux has ONE name field per space. A caller that composes a display name out of a tab's name
+* (`pool - editor`) has destroyed `editor`, and there is no sound way back: splitting on the separator
+* is ambiguous (`acme - beta - main` reads two legal ways), and reading the display name verbatim
+* re-prefixes it on every round trip (`pool - pool - editor`). So the original is stored here and read
+* back from here — the same rule the group id follows, one tier down. The display name is a human's to
+* read; this is what a machine reads.
+*
+* A user option (the `@` prefix) for `TMUX_WORKSPACE_GROUP_OPTION`'s reasons exactly: tmux stores it
+* without interpreting it, it survives a window rename, and `list-windows` reads it back
+* (`#{@cm_tab}`). Named here rather than spelled at each use so the write side and every read side
+* cannot drift.
+*/
+const TMUX_TAB_NAME_OPTION$1 = "@cm_tab";
+/**
+* `-u`, led on EVERY tmux invocation this adapter makes.
+*
+* tmux(1): "-u  Write UTF-8 output to the terminal even if the first environment variable of LC_ALL,
+* LC_CTYPE, or LANG that is set does not contain \"UTF-8\" or \"UTF8\"." Without it — and a substring
+* test on those three variables is the whole of tmux's decision — the command client is not UTF-8, and
+* tmux SANITIZES what it prints: every byte outside printable ASCII becomes a literal `_`.
+*
+* That is not a cosmetic loss, it is this adapter's parser. The listing formats separate their fields
+* with a TAB, and a tab is 0x09. Measured on 3.7c, one binary, one isolated `-L` socket, only the
+* environment differing:
+*
+*     env -i PATH=… HOME=… tmux -L p list-panes -a -F '#{pane_id}<TAB>#{window_id}' | cat -A  ->  %0_@0
+*     env -i PATH=… HOME=… LANG=C.UTF-8 tmux …                                      | cat -A  ->  %0^I@0
+*     env -i PATH=… HOME=… tmux -u -L p list-panes …                                | cat -A  ->  %0^I@0
+*
+* So a caller with no locale — a systemd unit, a cron job, a container entrypoint, a non-interactive
+* ssh session — got N panes collapsed into ONE record whose id was the whole line. Not a throw and not
+* an empty result: a plausible wrong answer, which anything culling or reconciling on the listing then
+* acted on (#177).
+*
+* Uniform rather than scoped to the `-F` calls, for two reasons. The mangling is a whole CLASS, not
+* one separator: measured, EVERY byte below 0x20, plus 0x7f, plus every non-ASCII byte, comes back as
+* `_` — so `#{pane_title}` and `#{pane_current_path}` lose their non-ASCII content too, and a fix that
+* only re-picked the separator would leave that half of the bug standing. And a flag that is on some
+* invocations and not others is a flag someone eventually forgets; one choke point cannot be bypassed
+* by adding a call site.
+*
+* Chosen over pinning a locale on the child environment, which was the other candidate. `LC_ALL=C`
+* does NOT fix it (measured: still `_` — tmux wants the string "UTF-8", not any valid locale), so a
+* pin has to name a UTF-8 locale that the host actually has, and `C.UTF-8` is a glibc spelling that
+* macOS does not ship. It would also mean widening `Exec` to carry an environment, which it does not
+* do today. `-u` is tmux's own answer to exactly this question and needs neither.
+*
+* rmux was measured too and is NOT affected — it emits a real tab under `env -i` — so `mux.rmux.ts` is
+* deliberately left alone. See the `177-locale-safe-tmux-output` ADR.
+*/
+function runTmux$1(exec, args) {
+	return exec("tmux", ["-u", ...args]);
+}
+/** tmux backend — detected via `$TMUX`. */
+const tmuxMuxAdapter$1 = withJumpHistory$1({
+	name: "tmux",
+	canSizeSplits: true,
+	/**
+	* `new-pane` opens a floating pane — tmux 3.7's own new command ("Add floating panes. These are
+	* panes which sit above the layout ('tiled panes') like popups but unlike popups are not modal and
+	* behave like panes", CHANGES 3.6b → 3.7), bound to `*` by default.
+	*
+	* Declared UNCONDITIONALLY rather than probed off `tmux -V`, and that is deliberate: this adapter
+	* takes no version reading anywhere (its `-l`, `-e` and `@`-option paths are all declared the same
+	* way), and a version probe would cost an exec on every resolution to pre-empt a failure tmux
+	* already reports precisely. On tmux ≤ 3.6 the command does not exist and `new-pane` fails with
+	* tmux's own `unknown command` — surfaced by the `withReason` throw in `open`, which names the
+	* command that failed. A silent wrong-pane is the failure mode worth engineering against, and this
+	* has none: there is nothing for an absent `new-pane` to be mistaken for.
+	*
+	* Both sides of this placement are now pinned against a real 3.7c binary — the read side by
+	* `#{pane_floating_flag}`, the create side by the `new-pane` rows in `mux.tmux.integration.test.ts`.
+	* The branch below was originally written off tmux's CHANGES file, because the tmux installed when
+	* it landed was 3.6b and had no `new-pane` to run it against.
+	*/
+	canFloatPanes: true,
+	/**
+	* `true` — `resize-pane -Z`, and it is one of the oldest things tmux does. Verified live on 3.7c:
+	* `list-commands` reports `resize-pane (resizep) [-DLMRTUZ] …`, and driving `-Z` against a
+	* three-pane window flipped `#{window_zoomed_flag}` and grew `#{pane_width}` from 40 to 80.
+	*
+	* Declared even though the verb is a TOGGLE and the seam's is absolute: what this flag answers is
+	* whether the backend can be made to honor `setPaneZoom` at all, and tmux can, because it also
+	* reports the state the toggle has to be guarded by (`isPaneZoomed`). A backend with the toggle and
+	* no read would have to omit this — that is otty's position, not tmux's.
+	*/
+	canZoomPanes: true,
+	/**
+	* `true` for both, against two commands tmux has had for as long as it has had windows. Verified
+	* live on 3.7c in a throwaway server: `move-pane -d -h -s %2 -t %1` carried %2 out of window @0
+	* and left it at `l=101` in @1 — to the RIGHT of %1, which is what makes `-h` the `'right'` side —
+	* and `break-pane -d -s %1 -P -F` answered `@2 %1` with %1 gone from @0.
+	*
+	* Neither verb has the ACTIVE-pane trap `setPaneZoom` had to work around: `-s` is honored as
+	* given. Measured, not assumed — with %0 active, `move-pane -s %1` moved %1 and left %0 where it
+	* was, and `break-pane -s %1` broke out %1 rather than the active pane.
+	*/
+	canMovePanes: true,
+	canBreakPanes: true,
+	/**
+	* Every route passes `-d`, so no open moves the attached client. tmux is the backend where this
+	* cost the most to make true: `-d` was already on `new-window`, but `split-window` and `new-pane`
+	* were issuing it nowhere, and both ACTIVATE what they create. Measured on 3.7c rather than read
+	* off the man page — a bare `split-window` in a session focused on %0 left %1 active, and a bare
+	* `new-pane` did the same for the float; with `-d` each left focus on %0 and still printed the new
+	* id through `-P -F`. So the flag costs the id report nothing, which is what makes it free to add.
+	*
+	* There is no focus move to undo on top of that, unlike zellij: `-t` targets the pane to split
+	* directly, so tmux never has to VISIT a pane to choose it.
+	*/
+	focusOnOpen: "preserved",
+	open(exec, opts) {
+		const at = opts.at ?? "tab";
+		const window = at === "workspace" || at === "tab";
+		const env = opts.env ? Object.entries(opts.env).flatMap(([k, v]) => ["-e", `${k}=${v}`]) : [];
+		const group = window && opts.workspaceGroup != null;
+		const format = "#{pane_id}	#{window_id}";
+		let args;
+		if (at === "pane:float") args = [
+			"new-pane",
+			"-d",
+			...opts.from ? ["-t", opts.from.id] : [],
+			...env,
+			"-c",
+			opts.cwd,
+			"-P",
+			"-F",
+			format
+		];
+		else if (window) args = [
+			"new-window",
+			"-d",
+			...env,
+			"-c",
+			opts.cwd,
+			"-P",
+			"-F",
+			format
+		];
+		else {
+			const from = opts.from ? ["-t", opts.from.id] : [];
+			const size = opts.ratio != null ? ["-l", toTmuxSize$1(opts.ratio)] : [];
+			args = [
+				"split-window",
+				"-d",
+				at === "pane:down" ? "-v" : "-h",
+				...from,
+				...size,
+				...env,
+				"-c",
+				opts.cwd,
+				"-P",
+				"-F",
+				format
+			];
+		}
+		if (window && opts.label) args.splice(1, 0, "-n", opts.label);
+		const out = runTmux$1(exec, args);
+		if (!out) throw new Error(withReason$1(exec, `tmux ${args[0]} failed`));
+		const [pane, windowId] = splitOpenReport$2(out, args[0]);
+		const target = {
+			id: pane,
+			tab: windowId
+		};
+		if (group && windowId) tmuxMuxAdapter$1.group(exec, { id: windowId }, opts.workspaceGroup);
+		if (!window && opts.label) tmuxMuxAdapter$1.rename(exec, target, "pane", opts.label);
+		if (opts.launch) tmuxMuxAdapter$1.submit(exec, target, opts.launch);
+		return target;
+	},
+	rename(exec, target, tier, name) {
+		if (tier === "tab") {
+			runTmux$1(exec, [
+				"rename-window",
+				"-t",
+				target.id,
+				name
+			]);
+			return;
+		}
+		runTmux$1(exec, [
+			"select-pane",
+			"-t",
+			target.id,
+			"-T",
+			name
+		]);
+	},
+	group(exec, target, group, name) {
+		runTmux$1(exec, [
+			"set-option",
+			"-w",
+			"-t",
+			target.id,
+			TMUX_WORKSPACE_GROUP_OPTION$1,
+			group
+		]);
+		if (name !== void 0) runTmux$1(exec, [
+			"set-option",
+			"-w",
+			"-t",
+			target.id,
+			TMUX_TAB_NAME_OPTION$1,
+			name
+		]);
+	},
+	sendText(exec, target, text) {
+		runTmux$1(exec, [
+			"send-keys",
+			"-t",
+			target.id,
+			"-l",
+			text
+		]);
+	},
+	sendKeys(exec, target, keys) {
+		runTmux$1(exec, [
+			"send-keys",
+			"-t",
+			target.id,
+			...keys.map(toTmuxKey$1)
+		]);
+	},
+	submit(exec, target, text) {
+		if (!text) {
+			runTmux$1(exec, [
+				"send-keys",
+				"-t",
+				target.id,
+				"Enter"
+			]);
+			return;
+		}
+		tmuxMuxAdapter$1.sendText(exec, target, text);
+		runTmux$1(exec, [
+			"send-keys",
+			"-t",
+			target.id,
+			"Enter"
+		]);
+	},
+	read(exec, target, opts) {
+		const text = capturePane$2(exec, target, opts?.lines);
+		if (!opts?.truncation) return { text };
+		if (opts.lines === "all") return {
+			text,
+			truncated: false
+		};
+		return {
+			text,
+			truncated: isReadTruncated$1(text, capturePane$2(exec, target, (opts.lines ?? 0) + 1))
+		};
+	},
+	waitForOutput(exec, target, opts) {
+		return pollForOutput$1(tmuxMuxAdapter$1, exec, target, opts);
+	},
+	focus(exec, target) {
+		const { sessionName, windowId } = parsePaneLocation$3(runTmux$1(exec, [
+			"list-panes",
+			"-a",
+			"-F",
+			"#{pane_id} #{session_name} #{window_id}"
+		]), target.id);
+		runTmux$1(exec, [
+			"switch-client",
+			"-t",
+			sessionName
+		]);
+		runTmux$1(exec, [
+			"select-window",
+			"-t",
+			windowId
+		]);
+		runTmux$1(exec, [
+			"select-pane",
+			"-t",
+			target.id
+		]);
+	},
+	teardown(exec, target) {
+		runTmux$1(exec, [
+			"kill-pane",
+			"-t",
+			target.id
+		]);
+	},
+	paneExists(exec, target) {
+		if (runTmux$1(exec, [
+			"has-session",
+			"-t",
+			target.id
+		]) !== null) return true;
+		return (runTmux$1(exec, [
+			"list-panes",
+			"-a",
+			"-F",
+			"#{pane_id}"
+		]) ?? "").split("\n").includes(target.id);
+	},
+	isPaneFocused(exec, target) {
+		const out = runTmux$1(exec, [
+			"list-panes",
+			"-a",
+			"-F",
+			"#{pane_id} #{pane_active} #{window_active} #{session_attached}"
+		]);
+		if (!out) return void 0;
+		const line = out.split("\n").find((l) => l.split(" ")[0] === target.id);
+		if (!line) return void 0;
+		const [, paneActive, windowActive, sessionAttached] = line.split(" ");
+		if (paneActive === void 0 || windowActive === void 0 || sessionAttached === void 0) return void 0;
+		return paneActive === "1" && windowActive === "1" && sessionAttached !== "0";
+	},
+	/**
+	* `resize-pane -Z`, which is a TOGGLE — the seam's member is absolute, so the state is read first
+	* and the toggle issued only when it differs (`isPaneZoomed` below). All of it verified live on
+	* tmux 3.7c.
+	*
+	* **`select-pane` before `-Z`, and it is not redundant.** `resize-pane -Z -t <pane>` on a window
+	* that is ALREADY zoomed on a DIFFERENT pane does not transfer the zoom — it just unzooms, leaving
+	* the other pane active and nothing zoomed (measured: with %1 zoomed, `-Z -t %2` left `z=0` on
+	* every pane and %1 still active). Naming the pane is not enough on tmux; the zoom follows the
+	* ACTIVE pane. `select-pane -t <pane>` fixes both halves at once — it unzooms the window as a side
+	* effect of moving the active pane, and it makes the target the pane `-Z` will zoom.
+	*
+	* That `select-pane` is also why zooming MOVES FOCUS here, which `MuxAdapter.setPaneZoom`
+	* declares rather than compensates. It is not a cost this adapter chose: a bare `-Z -t <pane>` on
+	* an unfocused pane already makes that pane active on tmux, so there is no focus-preserving
+	* spelling to prefer.
+	*
+	* Unzooming needs no `select-pane`: the guard has already established that THIS pane is the zoomed
+	* one, so it is already the active pane and a bare `-Z` restores it in place, moving nothing.
+	*/
+	setPaneZoom(exec, target, zoomed) {
+		if (tmuxMuxAdapter$1.isPaneZoomed(exec, target) === zoomed) return;
+		if (zoomed && runTmux$1(exec, [
+			"select-pane",
+			"-t",
+			target.id
+		]) === null) throw new Error(withReason$1(exec, `tmux could not select pane ${target.id}`));
+		if (runTmux$1(exec, [
+			"resize-pane",
+			"-Z",
+			"-t",
+			target.id
+		]) === null) throw new Error(withReason$1(exec, `tmux could not ${zoomed ? "zoom" : "unzoom"} pane ${target.id}`));
+	},
+	/**
+	* `#{window_zoomed_flag}` AND `#{pane_active}`, because tmux's flag is per WINDOW: it reads `1` on
+	* every pane of a zoomed window, including the small ones behind the zoomed one (verified live on
+	* 3.7c — with %1 zoomed, all three panes reported `z=1`). The pane that is actually big is the
+	* window's ACTIVE pane, so the per-pane answer the seam promises is the conjunction.
+	*
+	* Read out of `list-panes -a`, the same server-wide listing `isPaneFocused` uses, rather than
+	* `display-message -p -t <pane>`: display-message answers a pane that no longer exists with a blank
+	* line and exit code 0 (measured on 3.7c), which is indistinguishable from a real answer whose
+	* fields did not expand. A missing LINE is unambiguous, and `undefined` is then the honest report
+	* rather than a false `false`.
+	*
+	* `#{session_attached}` is deliberately NOT part of this, unlike `isPaneFocused`'s answer: a pane
+	* is zoomed in its window whether or not any client is looking, and a detached session's zoom is
+	* still there when a client attaches.
+	*/
+	isPaneZoomed(exec, target) {
+		const out = runTmux$1(exec, [
+			"list-panes",
+			"-a",
+			"-F",
+			"#{pane_id} #{window_zoomed_flag} #{pane_active}"
+		]);
+		if (!out) return void 0;
+		const line = out.split("\n").find((l) => l.split(" ")[0] === target.id);
+		if (!line) return void 0;
+		const [, zoomedFlag, paneActive] = line.split(" ");
+		return zoomedFlag === "1" && paneActive === "1";
+	},
+	/**
+	* `move-pane -s <src> -t <dst>`, with `-h`/`-v` choosing the side. Measured on 3.7c: `-h` lands the
+	* moved pane to the RIGHT of the destination (`l=101` beside a destination at `l=0 w=100`) and
+	* `-v` lands it BELOW, which is the mapping this member's `'right'`/`'down'` takes.
+	*
+	* `-d` is not decoration: without it tmux SELECTS the destination window and makes the moved pane
+	* active, dragging an attached client to a window the caller never asked to look at (measured —
+	* a bare `move-pane` left the client on @1 with %1 active there). With it the client stays put and
+	* the destination's own active pane is untouched.
+	*
+	* The re-read afterwards is what turns tmux's `void` command into the seam's `OpenedPane`.
+	* `move-pane` has no `-P`/`-F` at all — unlike `break-pane` below — so the window the pane landed
+	* in has to be asked for, and asking doubles as the confirmation that the pane survived the move.
+	* No `workspace`: tmux has no such tier, and `open` reports none either.
+	*/
+	movePane(exec, target, destination, side) {
+		if (runTmux$1(exec, [
+			"move-pane",
+			"-d",
+			side === "down" ? "-v" : "-h",
+			"-s",
+			target.id,
+			"-t",
+			destination.id
+		]) === null) throw new Error(withReason$1(exec, `tmux could not move pane ${target.id} to ${destination.id}`));
+		return tmuxPaneLocation$1(exec, target.id, "move");
+	},
+	/**
+	* `break-pane -s <src> -P -F`, which reports the pane and its NEW window in the same call — so
+	* unlike `movePane` this needs no second read. Driven on 3.7c: with %0 active, `break-pane -d -s
+	* %1` answered `@2 %1` and left %0 alone in @0.
+	*
+	* `at` is ignored, and that is the tier collapse `open` already makes rather than a member
+	* ignoring its argument: tmux has no workspace tier, so `'tab'` and `'workspace'` are both a new
+	* Window here, exactly as `MuxPlacement`'s two space placements both are. The returned
+	* `OpenedPane` carries no `workspace`, which is how a caller sees the collapse rather than being
+	* told a false one.
+	*
+	* `-d` for `movePane`'s reason. Breaking out a pane that is already alone in its window is a
+	* no-op that reports its existing window (measured on 3.7c) — the seam declares that rather than
+	* spending a read to normalize it.
+	*/
+	breakPane(exec, target, _at) {
+		const out = runTmux$1(exec, [
+			"break-pane",
+			"-d",
+			"-s",
+			target.id,
+			"-P",
+			"-F",
+			"#{pane_id} #{window_id}"
+		]);
+		if (!out) throw new Error(withReason$1(exec, `tmux could not break out pane ${target.id}`));
+		const [pane, window] = out.trim().split(" ");
+		if (!pane || !window) throw new Error(`tmux break-pane did not report the pane and window of ${target.id}`);
+		return {
+			id: pane,
+			tab: window
+		};
+	},
+	/**
+	* Tab-separated, not space — the same rule `describeTmuxRegion` follows, and for the same reason:
+	* `pane_current_path` and `pane_title` can both contain spaces. The old space-separated format
+	* recovered the cwd by rejoining everything after the command, which works only while the cwd is
+	* the LAST field. A label is a human's and may hold anything, so appending one to that format would
+	* make both fields unrecoverable — `my worker` and `/repo/my dir` cannot be told apart by a space.
+	* A tab can appear in neither id nor command, and the two free-text fields are separated by one.
+	*/
+	listPanes(exec) {
+		const out = runTmux$1(exec, [
+			"list-panes",
+			"-a",
+			"-F",
+			"#{pane_id}	#{pane_current_command}	#{pane_current_path}	#{pane_title}	#{host}	#{pane_floating_flag}"
+		]);
+		if (!out) return [];
+		return out.split("\n").filter(Boolean).map((line) => {
+			const [id, , cwd, title, host, floating] = line.split("	");
+			const pane = {
+				id: id ?? "",
+				mux: "tmux",
+				floating: floating === "1"
+			};
+			if (cwd) pane.cwd = cwd;
+			const label = paneLabel$2(title, host);
+			if (label) pane.label = label;
+			return pane;
+		}).filter((p) => p.id !== "");
+	},
+	regions: {
+		describeRegion(exec, target) {
+			return describeTmuxRegion$1(exec, target.id);
+		},
+		/**
+		* `resize-pane -x/-y` in CELLS, never `-x <percent>`, and the difference is not cosmetic: tmux
+		* takes a percentage of the WINDOW, while the seam's `ratio` is a fraction of the pane's own
+		* SPLIT REGION. Those are the same number only in a two-pane window, so a nested layout would be
+		* sized against the wrong denominator — silently, and only for the users with more than one
+		* split. Cells computed from the rects tmux just reported are exact at every depth.
+		*
+		* Verified against a live tmux 3.7c (`mux.tmux.integration.test.ts`): `-x` sizes the target pane
+		* and its sibling absorbs the difference, `-y` does the same on a stacked split, and a resize
+		* inside a nested region leaves the outer divider where it was.
+		*/
+		resizePane(exec, target, ratio) {
+			const split = enclosingSplit$1(describeTmuxRegion$1(exec, target.id), target.id);
+			if (!split) throw new Error(`tmux pane ${target.id} is the only pane in its region — there is no split to resize`);
+			const flag = split.direction === "right" ? "-x" : "-y";
+			const cells = toTmuxResizeCells$1(split, ratio);
+			if (runTmux$1(exec, [
+				"resize-pane",
+				"-t",
+				target.id,
+				flag,
+				String(cells)
+			]) === null) throw new Error(withReason$1(exec, `tmux could not resize pane ${target.id}`));
+		},
+		/**
+		* tmux has NO workspace tier — `workspace` and `tab` both collapse onto a Window — so a workspace
+		* is not a fact this backend holds. What it holds is the grouping TAG the walk wrote
+		* (`MuxOpenOptions.workspaceGroup`, stored in a window user option), so the read here is
+		* literally *"which windows carry this group id"*.
+		*
+		* The tag, never the label. `list-windows -a` spans SESSIONS, so a bare name match would
+		* over-collect a same-named window from another session, and taking the workspace off a
+		* `<workspace> - <tab>` label is unsound in the first place (`acme - beta - main` splits two ways,
+		* both legal). `-f '#{==:#{@cm_ws},<id>}'` keys on what actually identifies the group, filtered
+		* server-side — the tag survives a window rename, which a name-encoded grouping does not.
+		*
+		* A window with NO tag is a workspace of ONE: the honest answer for a window nobody grouped, and
+		* it costs no further call — the caller's own window is the whole workspace.
+		*/
+		describeWorkspace(exec, target) {
+			const out = runTmux$1(exec, [
+				"display-message",
+				"-p",
+				"-t",
+				target.id,
+				`#{window_id}\t#{${TMUX_WORKSPACE_GROUP_OPTION$1}}\t#{${TMUX_TAB_NAME_OPTION$1}}\t#{window_name}`
+			]);
+			if (!out) throw new Error(withReason$1(exec, `tmux could not resolve the workspace around pane ${target.id}`));
+			const [windowId, group, ownName, ...nameParts] = out.split("\n")[0].split("	");
+			if (!windowId) throw new Error(`tmux did not report the window around pane ${target.id}`);
+			if (!group) return [tmuxTab$1(exec, windowId, ownName, nameParts.join("	"))];
+			const listed = runTmux$1(exec, [
+				"list-windows",
+				"-a",
+				"-F",
+				`#{window_id}\t#{${TMUX_TAB_NAME_OPTION$1}}\t#{window_name}`,
+				"-f",
+				`#{==:#{${TMUX_WORKSPACE_GROUP_OPTION$1}},${group}}`
+			]);
+			if (!listed) throw new Error(withReason$1(exec, `tmux could not enumerate the windows grouped as ${group}`));
+			const tabs = listed.split("\n").filter(Boolean).map((line) => line.split("	")).filter(([id]) => Boolean(id)).map(([id, own, ...rest]) => tmuxTab$1(exec, id, own, rest.join("	")));
+			if (tabs.length === 0) throw new Error(`tmux reported no windows grouped as ${group}`);
+			return tabs;
+		}
+	}
+});
+/**
+* One window, read as a tab: its id, the tab's OWN name, and its region's geometry.
+*
+* `ownName` is what `group` stored (`TMUX_TAB_NAME_OPTION`) and it WINS, because `windowName` is the
+* display name — on a grouped window that is the composed `pool - editor`, whose `editor` tmux's
+* single name field no longer holds. Reporting the display name instead would compound the prefix on
+* every capture/apply round trip (`pool - pool - editor`), and splitting it back apart is the unsound
+* parse the option exists to refuse.
+*
+* The window name is the FALLBACK, not a second guess: a window carrying no stored name is one nobody
+* composed a display name for, so its name already IS its own name. That covers the untagged window —
+* a workspace of one — and any window a caller grouped without naming.
+*/
+function tmuxTab$1(exec, windowId, ownName, windowName) {
+	const tab = {
+		id: windowId,
+		panes: describeTmuxRegion$1(exec, windowId)
+	};
+	const label = ownName || windowName;
+	if (label) tab.label = label;
+	return tab;
+}
+/**
+* Every pane of the region `id` names, with its rectangle. `id` is a pane id (that pane's own window)
+* or a window id (that window) — `list-panes -t` resolves both, which is what lets the region read and
+* the workspace read share one query instead of two that could drift apart.
+*
+* `-t` scopes `list-panes` to ONE window — the region tier, which is what capture captures. Without
+* `-a`, so this never reaches the panes of some other window.
+*
+* `#{pane_left}`/`#{pane_top}` are window-relative, and the widths exclude the divider column tmux
+* draws between panes (a 200-wide window split side by side reports 119 + 80, not 200) — both are
+* exactly what `RegionPane.rect` documents, so nothing is adjusted here.
+*
+* Tab-separated, not space: `pane_current_path` and `pane_title` can both contain spaces, and
+* splitting a path on spaces is how a directory with one in it silently becomes the wrong pane.
+*/
+function describeTmuxRegion$1(exec, id) {
+	const out = runTmux$1(exec, [
+		"list-panes",
+		"-t",
+		id,
+		"-F",
+		"#{pane_id}	#{pane_left}	#{pane_top}	#{pane_width}	#{pane_height}	#{pane_current_path}	#{pane_title}	#{host}"
+	]);
+	if (!out) throw new Error(withReason$1(exec, `tmux could not describe the region around pane ${id}`));
+	const panes = [];
+	for (const line of out.split("\n").filter(Boolean)) {
+		const [paneId, left, top, width, height, cwd, title, host] = line.split("	");
+		if (!paneId) continue;
+		const pane = {
+			id: paneId,
+			rect: {
+				x: Number(left),
+				y: Number(top),
+				width: Number(width),
+				height: Number(height)
+			}
+		};
+		if (cwd) pane.cwd = cwd;
+		const label = paneLabel$2(title, host);
+		if (label) pane.label = label;
+		panes.push(pane);
+	}
+	if (panes.length === 0) throw new Error(`tmux reported no panes in the region around pane ${id}`);
+	return panes;
+}
+/**
+* A tmux pane's label — its title, unless that title is the hostname tmux handed it.
+*
+* **tmux has no "unset title"**: it defaults `pane_title` to the hostname, so a pane nobody ever named
+* reports a name nobody chose, and every pane in an untouched session reports the SAME one. Exporting
+* that would label them all `zeta`, and `zeta` would then resolve to every pane in the session —
+* ambiguity manufactured out of nothing. A title that differs from the host is one someone set
+* (cyber-mux's own `select-pane -T` among them), so it is the author's and survives.
+*
+* One home for the rule, called by BOTH reads — `listPanes` (which a name resolves against) and
+* `describeTmuxRegion` (which a capture exports). Two spellings of a heuristic this load-bearing is
+* how the listing and the capture come to disagree about which panes are named.
+*
+* The comparison is the workaround, not the shape of the thing: herdr has the honest primitive and
+* omits the key outright until a pane is renamed, so it needs no rule at all.
+*/
+function paneLabel$2(title, host) {
+	return title && title !== host ? title : void 0;
+}
+/**
+* The `-P -F '#{pane_id}\t#{window_id}'` report EVERY open asks for, split back into its two ids.
+* Tab-separated because neither id can contain a tab.
+*
+* A report that does not carry both throws rather than returning half an answer: the window is the
+* pane's tab, which `OpenedPane.tab` promises is always present, and it is also what a grouping open
+* tags. Guessing either would be worse than failing — a caller would name or group nothing and never
+* learn it.
+*/
+function splitOpenReport$2(out, command) {
+	const [pane, windowId] = out.split("	");
+	if (!pane || !windowId) throw new Error(`tmux ${command} did not report the new pane's id and window id`);
+	return [pane, windowId];
+}
+/**
+* Where a pane lives NOW, as the `OpenedPane` a relocation has to answer with — the read `move-pane`
+* cannot give, because it has no `-P`/`-F` to report through.
+*
+* Server-wide `list-panes -a` rather than `display-message -p -t <pane>`, for `isPaneZoomed`'s
+* reason: display-message answers a pane that no longer exists with a blank line and exit code 0, so
+* a move that silently lost its pane would read as a successful one. A missing LINE is unambiguous,
+* and here it means the relocation did not land — which throws rather than reporting a false success.
+*
+* No `workspace` on the result: tmux has no such tier, so a relocation reports none exactly as an
+* `open` does.
+*/
+function tmuxPaneLocation$1(exec, id, verb) {
+	const line = (runTmux$1(exec, [
+		"list-panes",
+		"-a",
+		"-F",
+		"#{pane_id} #{window_id}"
+	]) ?? "").split("\n").find((l) => l.split(" ")[0] === id);
+	if (!line) throw new Error(`tmux could not resolve pane ${id} after the ${verb}`);
+	const [, windowId] = line.split(" ");
+	if (!windowId) throw new Error(`tmux did not report a window for pane ${id} after the ${verb}`);
+	return {
+		id,
+		tab: windowId
+	};
+}
+/**
+* The seam's `ratio` as the CELL count `resize-pane -x/-y` wants for the target pane.
+*
+* Computed through the SECOND side rather than the target directly, because that is the definition
+* `ratioOf` (`region-tree.ts`) reads a live split back with, and a write that used the other formula
+* would not round-trip: tmux eats a column for the divider, so `first / (first + second)` and
+* `1 - second / total` disagree by exactly that column. Going through the second side means a region
+* described at 0.6 and resized to 0.6 is a no-op, which is the property a caller restoring a drifted
+* layout depends on.
+*
+* The divider is MEASURED (`extent - targetExtent - otherExtent`) rather than assumed to be one
+* column: it is the same arithmetic on a backend that draws no divider, so nothing here is tmux-shaped
+* beyond the flag it renders into.
+*/
+function toTmuxResizeCells$1(split, ratio) {
+	assertRatioInRange$1(ratio);
+	const second = Math.round((split.targetIsFirst ? 1 - ratio : ratio) * split.extent);
+	if (!split.targetIsFirst) return second;
+	const divider = split.extent - split.targetExtent - split.otherExtent;
+	return split.extent - divider - second;
+}
+/**
+* `ratio` is the fraction kept by the ORIGINAL pane; tmux's `-l` sizes the NEW one. So this INVERTS
+* — `1 - ratio` — where herdr's `--ratio` passes the same number through untouched. The two backends
+* genuinely convert in opposite directions, and applying the inversion to both (or to neither) is
+* the way this gets silently backwards: a 0.333 template would size the original pane at 67%.
+*
+* Percent rather than cells: tmux takes `-l` as either, and a percentage is the only form that means
+* the same thing without first querying the region's size.
+*/
+function toTmuxSize$1(ratio) {
+	assertRatioInRange$1(ratio);
+	return `${Math.round((1 - ratio) * 100)}%`;
+}
+/**
+* The core vocabulary's tmux spelling. Exactly one member differs — probed, not read off tmux(1):
+* tmux has no `Backspace` key name, so it would *type* the word (its unrecognized-token fallback);
+* its name for that key is `BSpace` (tmux(1): "the following special key names are accepted: Up,
+* Down, Left, Right, BSpace, BTab, DC ..."). Every other core key — `Up` `Down` `Left` `Right`
+* `Enter` `Escape` `Tab` `Space` `C-c` `F1`-`F12` — is already tmux's own name for it.
+*
+* Deliberately a rename table, NOT a validation table: a token outside the core is forwarded
+* verbatim (the contract), so this must not reject what it does not recognize. Keeping a full tmux
+* key list here would make the passthrough a second vocabulary to maintain.
+*/
+const TMUX_KEY_RENAMES$1 = { Backspace: "BSpace" };
+/**
+* One spelling of the capture, taken by `read` for the snapshot AND for the one-row-deeper truncation
+* probe — so the two differ in exactly the number they disagree about and nothing else. `lines`
+* omitted is tmux's own default window: the visible screen, with no `-S` at all.
+*/
+function capturePane$2(exec, target, lines) {
+	const args = [
+		"capture-pane",
+		"-p",
+		"-t",
+		target.id
+	];
+	if (lines === "all") args.push("-S", "-");
+	else if (lines != null) args.push("-S", `-${lines}`);
+	return runTmux$1(exec, args) ?? "";
+}
+function toTmuxKey$1(key) {
+	return TMUX_KEY_RENAMES$1[key] ?? key;
+}
+/**
+* `tmux list-panes -a -F '#{pane_id} #{session_name} #{window_id}'` lists every pane server-wide.
+* Resolving fails — no line's pane id matches `id` — when the pane no longer exists in the backend,
+* and that must throw so `focus` never issues a switch-client/select-window against a pane it
+* couldn't actually resolve.
+*/
+function parsePaneLocation$3(out, id) {
+	const line = (out ?? "").split("\n").find((l) => l.split(" ")[0] === id);
+	if (!line) throw new Error(`peer's pane ${id} could not be resolved to beam to`);
+	const [, sessionName, windowId] = line.split(" ");
+	return {
+		sessionName,
+		windowId
+	};
+}
+/** The real id source — a v4 UUID. The shell binds this; core takes `NewId` as a parameter. */
+const nodeNewId$1 = () => randomUUID();
+/**
+* WezTerm backend — detected via `$WEZTERM_PANE`. Drives WezTerm's built-in multiplexer through
+* `wezterm cli …` (https://wezterm.org/cli/general.html), the same synchronous-CLI shape tmux and
+* herdr already give `Exec`.
+*
+* Probed from `wezterm cli --help`/the CLI reference docs only — there is no live WezTerm GUI in
+* this sandbox, so nothing here carries the "verified against a live binary" claim `session.tmux.ts`
+* and `session.herdr.ts` make. Several real capability gaps fell out of that probe, not just missing
+* polish:
+*
+* - **No `--env` on `spawn`/`split-pane` at all.** Unlike herdr (native everywhere except one
+*   worktree route), WezTerm's CLI has no env flag on ANY space-creating command — every route is
+*   the exception, so `open`'s env always rides the `envFallback` compensation (a `env K=V` prefix
+*   on the launch command, or a stderr warning with none to ride), never a native flag.
+* - **No way to title a PANE**, at birth or after — `set-tab-title`/`set-window-title` exist, there
+*   is no pane equivalent. `rename(..., 'pane', …)` throws; `open`'s pane-tier `label` degrades to a
+*   stderr warning rather than silently dropping it or failing the whole open.
+* - **A real focus-query primitive, and this file used to deny it.** `cli list-clients --format
+*   json` carries `focused_pane_id` per attached client, and it MOVES: measured on the pinned
+*   20240203 build with a GUI client attached to a headless mux server, it followed `cli
+*   activate-pane` in both directions. `isPaneFocused` reads it and no longer answers a blanket
+*   `undefined`. What it deliberately does NOT read is `list --format json`'s `is_active`, which is
+*   the seam-shaped trap here: that flag is per-TAB, and the same run measured THREE rows reporting
+*   `is_active: true` at once across two tabs and two windows.
+* - **A real, natively ABSOLUTE pane zoom, and it is the one thing in this file that WAS driven.**
+*   `cli zoom-pane --pane-id <id> --zoom|--unzoom|--toggle`, plus an `is_zoomed` flag on every
+*   `cli list --format json` row. Both were exercised against a headless `wezterm-mux-server` on the
+*   pinned 20240203 build, so `canZoomPanes`, `setPaneZoom` and `isPaneZoomed` below carry the live
+*   claim the rest of this header does not. Issue #142 filed this backend as "needs confirming — no
+*   documented zoom verb"; it has one, and a better-shaped one than any other backend here.
+* - **No per-key press primitive** — there is no `send-keys`-shaped verb, only `send-text`. The core
+*   vocabulary is instead realized by encoding each key as its raw terminal byte sequence and typing
+*   it via `send-text --no-paste`; see `WEZTERM_KEY_BYTES`.
+* - **No pane geometry** — `list --format json` reports a pane's `size` (rows/cols) but no position,
+*   so there is nothing to build a `PaneRect` from. `describeRegion`/`describeWorkspace` are omitted
+*   entirely, the same optional-omission `template save` already handles for a backend that cannot.
+* - **No git-worktree concept in the CLI at all** — no `worktree` subcommand, so like tmux this
+*   backend never binds one to a workspace; `worktree` is omitted.
+*
+* `spawn`/`split-pane` report only the new pane's bare id — unlike tmux/herdr, which embed the tab
+* (and workspace) in the same `-F`/JSON envelope the pane id rides out on. So `OpenedPane.tab` costs
+* a follow-up `wezterm cli list --format json` lookup here, not a free read of output already held.
+*/
+/**
+* Build the WezTerm adapter over its injected effects. The only effect it takes is `newId` — the id
+* source for the fresh workspace name minted when the caller opens a `workspace` without a `label`.
+* Exported as a factory (with `weztermMuxAdapter` binding the real one below) so a test can inject a
+* deterministic id instead of a UUID, exactly the seam `Exec`/`TemplateStore` already are.
+*/
+function createWeztermAdapter$1(deps) {
+	const adapter = {
+		name: "wezterm",
+		canSizeSplits: true,
+		/**
+		* `'restored'`. WezTerm's CLI has no suppress-focus flag on any creating verb — `cli spawn
+		* --help` and `cli split-pane --help` on the pinned 20240203 build list `--pane-id`, the
+		* direction/placement flags, `--cells`/`--percent`, `--cwd`, `--move-pane-id`, `--domain-name`,
+		* `--window-id`, `--new-window` and `--workspace`, and nothing resembling `--no-focus`. Measured,
+		* not read: a split of pane 0 left pane 1 as its tab's active pane, and a `spawn` made its new
+		* tab's pane active too.
+		*
+		* So the focus move cannot be SUPPRESSED here, which is why the old boolean answered `false` and
+		* stopped. It can be UNDONE, and that is what changed: `cli list-clients` reports
+		* `focused_pane_id` (see `isPaneFocused` for the live proof that it tracks focus), so the pane
+		* the caller was on is readable before the open and `cli activate-pane` puts them back after.
+		* The old comment argued a restore would be "a second visible focus move… worse than the honest
+		* `false`", and that argument does not survive the seam having a value for it: `'restored'`
+		* SAYS there is a visible detour, and a caller told the truth about a flicker is better served
+		* than one told nothing and left stranded.
+		*
+		* The restore is a no-op when nothing moved — `restoringFocus` re-activates the pane the client
+		* was already on — which also makes it safe under a reading this box cannot settle. Measured
+		* with a real GUI client attached, `focused_pane_id` did NOT follow a `split-pane` even though
+		* `is_active` did, so wezterm may already leave the attached client alone. If it does, this
+		* costs one redundant `activate-pane`; if it does not, it is the fix. Either way the caller ends
+		* on the pane they started on, which is the only thing this declaration promises.
+		*/
+		focusOnOpen: "restored",
+		/**
+		* `true` — `wezterm cli zoom-pane --pane-id <id> --zoom|--unzoom`, and this is the ONE claim in
+		* this file that IS verified against a live binary. Issue #142 filed wezterm as "needs
+		* confirming — `wezterm cli` has no documented zoom verb; zoom is a GUI key action". That is
+		* wrong, and the measurement is `wezterm cli --help` on 20240203-110809-5046fc22 (the version
+		* `pull-request.yml` pins), which lists `zoom-pane   Zoom, unzoom, or toggle zoom state`, with
+		* `zoom-pane --help` giving `--pane-id`, `--zoom`, `--unzoom` and `--toggle`.
+		*
+		* It is also the best-behaved zoom on this seam. Driven against a real headless
+		* `wezterm-mux-server` with three panes in a tab: `--zoom` is per-PANE and truly absolute —
+		* repeating it on an already-zoomed pane changed nothing, `--zoom` on a second pane while the
+		* first was zoomed TRANSFERRED the zoom (which neither tmux nor zellij does), and `--unzoom` on a
+		* pane that was not zoomed left its zoomed sibling alone. Every other backend here needs the
+		* seam's read-first guard to get those three properties; wezterm has them natively.
+		*/
+		canZoomPanes: true,
+		/**
+		* `true` for both, against two verbs driven live on the pinned 20240203 build through a headless
+		* `wezterm-mux-server`. They are two DIFFERENT commands here, which is part of why the seam keeps
+		* the members apart: `split-pane --pane-id <dst> --right|--bottom --move-pane-id <src>` relocates
+		* a pane beside another one, and `move-pane-to-new-tab --pane-id <src>` promotes it.
+		*
+		* `--move-pane-id` is the flag that makes wezterm capable at all, and it is easy to miss: the
+		* move is not its own verb, it is a mode of `split-pane` ("Instead of spawning a new command,
+		* move the specified pane into the newly created split"). Measured: `split-pane --pane-id 2
+		* --bottom --move-pane-id 1` carried pane 1 out of window 0 into pane 2's tab with its id intact
+		* and printed `1`.
+		*/
+		canMovePanes: true,
+		canBreakPanes: true,
+		open(exec, opts) {
+			const at = opts.at ?? "tab";
+			if (at === "pane:float") refuseFloatingPane$1(adapter.name);
+			if (opts.ratio != null) assertRatioInRange$1(opts.ratio);
+			return restoringFocus$1({
+				read: () => focusedWeztermPane$1(exec),
+				restore: (pane) => adapter.focus(exec, { id: pane })
+			}, () => {
+				if (at === "workspace") {
+					const workspace = opts.label ?? `cyber-mux-${deps.newId().slice(0, 8)}`;
+					const out = exec("wezterm", [
+						"cli",
+						"spawn",
+						"--new-window",
+						"--workspace",
+						workspace,
+						"--cwd",
+						opts.cwd
+					]);
+					if (!out) throw new Error(withReason$1(exec, "wezterm cli spawn --new-window failed"));
+					const pane = out.trim();
+					if (!pane) throw new Error("wezterm cli spawn --new-window did not report the new pane id");
+					const opened = {
+						id: pane,
+						tab: resolveTab$1(exec, pane),
+						workspace
+					};
+					runLaunch$1$1(adapter, exec, opened, opts.env, opts.launch);
+					return opened;
+				}
+				if (at === "tab") {
+					const out = exec("wezterm", [
+						"cli",
+						"spawn",
+						...opts.within ? ["--window-id", resolveWorkspaceWindow$1(exec, opts.within)] : [],
+						"--cwd",
+						opts.cwd
+					]);
+					if (!out) throw new Error(withReason$1(exec, "wezterm cli spawn failed"));
+					const pane = out.trim();
+					if (!pane) throw new Error("wezterm cli spawn did not report the new pane id");
+					const opened = withTabAndWorkspace$1(exec, pane);
+					if (opts.label) adapter.rename(exec, { id: opened.tab }, "tab", opts.label);
+					runLaunch$1$1(adapter, exec, opened, opts.env, opts.launch);
+					return opened;
+				}
+				const direction = at === "pane:down" ? ["--bottom"] : ["--right"];
+				const from = opts.from ? ["--pane-id", opts.from.id] : [];
+				const size = opts.ratio != null ? ["--percent", toWeztermSize$1(opts.ratio)] : [];
+				const out = exec("wezterm", [
+					"cli",
+					"split-pane",
+					...direction,
+					...from,
+					...size,
+					"--cwd",
+					opts.cwd
+				]);
+				if (!out) throw new Error(withReason$1(exec, "wezterm cli split-pane failed"));
+				const pane = out.trim();
+				if (!pane) throw new Error("wezterm cli split-pane did not report the new pane id");
+				const opened = withTabAndWorkspace$1(exec, pane);
+				if (opts.label) process.stderr.write(`wezterm cannot name a pane — "${opts.label}" was not set on pane ${opened.id}\n`);
+				runLaunch$1$1(adapter, exec, opened, opts.env, opts.launch);
+				return opened;
+			});
+		},
+		rename(exec, target, tier, name) {
+			if (tier === "tab") {
+				exec("wezterm", [
+					"cli",
+					"set-tab-title",
+					"--tab-id",
+					target.id,
+					name
+				]);
+				return;
+			}
+			throw new Error(`wezterm cannot name a pane (only a tab or window) — asked to rename ${target.id}`);
+		},
+		group() {},
+		sendText(exec, target, text) {
+			exec("wezterm", [
+				"cli",
+				"send-text",
+				"--pane-id",
+				target.id,
+				text
+			]);
+		},
+		sendKeys(exec, target, keys) {
+			const bytes = keys.map((k) => WEZTERM_KEY_BYTES$1[k] ?? k).join("");
+			exec("wezterm", [
+				"cli",
+				"send-text",
+				"--pane-id",
+				target.id,
+				"--no-paste",
+				bytes
+			]);
+		},
+		submit(exec, target, text) {
+			if (!text) {
+				adapter.sendKeys(exec, target, ["Enter"]);
+				return;
+			}
+			adapter.sendText(exec, target, text);
+			adapter.sendKeys(exec, target, ["Enter"]);
+		},
+		read(exec, target, opts) {
+			const text = getText$1(exec, target, opts?.lines);
+			if (!opts?.truncation) return { text };
+			if (opts.lines === "all") return {
+				text,
+				truncated: false
+			};
+			return {
+				text,
+				truncated: isReadTruncated$1(text, getText$1(exec, target, (opts.lines ?? 0) + 1))
+			};
+		},
+		waitForOutput(exec, target, opts) {
+			return pollForOutput$1(adapter, exec, target, opts);
+		},
+		focus(exec, target) {
+			exec("wezterm", [
+				"cli",
+				"activate-pane",
+				"--pane-id",
+				target.id
+			]);
+		},
+		teardown(exec, target) {
+			exec("wezterm", [
+				"cli",
+				"kill-pane",
+				"--pane-id",
+				target.id
+			]);
+		},
+		paneExists(exec, target) {
+			return listWeztermPanes$1(exec).some((p) => String(p.pane_id) === target.id);
+		},
+		/**
+		* `wezterm cli list-clients --format json` carries `focused_pane_id` per attached client. This
+		* member used to return a hard `undefined` on the grounds that "there is no primitive to ask",
+		* and **that was wrong** — measured on the pinned 20240203-110809-5046fc22 build, against a
+		* headless `wezterm-mux-server` with a real GUI client attached to it over the same socket:
+		* `focused_pane_id` read `0` at rest, `1` after `cli activate-pane --pane-id 1`, and `0` again
+		* after activating pane 0 back. It tracks focus, live, in both directions.
+		*
+		* **Not `list --format json`'s `is_active`**, which is the field this file already reads for
+		* zoom and the obvious-looking answer. It is per-TAB, and the same run measured why that is
+		* fatal here: with two tabs in one window and a second window open, THREE rows reported
+		* `is_active: true` at once. It answers "is this the active pane of its tab", so a caller asking
+		* "is the user looking at this pane" would get a confident `true` for two panes they are not
+		* looking at — the plausible wrong answer, not a throw.
+		*
+		* Three-valued, and each value is earned:
+		*
+		* - `undefined` when the pane is in no listing (gone, or the listing itself failed —
+		*   `listWeztermPanes` folds an exec failure into an empty array, which lands here as "cannot
+		*   say" rather than as "not focused").
+		* - `undefined` when NO client is attached, which a headless mux server reports as a literal
+		*   `[]` (measured). Nobody is viewing anything, so there is no focused pane for this one to
+		*   fail to be, and `false` would be reading a fact out of an absence.
+		* - `true`/`false` otherwise, against every attached client: focused if ANY of them is on this
+		*   pane. `MuxTarget` carries no client qualifier, so "the caller's client" is not expressible
+		*   and any-client is the only answerable reading.
+		*/
+		isPaneFocused(exec, target) {
+			if (!listWeztermPanes$1(exec).some((p) => String(p.pane_id) === target.id)) return void 0;
+			const clients = listWeztermClients$1(exec);
+			if (clients === void 0 || clients.length === 0) return void 0;
+			return clients.some((c) => c.focused_pane_id != null && String(c.focused_pane_id) === target.id);
+		},
+		/**
+		* `zoom-pane --zoom|--unzoom`, the native absolute form — no toggle to compose and no state to
+		* read back first on wezterm's own account (see `canZoomPanes` for the live probe). The guard is
+		* kept anyway, and it is the seam's contract rather than a wezterm need: `setPaneZoom` promises
+		* that a pane already in the requested state is not touched at all, and that promise is uniform
+		* across adapters or it is not a promise. It costs one `cli list` here.
+		*
+		* Zooming makes the pane ACTIVE (measured: `is_active` moved to the zoomed pane), which
+		* `MuxAdapter.setPaneZoom` declares. Unzooming moves nothing.
+		*
+		* Throws on failure rather than reporting a false success: a pane id wezterm cannot resolve
+		* fails the command outright (`unable to resolve current tab; terminating`, exit 1, measured),
+		* which reaches this as a `null` from `Exec`.
+		*/
+		setPaneZoom(exec, target, zoomed) {
+			if (adapter.isPaneZoomed(exec, target) === zoomed) return;
+			if (exec("wezterm", [
+				"cli",
+				"zoom-pane",
+				"--pane-id",
+				target.id,
+				zoomed ? "--zoom" : "--unzoom"
+			]) === null) throw new Error(`wezterm could not ${zoomed ? "zoom" : "unzoom"} pane ${target.id}`);
+		},
+		/**
+		* `is_zoomed`, per pane, off the `cli list --format json` call this adapter already makes — free,
+		* exactly as zellij's `is_fullscreen` is, and per-pane rather than the tab-wide flag tmux and
+		* herdr report. Verified live on 20240203: the field is present on every row and flipped to
+		* `true` on precisely the pane that was zoomed.
+		*
+		* This is the one read-back wezterm HAS, and the contrast with `isPaneFocused` right above is
+		* the point rather than an inconsistency: the same JSON row that carries no answer for focus
+		* carries a real one for zoom, so this member answers and that one still does not.
+		*
+		* Unresolvable (no matching record) answers `undefined`, never a false `false`.
+		*/
+		isPaneZoomed(exec, target) {
+			const found = listWeztermPanes$1(exec).find((p) => String(p.pane_id) === target.id);
+			if (!found) return void 0;
+			return found.is_zoomed === true;
+		},
+		/**
+		* `split-pane --pane-id <dst> --right|--bottom --move-pane-id <src>` — a MODE of the split verb
+		* rather than a move verb of its own, and the destination is named as `--pane-id`, the pane being
+		* split. That is exactly the seam's destination, which is the strongest single argument for a
+		* pane-typed destination: wezterm has no way to name a tab here at all.
+		*
+		* Prints the moved pane's id on success (`1`, measured) and keeps it — wezterm ids are
+		* server-wide, so unlike herdr nothing is renamed by crossing a window. The `OpenedPane` still
+		* costs a `cli list` lookup, for `resolveTab`'s reason: the id is all that comes back, and the
+		* tab and workspace the pane landed in are exactly what changed.
+		*
+		* Moving MOVES FOCUS here and there is no flag to stop it — the moved pane becomes its new tab's
+		* active pane (measured). That is the same thing `focusOnOpen: 'restored'` above
+		* already declares about every wezterm route, reported rather than compensated.
+		*/
+		movePane(exec, target, destination, side) {
+			if (exec("wezterm", [
+				"cli",
+				"split-pane",
+				"--pane-id",
+				destination.id,
+				side === "down" ? "--bottom" : "--right",
+				"--move-pane-id",
+				target.id
+			]) === null) throw new Error(`wezterm could not move pane ${target.id} to ${destination.id}`);
+			return withTabAndWorkspace$1(exec, target.id);
+		},
+		/**
+		* `move-pane-to-new-tab --pane-id <src>`, plus `--new-window --workspace <name>` for the
+		* workspace tier — wezterm's workspace is a set of WINDOWS, so a pane can only reach a new one
+		* by taking a new window with it.
+		*
+		* **The success check is `=== null`, not falsiness, and that is a real bug this avoids**: this
+		* verb prints NOTHING on success (measured — empty stdout, exit 0), so an `if (!out)` guard
+		* would throw on every successful break. `Exec` reports a failure as `null` and an empty
+		* success as `''`; only the strict check tells them apart.
+		*
+		* The workspace name is MINTED when the caller reaches the workspace tier, exactly as `open`
+		* does at that tier and for the same reason: `--workspace` defaults to `"default"`, so omitting
+		* it would put the "new workspace" in the one the caller was already in. wezterm has one string
+		* per workspace rather than an opaque id, so the minted name IS the identity.
+		*
+		* Costs the same `cli list` lookup `movePane` does, and here it is not optional at all: nothing
+		* is printed, so the tab the pane landed in can only be read back.
+		*/
+		breakPane(exec, target, at) {
+			const args = [
+				"cli",
+				"move-pane-to-new-tab",
+				"--pane-id",
+				target.id
+			];
+			if (at === "workspace") args.push("--new-window", "--workspace", `cyber-mux-${deps.newId().slice(0, 8)}`);
+			if (exec("wezterm", args) === null) throw new Error(`wezterm could not break out pane ${target.id} into its own ${at}`);
+			return withTabAndWorkspace$1(exec, target.id);
+		},
+		listPanes(exec) {
+			return listWeztermPanes$1(exec).map((p) => {
+				const pane = {
+					id: String(p.pane_id),
+					mux: "wezterm",
+					floating: false
+				};
+				const cwd = weztermCwd$1(p.cwd);
+				if (cwd) pane.cwd = cwd;
+				return pane;
+			});
+		}
+	};
+	return withJumpHistory$1(adapter);
+}
+createWeztermAdapter$1({ newId: nodeNewId$1 });
+/**
+* `wezterm cli spawn`/`split-pane` report ONLY the new pane's bare id on stdout — unlike tmux/herdr,
+* neither embeds the tab (or workspace) in that same output. So the tab this pane landed in is a
+* follow-up `list --format json` lookup rather than a free read of an envelope already held.
+* `OpenedPane.tab` is still required — every multiplexer has the Tab level — it simply costs more
+* here than the "no extra call" property tmux/herdr get to claim.
+*/
+function resolveTab$1(exec, pane) {
+	const found = listWeztermPanes$1(exec).find((p) => String(p.pane_id) === pane);
+	if (!found) throw new Error(`wezterm did not report a tab for the new pane ${pane}`);
+	return String(found.tab_id);
+}
+/**
+* A window of the named workspace — what `spawn --window-id` needs to place a tab in a workspace
+* WezTerm's CLI cannot target directly (`--workspace` only names the space a `--new-window` spawn
+* creates, so it cannot place a tab in an existing one).
+*
+* Throws rather than falling back to an untargeted spawn: an unresolvable anchor means the workspace
+* is gone, and the untargeted spawn is exactly the wrong-space bug `within` was added to close.
+*/
+function resolveWorkspaceWindow$1(exec, workspace) {
+	const found = listWeztermPanes$1(exec).find((p) => p.workspace === workspace);
+	if (!found) throw new Error(`wezterm reported no window in workspace ${workspace} to open a tab in`);
+	return String(found.window_id);
+}
+/** `resolveTab` plus the workspace the same lookup already answers — one call serves both facts. */
+function withTabAndWorkspace$1(exec, pane) {
+	const found = listWeztermPanes$1(exec).find((p) => String(p.pane_id) === pane);
+	if (!found) throw new Error(`wezterm did not report a tab for the new pane ${pane}`);
+	return {
+		id: pane,
+		tab: String(found.tab_id),
+		workspace: found.workspace
+	};
+}
+/**
+* Env is native at NO tier on this backend — `spawn`/`split-pane` take no `--env` at all, unlike
+* herdr (native everywhere but one worktree route). So every `open` funnels through the same
+* fallback herdr's worktree route uses: with a launch command, env rides in as an `env K=V` prefix;
+* with none, a warning names what did not land. `envFallback` is a no-op when there is no env to
+* carry, so this is safe to call unconditionally.
+*/
+function runLaunch$1$1(adapter, exec, target, env, launch) {
+	const fallback = envFallback$1(env, launch);
+	if (fallback.kind === "dropped") {
+		process.stderr.write(`env (${fallback.variables.join(", ")}) could not be set on this wezterm pane — wezterm has no --env flag on any space-creating command
+`);
+		return;
+	}
+	if (fallback.command !== void 0) adapter.submit(exec, target, fallback.command);
+}
+/** One `wezterm cli list --format json` call, parsed defensively — never throws on bad output. */
+function listWeztermPanes$1(exec) {
+	const out = exec("wezterm", [
+		"cli",
+		"list",
+		"--format",
+		"json"
+	]);
+	if (!out) return [];
+	let parsed;
+	try {
+		parsed = JSON.parse(out);
+	} catch {
+		return [];
+	}
+	if (!Array.isArray(parsed)) return [];
+	return parsed.filter((p) => p != null && p.pane_id != null && p.tab_id != null && p.window_id != null);
+}
+/**
+* The pane the attached client is on, or `undefined` when nothing answers — the restore target
+* `focusOnOpen: 'restored'` reads before an open moves anything.
+*
+* The FIRST client's pane. This adapter is single-client throughout (`MuxTarget` carries no client
+* qualifier any more than it carries a session one), and with several attached there is no "the
+* caller's client" for it to prefer. `undefined` when no client is attached — a headless mux server
+* reports exactly that — and nothing is restored then, because nothing was stolen from anybody.
+*/
+function focusedWeztermPane$1(exec) {
+	const focused = listWeztermClients$1(exec)?.[0]?.focused_pane_id;
+	return focused == null ? void 0 : String(focused);
+}
+/**
+* The attached clients, or `undefined` when wezterm could not be asked — and that distinction is the
+* whole reason this returns a nullable rather than folding failure into `[]` the way
+* `listWeztermPanes` does. Here the two readings differ: `[]` is a real, measured answer (a mux server
+* with no client attached prints exactly that) meaning "nobody is viewing anything", while an exec or
+* parse failure means "wezterm did not answer". `isPaneFocused` maps both to `undefined` today, so
+* nothing turns on it yet; collapsing them would still be throwing away the one fact that lets a
+* later caller tell an idle server from a broken one.
+*/
+function listWeztermClients$1(exec) {
+	const out = exec("wezterm", [
+		"cli",
+		"list-clients",
+		"--format",
+		"json"
+	]);
+	if (out === null) return void 0;
+	let parsed;
+	try {
+		parsed = JSON.parse(out);
+	} catch {
+		return;
+	}
+	if (!Array.isArray(parsed)) return void 0;
+	return parsed.filter((c) => c != null && typeof c === "object");
+}
+/** `cwd` is reported as a `file://` URI; strip the scheme and host down to the bare path. */
+function weztermCwd$1(cwd) {
+	if (!cwd) return void 0;
+	const match = /^file:\/\/[^/]*(\/.*)$/.exec(cwd);
+	return match ? decodeURIComponent(match[1]) : cwd;
+}
+/**
+* `ratio` is the fraction kept by the ORIGINAL pane; `--percent` sizes the NEW one (the issue's own
+* probe note, #47) — the same inversion tmux's `-l` needs, unlike herdr's pass-through.
+*/
+function toWeztermSize$1(ratio) {
+	assertRatioInRange$1(ratio);
+	return String(Math.round((1 - ratio) * 100));
+}
+/**
+* The core vocabulary, realized as raw terminal bytes rather than a backend key NAME — there is no
+* send-keys-shaped verb to name a key TO, only `send-text`. Escape sequences are the ANSI/VT100
+* "cursor key mode" forms every common shell/program already parses; `Backspace` sends DEL (`\x7f`),
+* what most terminals emit for that key today (probed, not read off any wezterm spec — wezterm ships
+* no such table because it has no key-name CLI surface to spec).
+*
+* `Home`/`End`/`Delete`/`Insert`/`PageUp`/`PageDown` are extras beyond the core, included for the
+* same reason tmux "knows" `Home` even though the core vocabulary does not name it: these are
+* standard-enough ANSI keys that encoding them costs nothing extra and a caller reaching for one
+* should not silently get the literal word typed instead.
+*/
+const WEZTERM_KEY_BYTES$1 = {
+	Up: "\x1B[A",
+	Down: "\x1B[B",
+	Right: "\x1B[C",
+	Left: "\x1B[D",
+	Enter: "\r",
+	Escape: "\x1B",
+	Tab: "	",
+	Space: " ",
+	Backspace: "",
+	"C-c": "",
+	F1: "\x1BOP",
+	F2: "\x1BOQ",
+	F3: "\x1BOR",
+	F4: "\x1BOS",
+	F5: "\x1B[15~",
+	F6: "\x1B[17~",
+	F7: "\x1B[18~",
+	F8: "\x1B[19~",
+	F9: "\x1B[20~",
+	F10: "\x1B[21~",
+	F11: "\x1B[23~",
+	F12: "\x1B[24~",
+	Home: "\x1B[H",
+	End: "\x1B[F",
+	Delete: "\x1B[3~",
+	Insert: "\x1B[2~",
+	PageUp: "\x1B[5~",
+	PageDown: "\x1B[6~"
+};
+/**
+* One spelling of the capture, taken by `read` for the snapshot AND for its one-row-deeper truncation
+* probe, so the two differ only in the number they are meant to disagree about.
+*
+* `--start-line` counts backward into scrollback from 0 (the top of the visible screen); the end
+* defaults to the bottom of the screen. Negative-N approximates "last N lines" the way tmux's `-S -N`
+* does, though the two are not guaranteed to line up cell-for-cell. `lines` omitted is WezTerm's own
+* default window — the visible screen, with no `--start-line` at all.
+*/
+function getText$1(exec, target, lines) {
+	const args = [
+		"cli",
+		"get-text",
+		"--pane-id",
+		target.id
+	];
+	const start = lines === "all" ? FULL_SCROLLBACK_LINES$1 : lines;
+	if (start != null) args.push("--start-line", String(-start));
+	return exec("wezterm", args) ?? "";
+}
+/**
+* Zellij backend — detected via `$ZELLIJ`. Drives Zellij's built-in multiplexer through `zellij
+* action …` (https://zellij.dev/documentation/cli-actions), the same synchronous-CLI shape tmux,
+* herdr and wezterm already give `Exec`.
+*
+* Requires **Zellij ≥ 0.45.0**. The whole per-pane-addressable surface this adapter stands on landed
+* in 0.44.0 (2026-03-23): `--pane-id` across the action verbs, `list-panes --json`, ids returned from
+* `new-pane`/`new-tab`, and `focus-pane-id` (0.44.1). Before that release Zellij's CLI was almost
+* entirely FOCUS-relative — no stable per-pane handle — and no faithful adapter was possible. On an
+* older binary these commands fail and the adapter surfaces the failure rather than silently
+* mis-targeting the focused pane.
+*
+* The floor moved from 0.44.1 to **0.45.0** (2026-08-20) for `--no-focus`, which is what lets this
+* backend answer `focusOnOpen` at all. Raising it rather than keeping the old
+* focus-stealing path as a fallback, for four reasons that compound:
+*
+* - The seam member is a **static declaration**, like `canSizeSplits` and `canFloatPanes` — there is
+*   no runtime probe behind any of them. An adapter cannot declare `true` and then quietly degrade on
+*   an old binary without lying in precisely the way the declaration exists to prevent, and a
+*   conditional value has nowhere to live.
+* - Version-probing to decide would be a NEW behavior for this file, which reads no version anywhere,
+*   and would cost an exec on every open to pre-empt a failure zellij already reports precisely.
+* - A fallback would be a second code path that nothing here can ever exercise: there is no zellij on
+*   the machine this was written on, and the integration suite skips its rows without one (issue
+*   #125). Untested code guarding an untestable condition is a liability, not a safety net.
+* - The 0.44 failure is LOUD and creates nothing. Zellij's CLI parses in clap's strict mode (the
+*   v0.45.0 tree sets no `ignore_errors`, `allow_hyphen_values`, `allow_external_subcommands`, or
+*   `trailing_var_arg` anywhere in `zellij-utils/src/cli.rs`), so an unknown `--no-focus` is a parse
+*   error on stderr and a nonzero exit — surfaced by the `withReason` throw in `open`, which names the
+*   command. There is no silent wrong-pane for it to become, which is the one failure mode worth
+*   engineering against. tmux sets this precedent exactly: `new-pane` is declared unconditionally and
+*   an older binary fails with tmux's own `unknown command`.
+*
+* **The 0.45.0 surface is UNVERIFIED against a running binary** — read out of the v0.45.0 source tree
+* (`zellij-utils/src/cli.rs`, `zellij-server/src/route.rs`), not driven. Everything below attributed
+* to 0.44.3 was driven, and stays driven; the two claims are kept apart on purpose.
+*
+* Originally probed from the Zellij docs + CHANGELOG alone; now **driven against a live 0.44.3
+* binary** by `mux.zellij.integration.test.ts`, so the command shapes below carry the same
+* verified-against-a-real-binary claim `session.tmux.ts`/`session.herdr.ts` make. What the live probe
+* changed, and what a doc probe could not have known:
+*
+* - The id forms are confirmed and asymmetric: `new-pane` prints the PREFIXED `terminal_N`, while
+*   `list-panes --json` reports `id` as a BARE integer. `samePane` is what makes those the same pane,
+*   so it is load-bearing rather than defensive.
+* - That bare integer is NOT unique: a live session reports `id: 0` for both its suppressed
+*   `zellij:link` PLUGIN pane and its first terminal pane. The number is unique only within a kind,
+*   and `is_plugin` is what says which kind — so `listZellijPanes` qualifies every bare id to
+*   `terminal_N`/`plugin_N` before anything compares or reports it. Both prefixed forms are what
+*   `--pane-id` itself accepts, and a bare `N` addresses the TERMINAL pane (verified: renaming
+*   `--pane-id 3` renames terminal 3 and leaves plugin 3 alone), which is exactly the fold
+*   `normalizePaneId` makes.
+* - Which `list-panes --json` field names are real, and what each one carries. The label guard reads
+*   `terminal_command`, not `pane_command` — a doc probe had that one backwards; see `ZellijPane`.
+*   `pane_cwd` and `pane_command` are real too, and both are present ONLY on a terminal pane: a
+*   plugin pane's record omits the keys entirely, which is how a probe that sampled one concluded
+*   the fields did not exist at all. That is the failure mode of a doc probe, and the reason this
+*   file now has a suite.
+* - `new-pane --direction` requires an attached client focused on a TERMINAL pane, and fails
+*   SILENTLY without one — it prints a plausible new pane id and exits 0 having created nothing.
+*   Re-probed against 0.44.3 with the client parked on zellij's own release-notes PLUGIN pane, which
+*   is where a fresh attach lands: the split printed `terminal_2`, exited 0, and the pane count did
+*   not move. `open()` does not propagate that phantom — see `openedForPane`, which now believes a
+*   reported id only where it names a pane that was NOT already standing.
+* - **A `zellij action` reply can be delivered to the WRONG command**, and **a session no client has
+*   ever attached to reports `list-panes --json` as an empty ARRAY** rather than as an error. Both
+*   are the reason this file retries a listing instead of reading one empty answer as the truth; see
+*   `LIST_PANES_ATTEMPTS` for the repro behind the first and `mux.zellij.integration.test.ts`'s
+*   readiness gate for the second. So the older claim that every verb but `--direction` works against
+*   a client-less session is wrong: the listing is silent there, and everything in this file that
+*   resolves an id reads the listing.
+* - **A `zellij action` can fail its own PRE-FLIGHT and never reach the server at all**, while the
+*   session is up and answers correctly a millisecond later. Driven on a live 0.45.0 under CPU
+*   contention: 2 bad answers in 600 `list-clients` calls — one exit-1 `There is no active session!`
+*   with an explicit `--session` naming that live session, one that exited **0 printing nothing** —
+*   and both correct on an immediate re-ask. `zellij list-sessions` polled 400 times against an idle
+*   server never missed, which is what makes this the busy-server probe rather than a stale socket.
+*   `ACTION_ATTEMPTS` is what this file does about it, and issue #115 is what it cost before that.
+*
+* Real capability shape that fell out of the probe:
+*
+* - **The session is the workspace tier, but a SEPARATE session's panes are un-addressable through
+*   this seam.** Zellij's native tiers are Session › Tab › Pane, so a `workspace` placement would
+*   naturally open a new session (`zellij attach --create-background`). But Zellij pane ids are
+*   SESSION-SCOPED — driving another session's pane requires `zellij --session <name> action …` — and
+*   `MuxTarget` carries only an opaque pane id, no session. A pane returned from a freshly-created
+*   session would therefore fail on the next `write`/`read`/`focus`, which is a trap, not a feature.
+*   So this adapter operates within the AMBIENT session: `workspace` collapses to a new **tab**, the
+*   same collapse tmux makes for a Window. Unlike tmux, the occupied workspace IS reported —
+*   `OpenedPane.workspace` carries the ambient session name (`deps.session`), because every pane
+*   genuinely lives in that session. (Lifting the collapse needs a seam change: a session qualifier
+*   on `MuxTarget`. Recorded in the ADR log.)
+* - **No `--env` on `new-pane`/`new-tab`.** Like wezterm, env is native at no tier, so every open
+*   rides the `envFallback` compensation (an `env K=V` prefix on the launch command, or a stderr
+*   warning when there is no command to ride).
+* - **Tiled splits cannot be sized.** `new-pane`'s `-x/-y/--width/--height` all require `--floating`;
+*   a tiled `pane:*` split is always even. So `canSizeSplits` is omitted and a `ratio` is dropped —
+*   callers degrade to the even default, the same path the flag's absence already documents.
+* - **`new-pane` has no split-TARGET flag.** It splits the focused pane (or the biggest space); the
+*   only flag is `--tab-id`. So `from` — which pane a `pane:*` split lands beside — is honored by
+*   FOCUSING that pane first, the sole way to choose the split target. That is still a real focus
+*   move; what changed in 0.45.0 is that it is now UNDONE, not that it stopped happening. See
+*   `focusOnOpen`, and `open` for why `--no-focus` cannot be the answer on that path —
+*   it re-anchors the split on the ISSUING pane and would make the focus move pointless and the target
+*   wrong.
+* - **No pane geometry adapter.** `list-panes --json` does report `pane_x`/`pane_y`, so `regions`
+*   (`describeRegion`/`describeWorkspace`) is IMPLEMENTABLE here — unlike wezterm, which lacks
+*   position entirely — but the cell-vs-divider semantics of Zellij's rects need a live binary to pin,
+*   so it is deliberately left as a follow-up rather than guessed. `template save` refuses on zellij
+*   by naming the backend, the same optional-absence it already handles for wezterm.
+* - **No git-worktree concept in the CLI.** No `worktree` subcommand, so — like tmux and wezterm —
+*   this backend never binds one to a workspace; callers fall back to plain git plus `open()`.
+*
+* Wins Zellij has that wezterm does not: it CAN name a pane (`new-pane --name` / `rename-pane`), and
+* it CAN report which pane is focused (`list-panes --json`'s `is_focused`), so `isPaneFocused`
+* answers a real value rather than always `unknown`.
+*/
+/**
+* Build the Zellij adapter over its injected effects. The only effect it takes is `session` — the
+* ambient Zellij session name (`$ZELLIJ_SESSION_NAME`), reported as `OpenedPane.workspace` so a
+* caller learns which workspace a new pane landed in. Undefined when unknown (the exported singleton),
+* in which case `workspace` is simply omitted — the same absent-not-false convention the seam uses
+* elsewhere. Exported as a factory (with `zellijMuxAdapter` binding the effect-less one) so
+* `backend.ts` can bind the real session name off `env` at resolution, exactly the seam `Exec` and
+* wezterm's `newId` already are.
+*/
+function createZellijAdapter$1(deps) {
+	const adapter = {
+		name: "zellij",
+		canFloatPanes: true,
+		/**
+		* Every route this adapter can take ends with the caller's focus where it started, which is the
+		* end-state the seam declares — NOT "focus never moves at any instant", which zellij cannot offer
+		* on the one route that has to choose a split target. Two different mechanisms get there, and
+		* which one applies is decided by whether `from` was named:
+		*
+		* - **No target to choose** (`new-tab`, and `new-pane` with no `from`): `--no-focus`, and nothing
+		*   moves at all. Zellij 0.45.0's flag, on the verbs this adapter uses.
+		* - **A named `from`**: focus it, split it, then focus back to the pane that was focused before —
+		*   a real, visible round trip. `--no-focus` is deliberately NOT passed here; see `open`, where
+		*   passing it would silently split the WRONG pane.
+		*
+		* **Written blind, now driven in CI.** There is no zellij on the machine this was written on, so
+		* `--no-focus` was read out of the v0.45.0 source tree (`zellij-utils/src/cli.rs`, the
+		* `no_focus: bool` field on `CliAction::NewPane`/`NewTab`) rather than off a live `--help`. CI's
+		* live-backends job pins 0.45.0 and runs `mux.zellij.integration.test.ts` against it, where two
+		* rows assert the CLIENT does not move — one per mechanism above. That is the evidence for this
+		* boolean. A LOCAL run is not: the suite skips every row when no binary is present and still
+		* reports green (issue #125).
+		*/
+		/**
+		* `true` — `zellij action toggle-fullscreen -p <pane-id>`, zellij's name for the same thing.
+		* Verified live on 0.45.0 (the version CI pins) rather than read out of the source, which is what
+		* `canFloatPanes` and `focusOnOpen` above had to settle for: driving it against a
+		* three-terminal-pane tab flipped that pane's `is_fullscreen` in `list-panes --json` and back.
+		*
+		* Declared despite the verb being a TOGGLE, because zellij also REPORTS the state the toggle has
+		* to be guarded by (`is_fullscreen`, per pane, free in the listing this adapter already makes).
+		* That combination is what the flag actually claims — see `mux.tmux.ts`'s note.
+		*/
+		canZoomPanes: true,
+		/**
+		* `'restored'`, and the change from the old boolean `true` is a correction rather than a
+		* downgrade. Both of this backend's routes end with focus where they found it, but only one of
+		* them never moves it: with no `from`, `new-pane --no-focus` means nothing moves at any instant;
+		* with a `from`, the anchor pane is FOCUSED first (zellij's `new-pane` has no split-target
+		* flag), the pane is opened, and `focus-pane-id` puts the client back.
+		*
+		* The boolean had one value for both and so declared the same thing tmux declares, which is not
+		* what a human watching sees. `'restored'` says the visible truth: a flicker, then home.
+		* `'preserved'` would be the claim that no instant of this open shows the user somewhere else,
+		* and on the `from` path that is false.
+		*/
+		focusOnOpen: "restored",
+		open(exec, opts) {
+			const at = opts.at ?? "tab";
+			if (at === "tab" || at === "workspace") {
+				const args = [
+					"action",
+					"new-tab",
+					"--no-focus",
+					"--cwd",
+					opts.cwd
+				];
+				if (opts.label) args.push("--name", opts.label);
+				const before = paneIdSet$1(exec);
+				const out = exec("zellij", args);
+				if (out === null) throw new Error(withReason$1(exec, "zellij action new-tab failed"));
+				const opened = openedForTab$1(exec, out.trim(), before, deps.session);
+				runLaunch$4(adapter, exec, opened, opts.env, opts.launch);
+				return opened;
+			}
+			const before = paneIdSet$1(exec);
+			const restoreTo = opts.from ? clientPane$1(exec) : void 0;
+			if (opts.from) focusClientOn$1(exec, opts.from.id);
+			const placement = at === "pane:float" ? ["--floating"] : ["--direction", at === "pane:down" ? "down" : "right"];
+			const focusFlag = opts.from ? [] : ["--no-focus"];
+			const args = [
+				"action",
+				"new-pane",
+				...placement,
+				...focusFlag,
+				"--cwd",
+				opts.cwd
+			];
+			if (opts.label) args.push("--name", opts.label);
+			const out = exec("zellij", args);
+			if (out === null) throw new Error(withReason$1(exec, "zellij action new-pane failed"));
+			const opened = openedForPane$1(exec, out.trim(), before, deps.session);
+			if (restoreTo) focusClientOn$1(exec, restoreTo);
+			runLaunch$4(adapter, exec, opened, opts.env, opts.launch);
+			return opened;
+		},
+		rename(exec, target, tier, name) {
+			if (tier === "tab") {
+				zellijAction$1(exec, [
+					"action",
+					"rename-tab-by-id",
+					target.id,
+					name
+				]);
+				return;
+			}
+			zellijAction$1(exec, [
+				"action",
+				"rename-pane",
+				"--pane-id",
+				target.id,
+				name
+			]);
+		},
+		group() {},
+		sendText(exec, target, text) {
+			zellijAction$1(exec, [
+				"action",
+				"write-chars",
+				"--pane-id",
+				target.id,
+				text
+			]);
+		},
+		sendKeys(exec, target, keys) {
+			zellijAction$1(exec, [
+				"action",
+				"send-keys",
+				"--pane-id",
+				target.id,
+				...keys.map(toZellijKey$1)
+			]);
+		},
+		submit(exec, target, text) {
+			if (!text) {
+				adapter.sendKeys(exec, target, ["Enter"]);
+				return;
+			}
+			adapter.sendText(exec, target, text);
+			adapter.sendKeys(exec, target, ["Enter"]);
+		},
+		read(exec, target, opts) {
+			if (opts?.lines === "all") {
+				const text = zellijAction$1(exec, [
+					"action",
+					"dump-screen",
+					"--pane-id",
+					target.id,
+					"--full"
+				]) ?? "";
+				return opts.truncation ? {
+					text,
+					truncated: false
+				} : { text };
+			}
+			if (opts?.lines != null) {
+				const full = zellijAction$1(exec, [
+					"action",
+					"dump-screen",
+					"--pane-id",
+					target.id,
+					"--full"
+				]) ?? "";
+				const text = lastLines$1(full, opts.lines);
+				return opts.truncation ? {
+					text,
+					truncated: isReadTruncated$1(text, full)
+				} : { text };
+			}
+			const text = zellijAction$1(exec, [
+				"action",
+				"dump-screen",
+				"--pane-id",
+				target.id
+			]) ?? "";
+			if (!opts?.truncation) return { text };
+			return {
+				text,
+				truncated: isReadTruncated$1(text, zellijAction$1(exec, [
+					"action",
+					"dump-screen",
+					"--pane-id",
+					target.id,
+					"--full"
+				]) ?? "")
+			};
+		},
+		waitForOutput(exec, target, opts) {
+			return pollForOutput$1(adapter, exec, target, opts);
+		},
+		focus(exec, target) {
+			zellijAction$1(exec, [
+				"action",
+				"focus-pane-id",
+				target.id
+			]);
+		},
+		teardown(exec, target) {
+			zellijAction$1(exec, [
+				"action",
+				"close-pane",
+				"--pane-id",
+				target.id
+			]);
+		},
+		paneExists(exec, target) {
+			return listZellijPanes$1(exec).some((p) => samePane$1(p.id, target.id));
+		},
+		isPaneFocused(exec, target) {
+			if (!listZellijPanes$1(exec).find((p) => samePane$1(p.id, target.id))) return void 0;
+			const client = clientPane$1(exec);
+			if (client === void 0) return void 0;
+			return samePane$1(client, target.id);
+		},
+		/**
+		* `focus-pane-id` and THEN `toggle-fullscreen -p <id>` — both calls, and the first is not
+		* redundant. Measured on a live 0.45.0: with `terminal_1` fullscreen, `toggle-fullscreen -p
+		* terminal_2` simply LEFT fullscreen — every pane came back `is_fullscreen: false` and
+		* `terminal_1` kept the focus — so naming the pane does not transfer the zoom any more than it
+		* does on tmux. `focus-pane-id terminal_2` first unfullscreens the tab and moves the focus, and
+		* the toggle that follows then fullscreens the right pane.
+		*
+		* That focus move is why zooming moves the user here, which `MuxAdapter.setPaneZoom` declares
+		* rather than compensates — and note it is unavoidable rather than chosen: a bare
+		* `toggle-fullscreen -p <id>` on an un-fullscreened tab already focuses the pane it zooms
+		* (measured: the client moved from `terminal_0` to `terminal_2`). There is nothing focus-
+		* preserving to prefer, and `--no-focus` — which `open` leans on — is not a flag this verb has.
+		*
+		* Unzooming needs no focus call: the guard has already established that this pane is the
+		* fullscreen one, and on zellij the fullscreen pane is the focused one.
+		*
+		* The state is read first because the seam's member is absolute and this verb is a toggle; a
+		* pane already in the requested state issues nothing.
+		*/
+		setPaneZoom(exec, target, zoomed) {
+			if (adapter.isPaneZoomed(exec, target) === zoomed) return;
+			if (zoomed) focusClientOn$1(exec, target.id);
+			if (zellijAction$1(exec, [
+				"action",
+				"toggle-fullscreen",
+				"-p",
+				target.id
+			]) === null) throw new Error(`zellij could not ${zoomed ? "zoom" : "unzoom"} pane ${target.id}`);
+		},
+		/**
+		* `is_fullscreen`, per pane, off the `list-panes --json` call this adapter already makes — a
+		* genuinely per-pane flag, unlike tmux's window-scoped one, so no conjunction is needed. Verified
+		* live on 0.45.0: exactly one record carried `is_fullscreen: true` while a pane was zoomed, and
+		* every record read `false` otherwise.
+		*
+		* Unresolvable (no matching record) answers `undefined`, never a false `false` — a caller cannot
+		* tell "not zoomed" from "pane gone" here, the same rule `isPaneFocused` follows.
+		*/
+		isPaneZoomed(exec, target) {
+			const found = listZellijPanes$1(exec).find((p) => samePane$1(p.id, target.id));
+			if (!found) return void 0;
+			return found.is_fullscreen === true;
+		},
+		/**
+		* Refused BY NAME. zellij can rotate a pane within its tab and cannot send one to another tab
+		* at all, so there is nothing here to render a destination with — see the declaration above for
+		* the inventory read that settles it.
+		*
+		* Emulating it would mean opening a fresh pane at the destination and closing this one, which
+		* loses the process, the scrollback and the identity the caller was moving — the substitution
+		* `MuxAdapter.movePane` exists to refuse. `canMovePanes`'s absence is the declaration; this is
+		* the enforcement, and both are needed for the reason `open`'s float refusal spells out: a
+		* pre-flight check is not on the path a library caller takes.
+		*/
+		movePane() {
+			refusePaneMove$1("zellij");
+		},
+		/** Refused BY NAME, for `movePane`'s reason — 0.45.0 has no break-out verb at any spelling. */
+		breakPane() {
+			refusePaneBreak$1("zellij");
+		},
+		listPanes(exec) {
+			return listZellijPanes$1(exec).map((p) => {
+				const pane = {
+					id: p.id,
+					mux: "zellij",
+					floating: p.is_floating === true
+				};
+				if (p.pane_cwd) pane.cwd = p.pane_cwd;
+				const label = zellijLabel$1(p.title, p.terminal_command);
+				if (label) pane.label = label;
+				return pane;
+			});
+		}
+	};
+	return withJumpHistory$1(adapter);
+}
+createZellijAdapter$1({});
+/**
+* How many times a listing is re-asked before it is reported as empty, and how many times an open
+* re-looks for the pane it just made.
+*
+* Both exist for ONE verified defect in zellij 0.44.3's CLI, which no amount of adapter care can
+* prevent and every verb here rides on: **a `zellij action` reply can be delivered to the wrong
+* command.** Driven under CPU contention, a command exits 0 having printed NOTHING, and the reply it
+* should have received arrives on the stdout of the command issued after it. Reproduced by
+* alternating `new-tab` and `list-panes --json` 40 times on a loaded 2-core box — twice in 40, the
+* `new-tab` printed an empty string and the `list-panes` that followed it printed `27`. Two hundred
+* back-to-back `list-panes --json` calls with no mutating verb between them lost nothing, so it is
+* the mutating verbs that open the window.
+*
+* The consequences land squarely here. An empty reply to `list-panes --json` is not an empty session
+* — a live zellij session always has at least one pane — so reading it as one made every id
+* resolution in this file fail at once. And an id printed by `new-pane`/`new-tab` may belong to the
+* PREVIOUS command, so it can name a pane that has been standing all along.
+*
+* A retry is the honest remedy because the loss is per-call and independent: the same read reissued
+* answers. These are ceilings on a wedged server, not a wait that decides a pass.
+*
+* What a retry CANNOT reach, stated so a caller knows the edge: a misdelivered reply may also be a
+* valid pane array — an older one, which simply does not carry a pane opened since. Nothing in the
+* shape of that answer marks it stale, so `listPanes` cannot reject it and a single negative read
+* (`paneExists`, `isPaneFocused`) can be wrong. A caller that needs certainty on this backend re-asks;
+* `mux.zellij.integration.test.ts` does exactly that.
+*/
+const LIST_PANES_ATTEMPTS$1 = 3;
+const OPEN_RESOLVE_ATTEMPTS$1 = 10;
+/**
+* How many times a `zellij action` that came back with NOTHING AT ALL is re-issued — the second half
+* of the same lossiness `LIST_PANES_ATTEMPTS` stands in front of, and the one that made this backend's
+* real-boundary suite flaky (issue #115).
+*
+* The failure is zellij's own PRE-FLIGHT, not the action. `zellij action` enters
+* `send_action_to_session`, which calls `get_active_session()` **before** it honors `--session`
+* (v0.45.0 `src/commands.rs`). That walks the socket dir and probes every session with
+* `assert_socket` — connect, send `ClientToServerMsg::ConnStatus`, and require a `Connected` message
+* back; `None | Some((_, _)) => false` (v0.45.0 `zellij-utils/src/sessions.rs`), so a reply that is
+* late, lost, or simply something else drops a LIVE session off the list. An empty list is
+* `ActiveSession::None`, and the CLI prints `There is no active session!` and exits 1 — with an
+* explicit `--session` naming a session that is up and answering a millisecond later.
+*
+* Measured against a live 0.45.0 under CPU contention (40 spinners on 16 cores, the shape a loaded CI
+* runner has): 2 bad answers in 600 `list-clients` calls — one that exit-1 `There is no active
+* session!`, one that exited **0 printing nothing at all** — and BOTH answered correctly when the same
+* command was re-asked immediately. `zellij list-sessions` polled 400 times against an idle server
+* never missed, which is what says this is the busy-server probe rather than a stale socket file.
+*
+* So a re-ask here is not a retry that waits out an assertion: a command that failed its pre-flight
+* never reached the server and therefore did not happen, and re-issuing it COMPLETES one operation
+* rather than repeating one. That is also why it is safe on `rename-pane`, `focus-pane-id`,
+* `close-pane`, `write-chars` and `toggle-fullscreen` alike — including the one verb that is a
+* TOGGLE, which a repeat would otherwise undo.
+*
+* Deliberately NOT used on `new-pane`/`new-tab`, the only verbs that CREATE. The argument above says
+* nothing was created when the client exited nonzero, but "probably nothing" is not good enough for a
+* verb whose repeat leaves a stray pane behind, and those two already fail LOUDLY by name rather than
+* as a plausible wrong answer — the failure shape this file is built to prefer.
+*/
+const ACTION_ATTEMPTS$1 = 3;
+/**
+* One `zellij action`, re-issued while it answers nothing at all — see `ACTION_ATTEMPTS` for the
+* pre-flight failure this stands in front of and for why re-issuing is sound.
+*
+* `null` only when every attempt came back `null`, which is then a real failure the caller reports.
+*/
+function zellijAction$1(exec, args) {
+	for (let attempt = 1; attempt <= ACTION_ATTEMPTS$1; attempt++) {
+		const out = exec("zellij", args);
+		if (out !== null) return out;
+	}
+	return null;
+}
+/**
+* One `zellij action list-panes --json` read, parsed defensively — `undefined` for output that is not
+* a pane array, so a caller can tell "zellij did not answer" from "zellij answered, with no panes".
+* Every id is QUALIFIED on the way out (see `zellijPaneId`), so what this returns — and therefore
+* what `LivePane.id` carries and what `samePane` compares — names exactly one live pane.
+*/
+function readZellijPanes$1(exec) {
+	const out = exec("zellij", [
+		"action",
+		"list-panes",
+		"--json"
+	]);
+	if (!out) return void 0;
+	let parsed;
+	try {
+		parsed = JSON.parse(out);
+	} catch {
+		return;
+	}
+	if (!Array.isArray(parsed)) return void 0;
+	return parsed.filter((p) => p != null && p.id != null).map((p) => ({
+		...p,
+		id: zellijPaneId$1(p.id, p.is_plugin)
+	}));
+}
+/**
+* The id a listing record is reported under — qualified by KIND, because zellij's bare number is not
+* unique. Plugin panes and terminal panes are numbered in separate spaces, so a live session reports
+* `id: 0` for both its suppressed `zellij:link` plugin pane and its first terminal pane; reporting
+* both as `'0'` collapsed two genuinely different panes onto one `LivePane.id`, and every resolution
+* by id — `paneExists`, `isPaneFocused`, and `openedForPane`'s guard against a phantom `new-pane`
+* result — could then land on the wrong one.
+*
+* A bare integer therefore takes the `terminal_`/`plugin_` prefix its `is_plugin` names, which is the
+* form `new-pane` already prints and the form `--pane-id` accepts for BOTH kinds (verified against a
+* live 0.44.3). An id that already carries a prefix is left exactly as it is — this qualifies what
+* zellij left ambiguous, it does not rewrite what zellij spelled out.
+*
+* A record with no `is_plugin` at all is read as a terminal pane: that is the same answer
+* `normalizePaneId` gives a bare id, and the kind zellij's own bare-id addressing resolves to.
+*/
+function zellijPaneId$1(id, isPlugin) {
+	const raw = String(id);
+	if (!/^\d+$/.test(raw)) return raw;
+	return isPlugin === true ? `plugin_${raw}` : `terminal_${raw}`;
+}
+/**
+* The session's panes — never throws on bad output, and never reports a LOST reply as an empty
+* session. A read that did not come back as a pane array is simply re-asked (`LIST_PANES_ATTEMPTS`);
+* only a session that refuses every time answers `[]`, which is then a real answer rather than a
+* dropped one. See `LIST_PANES_ATTEMPTS` for the defect this stands in front of.
+*/
+function listZellijPanes$1(exec) {
+	for (let attempt = 1; attempt <= LIST_PANES_ATTEMPTS$1; attempt++) {
+		const panes = readZellijPanes$1(exec);
+		if (panes) return panes;
+	}
+	return [];
+}
+/**
+* The panes standing right now, keyed the way `samePane` compares them — an open's BEFORE side. A
+* pane already in this set cannot be the one the open just made, which is the whole check.
+*/
+function paneIdSet$1(exec) {
+	return new Set(listZellijPanes$1(exec).map((p) => normalizePaneId$1(p.id)));
+}
+/**
+* The pane THE CLIENT is on, or `undefined` when nothing answers — the restore target an open that
+* moved focus has to land back on.
+*
+* `zellij action list-clients` prints a header row and then one row per client; the second
+* whitespace-separated column is the pane id, in the `terminal_N`/`plugin_N` form `focus-pane-id`
+* accepts. The FIRST client row is taken: this adapter is single-client throughout (`MuxTarget`
+* carries no client qualifier any more than it carries a session one), and with several attached
+* there is no "the caller's client" for it to prefer.
+*
+* `undefined` means "zellij answered, and NO client is attached" — never "zellij did not answer". The
+* two used to collapse onto the same value, and that is the bug behind issue #115's focus-restore
+* failure: an `open({ from })` reads this to learn where to put focus back, so a lost answer read as
+* "no client" made the restore silently do nothing and left the client on the pane the open created.
+* Observed on CI as `expected 'terminal_5' to be 'terminal_0'` — a plausible wrong answer, which is
+* the worst shape this file can produce.
+*
+* The two are told apart by SHAPE. A `list-clients` answer is a `CLIENT_ID`-headed table; anything
+* else — the empty string a dropped reply prints, or another command's output — is not an answer at
+* all and is re-asked (`ACTION_ATTEMPTS`). A well-formed table with no rows under the header IS an
+* answer, and it says nothing is attached, so it returns `undefined` on the first read without
+* spending a re-ask on a session that is genuinely client-less.
+*/
+function clientPane$1(exec) {
+	for (let attempt = 1; attempt <= ACTION_ATTEMPTS$1; attempt++) {
+		const out = exec("zellij", ["action", "list-clients"]);
+		if (out === null || !/^CLIENT_ID\b/.test(out)) continue;
+		const row = out.split("\n")[1];
+		if (row === void 0) return void 0;
+		const id = row.trim().split(/\s+/)[1];
+		if (id) return id;
+	}
+}
+/**
+* Focus a pane and CONFIRM the client got there, rather than trusting that the verb landed.
+*
+* `focus-pane-id` returns as soon as the server accepts it, and — per `ACTION_ATTEMPTS` — it may not
+* reach the server at all. Its exit code cannot close the gap: measured on 0.45.0 it exits **2** both
+* when the pane is ALREADY focused (a success for this purpose) and when the pane does not exist, so
+* `setPaneZoom` documents why it goes unchecked. `list-clients` is the observable that does answer,
+* and this is where the two callers whose CORRECTNESS depends on the focus having landed read it.
+*
+* Why those two need it: a `--direction` split issued while the client still sits on the old pane
+* splits the wrong pane — or, if that old pane is a plugin pane, fails SILENTLY (this file's header).
+* And `toggle-fullscreen -p <id>` on a pane the client is not on, in a tab that already has a
+* fullscreen pane, simply LEAVES fullscreen and reports success — issue #115's
+* `expected 'false' to be 'true'`, after a 15s poll that never had anything to wait for.
+*
+* A client-less session answers `undefined` and this returns immediately: there is no client to move,
+* nothing could have been stolen, and every caller here degrades to today's fire-and-forget.
+*/
+function focusClientOn$1(exec, id) {
+	for (let attempt = 1; attempt <= ACTION_ATTEMPTS$1; attempt++) {
+		zellijAction$1(exec, [
+			"action",
+			"focus-pane-id",
+			id
+		]);
+		const on = clientPane$1(exec);
+		if (on === void 0 || samePane$1(on, id)) return;
+	}
+}
+/**
+* The TERMINAL panes that appeared since `before` — the only candidates an open can have made.
+*
+* Plugin panes are excluded because zellij loads them on its own schedule, not the caller's: a tab
+* opened by `new-tab` can be carrying a plugin pane in the same listing as its own initial pane, and
+* that plugin record can sort FIRST. Resolving an open to it hands the caller a `plugin_N` — an id
+* that exists, so nothing downstream refuses it, and that then answers nothing a pane is asked. Seen
+* at the real boundary: an `open()` at `tab` returned `plugin_15`, and the `rename()` that followed
+* renamed a pane the caller never opened. `new-tab` and `new-pane` both create a TERMINAL pane, so
+* the kind is the discriminator, and `is_plugin` is the field that carries it.
+*/
+function appearedTerminals$1(exec, before) {
+	return listZellijPanes$1(exec).filter((p) => p.is_plugin !== true && !before.has(normalizePaneId$1(p.id)));
+}
+/**
+* The `OpenedPane` for a pane `new-pane` just made — resolved against the listing rather than taken
+* on the word of the id zellij printed, because that word is not reliable (see
+* `LIST_PANES_ATTEMPTS`): the reply may be empty, or may be the PREVIOUS command's, in which case
+* `paneId` names a pane that has been standing all along.
+*
+* So the id is believed only where it names a pane ABSENT from `before` — the phantom guard this file
+* has always meant to be, now closed. Where it cannot be believed, the session itself answers: a
+* single pane that appeared over this open is unambiguous, and adopting it recovers a reply zellij
+* lost instead of failing an open that genuinely happened. That fallback waits one round, so a
+* printed id that is merely SLOW to appear still wins over a guess.
+*
+* Throws rather than guessing a tab: `OpenedPane.tab` is required (every multiplexer has the Tab
+* level), and a wrong tab is worse than a loud failure.
+*/
+function openedForPane$1(exec, paneId, before, session) {
+	for (let attempt = 1; attempt <= OPEN_RESOLVE_ATTEMPTS$1; attempt++) {
+		const appeared = appearedTerminals$1(exec, before);
+		const claimed = paneId ? appeared.find((p) => samePane$1(p.id, paneId)) : void 0;
+		if (claimed?.tab_id != null) return openedPane$2(paneId, String(claimed.tab_id), session);
+		const only = appeared.length === 1 ? appeared[0] : void 0;
+		if ((attempt > 1 || !paneId) && only?.tab_id != null) return openedPane$2(only.id, String(only.tab_id), session);
+	}
+	throw new Error(paneId ? `zellij did not report a tab for the new pane ${paneId}` : "zellij action new-pane did not report the new pane id, and no new pane appeared");
+}
+/**
+* The `OpenedPane` for a tab `new-tab` just made — its initial pane resolved as the `list-panes`
+* record that carries that tab id AND was not already standing. Same reply-delivery defect, same
+* shape of answer as `openedForPane`: a `tabId` that names a tab whose panes all predate the open is
+* a stale reply, not this tab, and a single pane that appeared over the open answers when the id
+* cannot.
+*
+* Throws rather than guessing: a new tab must have a pane, and a caller handed a tab with no pane
+* could neither drive nor name it.
+*/
+function openedForTab$1(exec, tabId, before, session) {
+	for (let attempt = 1; attempt <= OPEN_RESOLVE_ATTEMPTS$1; attempt++) {
+		const appeared = appearedTerminals$1(exec, before);
+		const claimed = tabId ? appeared.find((p) => p.tab_id != null && String(p.tab_id) === tabId) : void 0;
+		if (claimed) return openedPane$2(claimed.id, tabId, session);
+		const only = appeared.length === 1 ? appeared[0] : void 0;
+		if ((attempt > 1 || !tabId) && only?.tab_id != null) return openedPane$2(only.id, String(only.tab_id), session);
+	}
+	throw new Error(tabId ? `zellij did not report a pane in the new tab ${tabId}` : "zellij action new-tab did not report the new tab id, and no new pane appeared");
+}
+/**
+* Assemble an `OpenedPane`, attaching `workspace` only when the ambient session name is known — the
+* absent-not-false convention. Every Zellij pane genuinely lives in a session, so where the name IS
+* known this is never absent, on every placement including `pane:*`; where it is not (the effect-less
+* singleton), it is omitted rather than reported as a false "none".
+*/
+function openedPane$2(id, tab, session) {
+	const opened = {
+		id,
+		tab
+	};
+	if (session) opened.workspace = session;
+	return opened;
+}
+/**
+* Env is native at NO tier on this backend — `new-pane`/`new-tab` take no `--env`, like wezterm. So
+* every `open` funnels through the same fallback herdr's worktree route uses: with a launch command,
+* env rides in as an `env K=V` prefix; with none, a warning names what did not land. `envFallback` is
+* a no-op when there is no env to carry, so this is safe to call unconditionally.
+*/
+function runLaunch$4(adapter, exec, target, env, launch) {
+	const fallback = envFallback$1(env, launch);
+	if (fallback.kind === "dropped") {
+		process.stderr.write(`env (${fallback.variables.join(", ")}) could not be set on this zellij pane — zellij has no --env flag on new-pane/new-tab
+`);
+		return;
+	}
+	if (fallback.command !== void 0) adapter.submit(exec, target, fallback.command);
+}
+/**
+* The core key vocabulary's Zellij spelling — a rename table, NOT a validation table: a token outside
+* the core is forwarded verbatim (the seam's passthrough), so this must not reject what it does not
+* recognize. Only the two members that differ from the core name are listed; `Up` `Down` `Left`
+* `Right` `Enter` `Tab` `Space` `Backspace` `F1`–`F12` are already Zellij's own names. Probed from
+* Zellij's key-binding vocabulary in the docs, not verified against a live `send-keys`:
+*
+* - `Escape` → `Esc`: Zellij's key name for that key is `Esc`.
+* - `C-c` → `Ctrl c`: Zellij writes a modified key as space-separated words (`"Ctrl a"`, `"Alt Shift
+*   b"`), so the whole `Ctrl c` is one argument — the modifier and key are not two keys.
+*/
+const ZELLIJ_KEY_RENAMES$1 = {
+	Escape: "Esc",
+	"C-c": "Ctrl c"
+};
+function toZellijKey$1(key) {
+	return ZELLIJ_KEY_RENAMES$1[key] ?? key;
+}
+/**
+* A Zellij pane's label — its title, unless that title is the running command Zellij handed an unnamed
+* pane. Zellij defaults an unnamed pane's title to its `terminal_command`, so a title equal to it is
+* ambient rather than chosen; exporting it would put the same manufactured name on every shell pane,
+* exactly the collision tmux's hostname guard exists to prevent. A title that differs from the command
+* is one someone set (`new-pane --name`/`rename-pane`), so it is the author's and survives.
+*/
+function zellijLabel$1(title, command) {
+	return title && title !== command ? title : void 0;
+}
+/**
+* Normalize a pane id to a single canonical form for comparison. Per the Zellij docs a bare integer
+* `N` is the same terminal pane as `terminal_N`; `plugin_N` is a distinct space. So a bare id is
+* folded to its `terminal_` form and everything else is left as-is — a comparison-only transform,
+* never stored (`MuxTarget.id` stays whatever the backend reported).
+*/
+function normalizePaneId$1(id) {
+	return /^\d+$/.test(id) ? `terminal_${id}` : id;
+}
+/** Whether two pane ids name the same pane, treating a bare `N` and its `terminal_N` twin as equal. */
+function samePane$1(a, b) {
+	return normalizePaneId$1(a) === normalizePaneId$1(b);
+}
+/** The last `n` lines of `text` — `read`'s client-side approximation of a trailing-lines capture. */
+function lastLines$1(text, n) {
+	const lines = text.split("\n");
+	return lines.slice(Math.max(0, lines.length - n)).join("\n");
+}
+//#endregion
+//#region ../../node_modules/.pnpm/cyber-mux@0.11.0/node_modules/cyber-mux/dist/worktree.mjs
+/**
+* This module's own refusals and failures — plain cyber-mux prose, never a dependency's raw words.
+* `reportWorktreeFailure` (`cli.ts`) forwards a `WorktreeGitError`'s message onto stdout verbatim
+* because it is safe to: everything thrown here is this CLI's own text. Anything else that reaches
+* that catch-all (a `session.tmux.ts`/`session.herdr.ts` throw, which embeds the backend's own name
+* and its raw stderr via `withReason`) is a different case and is translated, not forwarded.
+*/
+var WorktreeGitError = class extends Error {};
+/**
+* @deprecated Use `primaryRoot({ exec })` from `cyber-agentkit/worktrees` (re-exported here).
+*
+* Resolve the primary checkout's root regardless of whether the caller's cwd is the primary
+* checkout or a linked worktree — `--git-common-dir` always points at the main repo's `.git`.
+*/
+function resolvePrimaryRoot(exec) {
+	const commonDir = exec("git", [
+		"rev-parse",
+		"--path-format=absolute",
+		"--git-common-dir"
+	]);
+	if (!commonDir) throw new WorktreeGitError("cannot resolve the primary checkout — not inside a git repository");
+	return dirname(commonDir);
+}
+//#endregion
+//#region ../../node_modules/.pnpm/cyberlegion@1.7.0/node_modules/cyberlegion/dist/index.mjs
+/**
+* Transitional env-normalization seam (mux.feature: "a pane carrying only the legacy fast-path vars
+* is still honored"). cyber-mux's own fast-path reads `$CYBER_MUX`/`$CYBER_MUX_PANE` — its
+* `currentPane` hardcodes those names (no `envPrefix` override), and `probeMultiplexer`'s `envPrefix`
+* option renames the WHOLE pair together, so neither can be steered to fall back onto a
+* differently-named legacy pair. Every call into cyber-mux that reads the fast-path
+* (`probeMultiplexer`, `currentPane`, `callerPane`, `resolveMuxAdapter`) must be handed this seam's
+* output instead of the raw env.
+*
+* When `$CYBER_MUX`/`$CYBER_MUX_PANE` are both absent and either legacy `$CYBERLEGION_MUX`/
+* `$CYBERLEGION_MUX_PANE` var is present, copies the legacy pair onto the current names. Never
+* overwrites an already-set current var — the current pair always wins outright the moment either
+* half of it is set, exactly matching the frozen precedence chain (mux.feature: "the current
+* fast-path vars win over the legacy pair when both are set").
+*
+* Transitional — deleted once no pre-migration pane (one that only ever exported the legacy pair) is
+* still alive.
+*/
+function normalizeMuxEnv(env) {
+	const hasCurrent = env.CYBER_MUX !== void 0 || env.CYBER_MUX_PANE !== void 0;
+	const hasLegacy = env.CYBERLEGION_MUX !== void 0 || env.CYBERLEGION_MUX_PANE !== void 0;
+	if (hasCurrent || !hasLegacy) return env;
+	return {
+		...env,
+		CYBER_MUX: env.CYBERLEGION_MUX,
+		CYBER_MUX_PANE: env.CYBERLEGION_MUX_PANE
+	};
+}
+/** The tracked marker file that makes a hub root initialized (see ensureMarker). */
+const MARKER_FILE = "config.json";
+/** Walk up from `cwd` to the nearest git repo root; fall back to `cwd`. */
+function projectRoot(cwd = process.cwd()) {
+	let dir = resolve(cwd);
+	for (;;) {
+		if (existsSync(join(dir, ".git"))) return dir;
+		const parent = dirname(dir);
+		if (parent === dir) return resolve(cwd);
+		dir = parent;
+	}
+}
+/**
+* Resolve the cyberlegion hub root. Precedence: explicit --root/--space, then `$CYBERLEGION_ROOT`,
+* then the GLOBAL hub `~/.agents/cyberlegion` (addressable across every project and worktree
+* boundary — identity/mail/registry state lives here by default; `--space` isolates it), falling
+* back to a project-local `.agents/cyberlegion` only when no home directory is resolvable.
+*/
+function resolveRoot(opts = {}) {
+	const env = opts.env ?? process.env;
+	const explicit = opts.root ?? opts.space ?? env.CYBERLEGION_ROOT;
+	if (explicit) return resolve(explicit);
+	const home = homedir();
+	if (home) return join(home, ".agents", "cyberlegion");
+	return join(projectRoot(opts.cwd), ".agents", "cyberlegion");
+}
+/**
+* Create the tracked `config.json` marker at `root` (a hub root) if it does not already exist.
+* Callers pass the root under which the marker should be created/ensured; this mkdir's it as
+* needed. Idempotent — never overwrites an existing marker.
+*/
+function ensureMarker(root) {
+	mkdirSync(root, { recursive: true });
+	const marker = join(root, MARKER_FILE);
+	if (!existsSync(marker)) writeFileSync(marker, `${JSON.stringify({ version: 1 }, null, 2)}\n`);
+}
+/**
+* Thrown when an agent/message id destined to become a filename PATH SEGMENT fails
+* `assertSafeId` — see that function's doc for why this rejects rather than encodes.
+*/
+var InvalidIdError = class extends Error {
+	kind;
+	value;
+	constructor(kind, value) {
+		super(`invalid ${kind} ${JSON.stringify(value)} — must not be empty, ".", "..", or contain a path separator`);
+		this.kind = kind;
+		this.value = value;
+		this.name = "InvalidIdError";
+	}
+};
+const UNSAFE_ID = /[\\/\0]/;
+/**
+* Filename-safety guard for any id that becomes a bare PATH SEGMENT under the hub root — agent ids
+* (`agentFile`/`inboxDir`/`dataDir`/`briefFile`) and message ids (`messageFile`). Both are
+* effectively user/peer-controlled: an agent id round-trips a caller-supplied `--handle`-adjacent
+* value in some flows, and nothing upstream of the store validates it before it reaches a `join()`.
+*
+* REJECT, don't encode: unlike `sanitizePane` (which deliberately encodes, because a tmux/herdr pane
+* locator is an opaque, internally-produced token that only needs to survive as a *lookup key*, not
+* round-trip as an identity), an agent/message id is a PRIMARY KEY — `getAgent(id)` must return
+* exactly what `putAgent` stored under that same `id`. Silently encoding two different malformed ids
+* onto the same sanitized filename would let one caller's write silently clobber or read another's
+* record — a worse failure than a loud, immediate refusal. So: empty, `.`, `..`, and any embedded
+* path separator (POSIX `/`, Windows `\`) or NUL byte are rejected outright, which also rejects an
+* absolute path outright (an absolute path always contains a separator).
+*/
+function assertSafeId(id, kind) {
+	if (!id || id === "." || id === ".." || UNSAFE_ID.test(id)) throw new InvalidIdError(kind, id);
+	return id;
+}
+const paths = {
+	agentsDir: (root) => join(root, "agents"),
+	agentFile: (root, id) => join(root, "agents", `${assertSafeId(id, "agent id")}.json`),
+	panesDir: (root) => join(root, "panes"),
+	paneFile: (root, pane) => join(root, "panes", `${sanitizePane(pane)}.id`),
+	inboxDir: (root, id) => join(root, "inbox", assertSafeId(id, "agent id")),
+	inboxReadDir: (root, id) => join(root, "inbox", assertSafeId(id, "agent id"), "read"),
+	dataDir: (root, id) => join(root, "data", assertSafeId(id, "agent id")),
+	briefFile: (root, id) => join(root, "data", assertSafeId(id, "agent id"), "brief.md"),
+	mainPaneFile: (root) => join(root, "main-pane.id"),
+	projectsDir: (root) => join(root, "projects"),
+	serviceLeaseFile: (root, project, service) => join(root, "services", assertSafeId(project, "project id"), `${assertSafeId(service, "service name")}.json`),
+	projectFile: (root, id) => join(root, "projects", `${assertSafeId(id, "project id")}.json`),
+	/** A message's file path within `toId`'s unread/read inbox dir, keyed by its own collision-free
+	* id — validated the same as an agent id (it's the same class of risk: a peer- or CLI-controlled
+	* string becoming a filename). */
+	messageFile: (root, toId, msgId) => join(paths.inboxDir(root, toId), `${assertSafeId(msgId, "message id")}.json`),
+	messageReadFile: (root, toId, msgId) => join(paths.inboxReadDir(root, toId), `${assertSafeId(msgId, "message id")}.json`)
+};
+/** tmux pane ids look like "%3"; make them filesystem-safe. */
+function sanitizePane(pane) {
+	return pane.replace(/[^A-Za-z0-9_-]/g, "_");
+}
+const realExec = nodeExec$1;
+const nowIso = (ctx) => new Date(ctx.now?.() ?? Date.now()).toISOString();
+function loadAgent(store, id) {
+	return store.getAgent(id);
+}
+function saveAgent(store, rec) {
+	store.putAgent(rec);
+}
+function listAgents(store) {
+	return store.listAgents();
+}
+/**
+* Recover the calling agent's own id, mux-agnostically. Inside any multiplexer pane (tmux or herdr)
+* the pane index is authoritative — a pane with no pane entry is simply unregistered and must NOT
+* adopt `$CYBERLEGION_AGENT_ID` (that env fallback applies ONLY when the session is in no
+* multiplexer pane at all). There is no shared bare "self" file — self-id is always pane-keyed or
+* explicit via the env var.
+*/
+function resolveSelfId(ctx) {
+	const env = ctx.env ?? process.env;
+	const cur = currentPane$1(normalizeMuxEnv(env));
+	if (cur) return ctx.store.resolvePaneId(cur.pane);
+	return env.CYBERLEGION_AGENT_ID || void 0;
+}
+/** Pick the one live record a handle names. A standing record wins over the rest — an owner report
+* must land in the durable standing inbox, not a dying session's. Otherwise two or more matches are
+* ambiguous (two same-named repos give their service endpoints the same handle), and silently taking
+* the first could deliver to the wrong one, so fail loud naming the ids, as `resolveOwnerMailbox` does. */
+function pickLive(ref, live) {
+	const standing = live.find((a) => a.kind === "standing");
+	if (standing) return standing;
+	if (live.length > 1) throw new Error(`"${ref}" names ${live.length} units — pass an id (${live.map((a) => a.id).join(", ")})`);
+	return live[0];
+}
+/** Split a handle's matches into live and exited. An exited unit's pane is gone and its inbox has
+* no reader, so a *name* must never resolve to one — a handle is reusable across units, and the
+* dead holders of it outnumber the live one over time. Standing records never exit. An explicit id
+* still resolves either way: naming a unit outright is a deliberate choice, unlike reaching for a
+* handle and silently landing on a corpse. */
+function matchHandle(agents, handle) {
+	const matched = agents.filter((a) => a.handle === handle);
+	return {
+		live: matched.filter((a) => a.status !== "exited"),
+		exited: matched.filter((a) => a.status === "exited")
+	};
+}
+/** Fail loudly when a handle names only the dead — never fall through to a corpse. */
+function unaddressable(ref, exited, tried) {
+	if (exited.length > 0) {
+		const dead = exited.map((a) => `${a.id.slice(0, 6)}${a.pane ? ` (${a.pane.id})` : ""}`).join(", ");
+		return /* @__PURE__ */ new Error(`"${ref}" matches only exited unit(s) — ${dead} — which have no reader. Address a live unit ('cyberlegion unit who'), or run 'cyberlegion unit register --standing --handle ${ref}' for a durable inbox.`);
+	}
+	return /* @__PURE__ */ new Error(`no agent addressable as "${ref}" (tried ${tried})`);
+}
+/**
+* Resolve a unit reference by id, handle, or its worktree branch (the unit↔CR join key: an
+* `AgentRecord.worktree.branch` equals the SDD `<cr-ref>` it maps to, when spawned for one). Used
+* by verbs that address "the unit working on CR X" as well as "the unit named X".
+*/
+function resolveAgent(store, ref) {
+	const byId = loadAgent(store, ref);
+	if (byId) return byId;
+	const agents = listAgents(store);
+	const { live, exited } = matchHandle(agents, ref);
+	const byHandle = pickLive(ref, live);
+	if (byHandle) return byHandle;
+	const byBranchAll = agents.filter((a) => a.worktree?.branch === ref);
+	const byBranch = byBranchAll.find((a) => a.status !== "exited");
+	if (byBranch) return byBranch;
+	throw unaddressable(ref, [...exited, ...byBranchAll.filter((a) => a.status === "exited")].filter((a, i, all) => all.findIndex((b) => b.id === a.id) === i), "id, handle, and worktree branch/CR");
+}
+function bumpLastSeen(ctx, id) {
+	const rec = loadAgent(ctx.store, id);
+	if (!rec) return;
+	rec.lastSeen = nowIso(ctx);
+	saveAgent(ctx.store, rec);
+}
+/** Refresh this session's own last-seen if it is registered — best-effort, never throws. */
+function touch(ctx) {
+	const id = resolveSelfId(ctx);
+	if (id) bumpLastSeen(ctx, id);
+}
+/**
+* Whether a unit's session is still there, as far as its backend can tell. "Cannot rule out alive"
+* must never become grounds to replace an owner — the same fail-closed policy `store/lock.ts` takes
+* on an ambiguous holder — so a session reads as gone only on positive evidence: its multiplexer
+* answered with a pane list and the pane is not in it. A record with no pane cannot be probed, and a
+* backend the caller cannot reach (a different server, no client, a failed query) answers with
+* nothing; both read as live. `paneExists` is not used here because it collapses "unreachable" into
+* "gone". An exited record is never live.
+*/
+function sessionLive(ctx, rec) {
+	if (rec.status === "exited" || rec.status === "stopped") return false;
+	if (!rec.pane) return true;
+	const panes = PANE_ADAPTERS[rec.pane.mux].listPanes(ctx.exec ?? realExec);
+	if (panes.length === 0) return true;
+	const id = rec.pane.id;
+	return panes.some((p) => p.id === id);
+}
+/** The per-mux session adapters `prune` consults for pane liveness — each answers with its own
+* backend primitive so a herdr pane is never probed with a tmux query, and vice versa. */
+const PANE_ADAPTERS = {
+	tmux: tmuxMuxAdapter$1,
+	herdr: herdrMuxAdapter$1
+};
+/**
+* Backend selection via cyber-mux's two-mode mux probe, normalized through the transitional
+* `$CYBERLEGION_MUX*` → `$CYBER_MUX*` env seam (`mux-env.ts`) — tmux/herdr map to their existing
+* cyber-mux adapters.
+*
+* cyber-mux detects MORE backends than `unit/registry`'s `AgentRecord.pane` can carry a locator
+* under (`'tmux' | 'herdr'` only). A DETECTED wezterm/zellij is refused HERE, before anything opens,
+* naming the backend it found (mux.feature: "a detected backend a unit record cannot carry is
+* refused before opening anything") — driving it would open a real pane no record could name,
+* stranding a live session `prune` can never reap and no caller can nudge. Anything else (`none`,
+* `screen`) falls through to the plain "no backend" refusal, unchanged from before the migration.
+*/
+function selectSessionAdapter(env, exec = realExec) {
+	const probe = probeMultiplexer$1(exec, normalizeMuxEnv(env));
+	if (probe.mux === "tmux") return tmuxMuxAdapter$1;
+	if (probe.mux === "herdr") return herdrMuxAdapter$1;
+	if (probe.mux === "wezterm" || probe.mux === "zellij") throw new Error(`spawn detected ${probe.mux}, a backend unit/registry cannot store a pane locator under (only tmux and herdr) — refusing before opening anything`);
+	throw new Error("spawn requires a session backend — run inside tmux ($TMUX) or herdr ($HERDR_ENV=1)");
+}
+function stringifyCell(v) {
+	if (v == null) return "";
+	const s = String(v);
+	return /[,\n"]/.test(s) ? `"${s.replace(/"/g, "\"\"")}"` : s;
+}
+/** One TOON-encoded object: `key: value` lines, blank/undefined fields dropped. */
+function toonObject(fields) {
+	return Object.entries(fields).filter(([, v]) => v != null).map(([k, v]) => `${k}: ${v}`).join("\n");
+}
+/** One TOON-encoded list: a `name[N]{field,...}:` header plus one row per item, then an aggregate
+* summary line. Definitive on empty — still emits `name[0]{...}:` plus the summary line. */
+function toonList(name, items, fields, summary) {
+	return [
+		`${name}[${items.length}]{${fields.map((f) => f.key).join(",")}}:`,
+		...items.map((item) => fields.map((f) => stringifyCell(f.get(item))).join(",")).map((r) => `  ${r}`),
+		summary
+	].join("\n");
+}
+/** Print a command's result to stdout in the requested format. */
+function emit(format, payload) {
+	if (format === "json") console.log(JSON.stringify(payload.json, null, 2));
+	else console.log(payload.toon);
+}
+/**
+* The canonical git common dir for `dir`, or undefined outside a repository. The common dir is the
+* one path every checkout of a repository shares — the default checkout and each linked worktree
+* all report the same `.git` — so it is what makes "same project from two worktrees" one reference.
+* Realpath'd so a symlinked path to the same repository cannot mint a second id.
+*/
+function commonDirOf(exec, dir) {
+	const out = exec("git", [
+		"-C",
+		dir,
+		"rev-parse",
+		"--path-format=absolute",
+		"--git-common-dir"
+	]);
+	if (!out) return void 0;
+	return realOrResolved(out);
+}
+/**
+* Derive a project's stable reference from its canonical common dir. Deterministic rather than
+* minted, so two worktrees registering the same project at the same instant converge on one id with
+* no lock, and two unrelated repositories that merely share a directory name never collide.
+*/
+function projectIdOf(commonDir) {
+	return `prj-${createHash("sha256").update(commonDir).digest("hex").slice(0, 16)}`;
+}
+function realOrResolved(path) {
+	try {
+		return realpathSync(path);
+	} catch {
+		return resolve(path);
+	}
+}
+/**
+* The default checkout's root, and whether that answer is authoritative. Asked from the default
+* checkout itself (its git dir IS the common dir), `--show-toplevel` is exact wherever the git dir
+* lives. Asked from a linked worktree, git has no pointer back to the default checkout when its git
+* dir was separated (`git init --separate-git-dir`) — even `git worktree list` then reports the git
+* dir — so the common dir's parent is only a guess.
+*/
+function defaultCheckoutOf(exec, dir, commonDir) {
+	const gitDir = exec("git", [
+		"-C",
+		dir,
+		"rev-parse",
+		"--path-format=absolute",
+		"--git-dir"
+	]);
+	const top = exec("git", [
+		"-C",
+		dir,
+		"rev-parse",
+		"--show-toplevel"
+	]);
+	if (gitDir && top && realOrResolved(gitDir) === commonDir) return {
+		root: realOrResolved(top),
+		exact: true
+	};
+	return {
+		root: dirname(commonDir),
+		exact: false
+	};
+}
+/**
+* Register (or idempotently refresh) the project containing `dir` — any checkout of it, default or
+* linked. Keeps the first `registeredAt`, so re-registering from a worktree is a no-op in effect.
+*/
+function registerProject(ctx, input = {}) {
+	const exec = ctx.exec ?? realExec;
+	const dir = resolve(input.dir ?? process.cwd());
+	const commonDir = commonDirOf(exec, dir);
+	if (!commonDir) throw new Error(`cannot register a project at "${dir}" — not inside a git repository`);
+	ctx.store.ensureMarker();
+	const id = projectIdOf(commonDir);
+	const existing = ctx.store.getProject(id);
+	const checkout = defaultCheckoutOf(exec, dir, commonDir);
+	const root = checkout.exact || !existing ? checkout.root : existing.root;
+	const rec = {
+		id,
+		name: basename(root),
+		root,
+		commonDir,
+		registeredAt: existing?.registeredAt ?? new Date(ctx.now?.() ?? Date.now()).toISOString()
+	};
+	ctx.store.putProject(rec);
+	return rec;
+}
+function looksLikePath(ref) {
+	return isAbsolute(ref) || ref.startsWith(".") || ref.includes(sep) || ref.includes("/");
+}
+function isDirectory(path) {
+	return existsSync(path) && statSync(path).isDirectory();
+}
+/**
+* Resolve a project from anywhere — by id, by a path inside any of its checkouts, or by name when
+* exactly one registered project carries it. A path registers its project on first use: git has
+* already confirmed it is a repository, and registering is idempotent, so there is nothing a typo
+* could mint. A name never registers — nothing can be found by a name no checkout has reported —
+* and an ambiguous name names its candidates rather than picking one.
+*/
+function resolveProject(ctx, ref) {
+	const byId = ctx.store.getProject(ref);
+	if (byId) return byId;
+	const asPath = resolve(ref);
+	if (looksLikePath(ref) && isDirectory(asPath)) return byPath(ctx, asPath);
+	const named = ctx.store.listProjects().filter((p) => p.name === ref);
+	if (named.length === 1) return named[0];
+	if (named.length > 1) throw new Error(`project name "${ref}" is ambiguous — ${named.map((p) => `${p.id} (${p.root})`).join(", ")}; pass an id or a path`);
+	if (isDirectory(asPath)) return byPath(ctx, asPath);
+	throw new Error(`no registered project "${ref}" (tried id, path, and name) — pass a path inside the repository to register it`);
+}
+function byPath(ctx, dir) {
+	const commonDir = commonDirOf(ctx.exec ?? realExec, dir);
+	if (!commonDir) throw new Error(`"${dir}" is not inside a git repository`);
+	return ctx.store.getProject(projectIdOf(commonDir)) ?? registerProject(ctx, { dir });
+}
+/** A refused ownership transition. `stale` means the caller's generation, token, or holder claim is
+* not the current one — the caller is not (or no longer) the authority it claims to be. */
+var ServiceOwnershipError = class extends Error {
+	code;
+	constructor(code, message) {
+		super(message);
+		this.code = code;
+		this.name = "ServiceOwnershipError";
+	}
+};
+const SERVICE_NAME = /^[a-z0-9][a-z0-9_-]{0,62}$/;
+function assertServiceName(name) {
+	if (!SERVICE_NAME.test(name)) throw new Error(`invalid service name "${name}" — use lowercase letters, digits, "-" or "_" (max 63)`);
+}
+function serviceEndpointId(projectId, name) {
+	return `svc-${projectId}-${name}`;
+}
+const nowMs = (ctx) => ctx.now?.() ?? Date.now();
+const iso = (ms) => new Date(ms).toISOString();
+function lockName(projectId, name) {
+	return `service-${projectId}-${name}`;
+}
+function isLive$1(ctx, unit) {
+	if (unit.status === "exited") return false;
+	return ctx.isLive ? ctx.isLive(unit) : sessionLive(ctx, unit);
+}
+function ensureEndpoint(ctx, project, name) {
+	const id = serviceEndpointId(project.id, name);
+	const existing = loadAgent(ctx.store, id);
+	if (existing) return existing;
+	ctx.store.ensureMarker();
+	const ts = iso(nowMs(ctx));
+	const rec = {
+		id,
+		handle: `${name}@${project.name}`,
+		kind: "service",
+		service: {
+			project: project.id,
+			name
+		},
+		cwd: project.root,
+		pane: null,
+		status: "active",
+		createdAt: ts,
+		lastSeen: ts
+	};
+	saveAgent(ctx.store, rec);
+	return rec;
+}
+function view(ctx, project, endpoint, lease) {
+	const base = {
+		project,
+		endpoint,
+		lease
+	};
+	if (lease.state === "vacant") return {
+		...base,
+		health: "vacant",
+		control: "none"
+	};
+	if (lease.state === "reserved") {
+		const expired = nowMs(ctx) > Date.parse(lease.reservation?.expiresAt ?? "");
+		return {
+			...base,
+			health: expired ? "expired" : "starting",
+			control: "none",
+			...expired ? { note: "the reservation expired without a bound owner; the next acquire takes over" } : {}
+		};
+	}
+	const owner = lease.holder ? loadAgent(ctx.store, lease.holder) : void 0;
+	if (!owner) return {
+		...base,
+		health: "unhealthy",
+		control: "none",
+		note: "the owner has no unit record"
+	};
+	const control = owner.pane || ctx.store.findPaneByAgentId(owner.id) ? "pane" : "none";
+	const controlNote = control === "none" ? "the owner resolves, but its session control is not recoverable from here (no multiplexer pane — e.g. a native subagent only its parent can drive)" : void 0;
+	if (!isLive$1(ctx, owner)) return {
+		...base,
+		owner,
+		health: "unhealthy",
+		control,
+		note: "the owner session is gone"
+	};
+	return {
+		...base,
+		owner,
+		health: "healthy",
+		control,
+		...controlNote ? { note: controlNote } : {}
+	};
+}
+function vacantLease(ctx, projectId, name) {
+	return {
+		project: projectId,
+		service: name,
+		endpoint: serviceEndpointId(projectId, name),
+		generation: 0,
+		state: "vacant",
+		updatedAt: iso(nowMs(ctx))
+	};
+}
+/** Load the project, service endpoint, and lease — creating the endpoint and a vacant lease when
+* `create` is set, else throwing for a service that was never started. */
+function load$1(ctx, projectRef, name, create) {
+	assertServiceName(name);
+	const project = resolveProject(ctx, projectRef);
+	const lease = ctx.store.getServiceLease(project.id, name);
+	const endpoint = loadAgent(ctx.store, serviceEndpointId(project.id, name));
+	if (lease && endpoint) return {
+		project,
+		endpoint,
+		lease
+	};
+	if (!create) throw new Error(`no service "${name}" in project ${project.name} (${project.id})`);
+	return {
+		project,
+		endpoint: ensureEndpoint(ctx, project, name),
+		lease: lease ?? vacantLease(ctx, project.id, name)
+	};
+}
+function stale(message) {
+	return new ServiceOwnershipError("stale", message);
+}
+/** Read a service's ownership without changing anything. Throws for a service never started. */
+function resolveService(ctx, projectRef, name) {
+	const { project, endpoint, lease } = load$1(ctx, projectRef, name, false);
+	return view(ctx, project, endpoint, lease);
+}
+/**
+* The fencing check: succeed only when `unit` owns the service at exactly `generation`. A runtime
+* calls this before acting as the service's authority; a stale runtime — replaced, handed off, or
+* recovered past — is refused.
+*/
+function verifyOwnership(ctx, projectRef, name, input) {
+	const { project, endpoint, lease } = load$1(ctx, projectRef, name, false);
+	if (lease.state !== "active" || lease.holder !== input.unit || lease.generation !== input.generation) throw stale(`"${input.unit}" at generation ${input.generation} is not the owner (now ${lease.state}${lease.holder ? ` by ${lease.holder}` : ""} at ${lease.generation})`);
+	return view(ctx, project, endpoint, lease);
+}
+/**
+* Run `fn` as the verified owner, holding the service lock so no transition can interleave between
+* the check and the act. For short critical sections only — the lock is bounded-wait for everyone
+* else — and never reentrant: `fn` must not call another service transition on the same service.
+*/
+function withOwnership(ctx, projectRef, name, input, fn) {
+	assertServiceName(name);
+	const project = resolveProject(ctx, projectRef);
+	return ctx.store.withLock(lockName(project.id, name), () => fn(verifyOwnership(ctx, project.id, name, input)));
+}
+/** A record file exists but its content didn't parse as JSON — a torn write (crash mid-`writeFileSync`,
+* pre-atomic-write code path) or on-disk tampering. Carries the file path and the original parse
+* error so a caller can report exactly what's broken and where, rather than "Unexpected token" with
+* no location. */
+var CorruptRecordError = class extends Error {
+	file;
+	constructor(file, cause) {
+		super(`corrupt record at "${file}": ${cause instanceof Error ? cause.message : String(cause)}`, { cause });
+		this.file = file;
+		this.name = "CorruptRecordError";
+	}
+};
+/**
+* Probe whether `pid` is alive using `process.kill(pid, 0)` — the POSIX "does this process exist"
+* idiom; it sends no signal, it only tests deliverability. `ESRCH` (no such process) is the only
+* errno that means "definitely dead". Every other errno — `EPERM` above all, common under sandboxes
+* and containers where a genuinely live process can be unsignalable by this one, or any process
+* owned by a different uid — reads as `'unknown'`, never `'dead'`: collapsing `EPERM` into "dead" is
+* exactly the defect this three-state return exists to make structurally impossible to reintroduce
+* at a new call site. Same-pid is trivially `'alive'` (a process checking its own prior identity,
+* e.g. after a crash-and-restart that reused nothing).
+*/
+function probeProcess(pid) {
+	if (pid === process.pid) return "alive";
+	try {
+		process.kill(pid, 0);
+		return "alive";
+	} catch (err) {
+		return err.code === "ESRCH" ? "dead" : "unknown";
+	}
+}
+var LockTimeoutError = class extends Error {
+	name;
+	constructor(name) {
+		super(`timed out waiting for lock "${name}"`);
+		this.name = name;
+		this.name = "LockTimeoutError";
+	}
+};
+function locksDir(root) {
+	return join(root, "locks");
+}
+function lockDirFor(root, name) {
+	return join(locksDir(root), `${name}.lock`);
+}
+/** Read a lock dir's recorded holder. Absent/corrupt/mid-acquire (holder.json not written yet) all
+* read as "unknown" — never grounds to steal. An ambiguous read must never look like a green light. */
+function readHolder(dir) {
+	try {
+		return JSON.parse(readFileSync(join(dir, "holder.json"), "utf8"));
+	} catch {
+		return;
+	}
+}
+/** Locking's policy on `probeProcess`'s `'unknown'` state: treat it exactly like `'alive'` — i.e.
+* NOT `'dead'`. The one invariant that must never break here is stealing a lock a live holder still
+* holds, and `'unknown'` means "cannot rule out alive", so it can only ever be safe to fold it into
+* the "do not steal" side. This is a local policy decision, not `probeProcess`'s — a different call
+* site (a staleness reaper, say) folding `'unknown'` into "not provably alive" instead would be
+* reading the SAME three states toward the opposite default, which is exactly the bug class this
+* three-state type exists to force each call site to decide explicitly (see process-liveness.ts). */
+function heldByLiveOrUnknownPid(pid) {
+	return probeProcess(pid) !== "dead";
+}
+function sleepSync(ms) {
+	if (ms <= 0) return;
+	Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+/**
+* Attempt to reclaim an abandoned lock dir without ever discarding a LIVE one out from under its
+* holder — the exact defect agmsg/firstmate's lock suites exist to catch (evidence.md items 3-4).
+*
+* `mkdirSync` on the lock path itself already arbitrates ordinary contention (EEXIST = someone else
+* got there first); the harder race is a STEAL: two processes independently deciding the same lock
+* looks dead. `renameSync` gives the same exclusivity `mkdirSync` gives for a fresh path, but for an
+* EXISTING one — of any number of processes racing to rename the SAME source path away, exactly one
+* succeeds and the rest get ENOENT. So the rename-away is the sole arbiter of "who gets to attempt
+* the steal", not the earlier staleness read.
+*
+* That still leaves one race: the content we read as stale might not be the content we actually
+* capture, if the true holder released and a NEW, live holder re-acquired at this same path between
+* our staleness read and our rename. So after winning the rename, re-check the pid we ACTUALLY
+* captured (not the one from the earlier read) — if it's alive, this was a live lock we grabbed by
+* accident; put it back immediately (best-effort — if a third party has since re-mkdir'd the path,
+* the invariant we're protecting already holds, so just drop our capture) and refuse to finalize.
+*/
+function tryReclaimStale(dir) {
+	const grave = `${dir}.stale-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+	try {
+		renameSync(dir, grave);
+	} catch (err) {
+		if (err.code === "ENOENT") return false;
+		throw err;
+	}
+	const captured = readHolder(grave);
+	if (captured && heldByLiveOrUnknownPid(captured.pid)) {
+		try {
+			renameSync(grave, dir);
+		} catch {
+			rmSync(grave, {
+				recursive: true,
+				force: true
+			});
+		}
+		return false;
+	}
+	rmSync(grave, {
+		recursive: true,
+		force: true
+	});
+	return true;
+}
+/**
+* Acquire an advisory, mkdir-based lock at `root/locks/<name>.lock`. mkdir (not O_EXCL on a file) is
+* the primitive here because a lock also needs to carry its holder metadata (pid + timestamp) for
+* staleness detection, and a directory gives that a natural home (`holder.json` inside it) without a
+* second file to keep in sync; `mkdirSync` on a non-existent path is exactly as atomic as an
+* exclusive file create on every filesystem this tool targets (POSIX; NTFS via Node's Win32 mkdir).
+*
+* Blocks (busy-retries) until acquired or `timeoutMs` elapses, reclaiming a dead holder's lock along
+* the way (see `tryReclaimStale`) but NEVER a live one — contention with a live holder always waits
+* it out or times out, never steals.
+*/
+function acquireLock(root, name, opts = {}) {
+	const retryDelayMs = opts.retryDelayMs ?? 20;
+	const timeoutMs = opts.timeoutMs ?? 5e3;
+	const dir = lockDirFor(root, name);
+	mkdirSync(locksDir(root), { recursive: true });
+	const deadline = Date.now() + timeoutMs;
+	for (;;) try {
+		mkdirSync(dir);
+		writeFileSync(join(dir, "holder.json"), JSON.stringify({
+			pid: process.pid,
+			acquiredAt: Date.now()
+		}));
+		return { release: () => rmSync(dir, {
+			recursive: true,
+			force: true
+		}) };
+	} catch (err) {
+		if (err.code !== "EEXIST") throw err;
+		const holder = readHolder(dir);
+		if (holder && !heldByLiveOrUnknownPid(holder.pid) && tryReclaimStale(dir)) continue;
+		if (Date.now() > deadline) throw new LockTimeoutError(name);
+		sleepSync(retryDelayMs);
+	}
+}
+/** Acquire `name`, run `fn`, and always release — the shape every genuine read-modify-write in the
+* store should use (`setMainPane`, `identity.ts`'s `claimPresence`/`clearPresence` today). */
+function withLock(root, name, fn, opts) {
+	const handle = acquireLock(root, name, opts);
+	try {
+		return fn();
+	} finally {
+		handle.release();
+	}
+}
+/** `withLock` for an async read-decide-write: the lock is held until `fn`'s promise settles, not
+* merely until it returns one. The wait to acquire is the same bounded, synchronous one. */
+async function withLockAsync(root, name, fn, opts) {
+	const handle = acquireLock(root, name, opts);
+	try {
+		return await fn();
+	} finally {
+		handle.release();
+	}
+}
+/** Parse a record file's content, wrapping a `JSON.parse` failure in a typed, file-named
+* `CorruptRecordError` instead of letting a bare `SyntaxError` bubble up from deep inside
+* `listInbox`/`listAgents`/`getAgent` with no indication of WHICH file broke. A file that doesn't
+* exist is a caller error — callers check existence first, so this only ever sees files known to
+* be present but possibly torn (a crash mid-write predating the atomic-write fix, or on-disk
+* tampering) — see evidence.md item 5, "no silent success on a broken store". */
+function readJsonRecord(file) {
+	const raw = readFileSync(file, "utf8");
+	try {
+		return JSON.parse(raw);
+	} catch (err) {
+		throw new CorruptRecordError(file, err);
+	}
+}
+function readMessages(dir) {
+	if (!existsSync(dir)) return [];
+	return readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => readJsonRecord(join(dir, f)));
+}
+/** Write `data` to `file` crash-safely: write to a sibling temp file first, then `renameSync` into
+* place. `rename` is atomic within a filesystem (POSIX guarantees this; Node's Win32 rename is too
+* for same-volume paths, which every path here is — always under the same store root), so any
+* reader either sees the OLD complete content or the NEW complete content, never a truncated
+* in-between. Before this fix, `putMessage`/`putAgent`/`putPaneIndex`/`setMainPane` called
+* `writeFileSync` directly on the final path — only `ackMessage`'s move (a rename of an already-
+* complete file) was atomic. A process crashing mid-`writeFileSync`, or a reader racing a writer on
+* a large record, could hand `JSON.parse` a truncated file and throw an uncaught `SyntaxError` deep
+* inside `listInbox`/`listAgents`/`getAgent`.
+*
+* Deliberately no `fsync` before the rename: this tool defends against a process CRASHING mid-write
+* (the actual, observed risk in a daemonless multi-process CLI), where the page cache alone is
+* sufficient, not against a power-loss/OS-crash losing unflushed pages, which cyberlegion doesn't
+* claim to survive today (no writer here holds data the user can't just re-send). Add fsync if that
+* durability bar ever changes.
+*
+* The temp name embeds pid + a counter so two writers to the SAME final path never collide on their
+* own temp files mid-write (each writer's temp file is unique to it). */
+let tmpCounter = 0;
+function writeFileAtomic(file, data) {
+	mkdirSync(dirname(file), { recursive: true });
+	const tmp = `${file}.${process.pid}.${tmpCounter++}.tmp`;
+	writeFileSync(tmp, data);
+	renameSync(tmp, file);
+}
+function writeJson(file, data) {
+	writeFileAtomic(file, `${JSON.stringify(data, null, 2)}\n`);
+}
+function writeText(file, text) {
+	writeFileAtomic(file, text);
+}
+/** Build a path via `build()` for a READ-only lookup, treating a syntactically-invalid id
+* (`InvalidIdError`) the same as "not found" rather than throwing. Reads are the wrong place to
+* enforce id-shape: `resolveAgent`/`resolveRecipient` (identity.ts) speculatively probe an arbitrary
+* ref — which may legitimately be a worktree BRANCH NAME containing `/` — as a candidate id before
+* falling back to handle/branch lookup, so `getAgent('cyberlegion/unit-abc')` must fail soft, not
+* throw, or that fallback chain breaks. The traversal risk this guards against (an id escaping the
+* store root) only bites on a WRITE — nothing is ever created or overwritten by a probe that finds
+* nothing — so a hard reject stays reserved for the write paths below (`putAgent`, `putMessage`,
+* `putPaneIndex`, `writeBrief`), where a malformed id would otherwise put a stray file wherever it
+* pointed. */
+function readPathOrUndefined(build) {
+	try {
+		return build();
+	} catch (err) {
+		if (err instanceof InvalidIdError) return void 0;
+		throw err;
+	}
+}
+/** The on-disk `Store` implementation — current per-writer sharded `.json` layout (ADR-0020):
+* one file per message/agent, collision-free filenames, ack = atomic rename into `read/`. */
+var FileStore = class {
+	root;
+	constructor(root) {
+		this.root = root;
+	}
+	ensureMarker() {
+		ensureMarker(this.root);
+	}
+	putMessage(toId, msg) {
+		writeFileAtomic(paths.messageFile(this.root, toId, msg.id), `${JSON.stringify(msg, null, 2)}\n`);
+	}
+	listInbox(id) {
+		const inbox = readPathOrUndefined(() => paths.inboxDir(this.root, id));
+		const read = readPathOrUndefined(() => paths.inboxReadDir(this.root, id));
+		return {
+			unread: inbox ? readMessages(inbox) : [],
+			read: read ? readMessages(read) : []
+		};
+	}
+	ackMessage(id, msgId) {
+		const src = readPathOrUndefined(() => paths.messageFile(this.root, id, msgId));
+		if (!src || !existsSync(src)) throw new Error(`"${msgId}" is not an unread message in this inbox`);
+		const msg = readJsonRecord(src);
+		const dest = paths.messageReadFile(this.root, id, msgId);
+		mkdirSync(dirname(dest), { recursive: true });
+		renameSync(src, dest);
+		return msg;
+	}
+	removeMessage(id, msgId) {
+		const unreadFile = readPathOrUndefined(() => paths.messageFile(this.root, id, msgId));
+		if (unreadFile && existsSync(unreadFile)) {
+			rmSync(unreadFile);
+			return;
+		}
+		const readFile = readPathOrUndefined(() => paths.messageReadFile(this.root, id, msgId));
+		if (readFile && existsSync(readFile)) {
+			rmSync(readFile);
+			return;
+		}
+		throw new Error(`"${msgId}" is not a message in this inbox`);
+	}
+	removeMailbox(id) {
+		rmSync(paths.inboxDir(this.root, id), {
+			recursive: true,
+			force: true
+		});
+	}
+	putAgent(rec) {
+		writeJson(paths.agentFile(this.root, rec.id), rec);
+	}
+	getAgent(id) {
+		const file = readPathOrUndefined(() => paths.agentFile(this.root, id));
+		if (!file || !existsSync(file)) return void 0;
+		return readJsonRecord(file);
+	}
+	listAgents() {
+		const dir = paths.agentsDir(this.root);
+		if (!existsSync(dir)) return [];
+		return readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => readJsonRecord(join(dir, f))).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+	}
+	removeAgent(id) {
+		rmSync(paths.agentFile(this.root, id), { force: true });
+	}
+	removeAgentData(id) {
+		rmSync(paths.dataDir(this.root, id), {
+			recursive: true,
+			force: true
+		});
+	}
+	putProject(rec) {
+		writeJson(paths.projectFile(this.root, rec.id), rec);
+	}
+	getProject(id) {
+		const file = readPathOrUndefined(() => paths.projectFile(this.root, id));
+		if (!file || !existsSync(file)) return void 0;
+		return readJsonRecord(file);
+	}
+	listProjects() {
+		const dir = paths.projectsDir(this.root);
+		if (!existsSync(dir)) return [];
+		return readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => readJsonRecord(join(dir, f))).sort((a, b) => a.registeredAt.localeCompare(b.registeredAt));
+	}
+	putServiceLease(lease) {
+		writeJson(paths.serviceLeaseFile(this.root, lease.project, lease.service), lease);
+	}
+	getServiceLease(project, service) {
+		const file = readPathOrUndefined(() => paths.serviceLeaseFile(this.root, project, service));
+		if (!file || !existsSync(file)) return void 0;
+		return readJsonRecord(file);
+	}
+	putPaneIndex(pane, agentId) {
+		writeText(paths.paneFile(this.root, pane), agentId);
+	}
+	resolvePaneId(pane) {
+		const file = paths.paneFile(this.root, pane);
+		return existsSync(file) ? readFileSync(file, "utf8").trim() : void 0;
+	}
+	findPaneByAgentId(agentId) {
+		const dir = paths.panesDir(this.root);
+		if (!existsSync(dir)) return void 0;
+		for (const f of readdirSync(dir)) {
+			if (!f.endsWith(".id")) continue;
+			if (readFileSync(join(dir, f), "utf8").trim() === agentId) return f.slice(0, -3);
+		}
+	}
+	removePaneIndex(pane) {
+		rmSync(paths.paneFile(this.root, pane), { force: true });
+	}
+	writeBrief(agentId, text) {
+		writeText(paths.briefFile(this.root, agentId), text);
+	}
+	readBrief(agentId) {
+		const file = readPathOrUndefined(() => paths.briefFile(this.root, agentId));
+		return file && existsSync(file) ? readFileSync(file, "utf8") : void 0;
+	}
+	setMainPane(pane) {
+		withLock(this.root, "main-pane", () => {
+			const file = paths.mainPaneFile(this.root);
+			if (pane) {
+				writeText(file, pane);
+				return;
+			}
+			rmSync(file, { force: true });
+		});
+	}
+	getMainPane() {
+		const file = paths.mainPaneFile(this.root);
+		return existsSync(file) ? readFileSync(file, "utf8").trim() : void 0;
+	}
+	withLock(name, fn) {
+		return withLock(this.root, name, fn);
+	}
+	withLockAsync(name, fn) {
+		return withLockAsync(this.root, name, fn);
+	}
+};
+//#endregion
+//#region src/project-address.ts
+const KEY_SCHEME = "cyberlegion";
+/** The project address of a checkout: a path in any checkout, a key this returned, or a unique name. */
+function projectAddressOf(ctx, ref) {
+	const project = resolveProject(ctx, ref);
+	return {
+		key: project.id,
+		scheme: KEY_SCHEME,
+		name: project.name,
+		home: project.root
+	};
+}
+//#endregion
+//#region src/captain.ts
+const CAPTAIN_SERVICE = "captain";
+/**
+* Where the project's Captain stands, read-only: no claim, no start. A project whose Captain was
+* never started reads as `vacant` at generation 0.
+*/
+function showCaptain(ctx, projectRef) {
+	const address = projectAddressOf(ctx, projectRef);
+	const exec = ctx.exec ?? realExec;
+	const branches = {
+		homeBranch: exec("git", [
+			"-C",
+			address.home,
+			"branch",
+			"--show-current"
+		]) || void 0,
+		defaultBranch: exec("git", [
+			"-C",
+			address.home,
+			"symbolic-ref",
+			"--short",
+			"refs/remotes/origin/HEAD"
+		])?.replace(/^origin\//, "")
+	};
+	const base = {
+		project: address.key,
+		name: address.name,
+		home: address.home,
+		...branches
+	};
+	let view;
+	try {
+		view = resolveService(ctx, address.key, CAPTAIN_SERVICE);
+	} catch {
+		return {
+			...base,
+			health: "vacant",
+			generation: 0,
+			control: "none",
+			note: "no Captain has been started"
+		};
+	}
+	return {
+		...base,
+		health: view.health,
+		generation: view.lease.generation,
+		owner: view.lease.holder,
+		ownerHandle: view.owner?.handle,
+		control: view.control,
+		note: view.note
+	};
+}
+/**
+* Record the project's Captain role as the one owner of `pod`, acting as the session that holds the
+* role's lease at `generation`. The pod must run in its own worktree of this project — not the
+* Captain's home, not another project's checkout. A pod the role already owns is left as it is,
+* whichever Captain session binds it again; a retired pod stays retired.
+*/
+function bindPod(ctx, act) {
+	const podProject = podProjectOf(ctx, act.pod);
+	return fenced(ctx, act, (project) => {
+		if (podProject.key !== project.key) throw new Error(`pod "${act.pod}" runs in another project's checkout (${podProject.name}), not ${project.name}`);
+		if (podProject.worktree === project.home) throw new Error(`pod "${act.pod}" sits in the Captain's home; a pod needs its own worktree`);
+		const existing = readBinding(ctx, act.pod);
+		if (existing?.state === "retired") throw new Error(`pod "${act.pod}" is already retired`);
+		if (existing) return existing;
+		return writeBinding(ctx, {
+			pod: act.pod,
+			project: project.key,
+			keyScheme: project.scheme,
+			role: CAPTAIN_SERVICE,
+			...act.sortie ? { sortie: act.sortie } : {},
+			state: "active",
+			boundAt: now(ctx),
+			boundBy: act.captain,
+			boundAtGeneration: act.generation
+		});
+	});
+}
+/**
+* Retire a pod once its work is merged or abandoned — exactly once, and only by the session holding
+* the Captain's lease now. The pod's unit is torn down separately (`cyberlegion unit close`).
+*/
+function retirePod(ctx, act) {
+	return fenced(ctx, act, (project) => {
+		return writeBinding(ctx, {
+			...activeBinding(ctx, act.pod, project),
+			state: "retired",
+			retiredAt: now(ctx),
+			retiredBy: act.captain,
+			retiredAtGeneration: act.generation
+		});
+	});
+}
+/** Every recorded pod — of one project, or of all — with where its ownership stands now. */
+function listPods(ctx, projectRef) {
+	const bindings = readBindings(ctx);
+	const key = projectRef === void 0 || bindings.some((b) => b.project === projectRef) ? projectRef : projectAddressOf(ctx, projectRef).key;
+	const views = /* @__PURE__ */ new Map();
+	const viewOf = (project) => {
+		if (!views.has(project)) try {
+			views.set(project, resolveService(ctx, project, CAPTAIN_SERVICE));
+		} catch {
+			views.set(project, void 0);
+		}
+		return views.get(project);
+	};
+	return bindings.filter((b) => key === void 0 || b.project === key).map((b) => {
+		const unit = ctx.store.getAgent(b.pod);
+		return {
+			...b,
+			handle: unit?.handle,
+			branch: unit?.worktree?.branch,
+			live: unit ? isLive(ctx, unit) : false,
+			owner: ownerState(b, viewOf(b.project))
+		};
+	});
+}
+function ownerState(b, view) {
+	if (b.state === "retired") return "retired";
+	return view?.lease.state === "active" && view.health === "healthy" ? "current" : "unavailable";
+}
+/** The registry's view of a pod's session; `cyberlegion unit show` probes its multiplexer. */
+function isLive(ctx, unit) {
+	if (unit.status === "exited" || unit.status === "stopped") return false;
+	return ctx.isLive ? ctx.isLive(unit) : true;
+}
+function fenced(ctx, act, fn) {
+	const project = projectAddressOf(ctx, act.project);
+	return withOwnership(ctx, project.key, CAPTAIN_SERVICE, {
+		unit: act.captain,
+		generation: act.generation
+	}, () => fn(project));
+}
+function activeBinding(ctx, pod, project) {
+	const existing = readBinding(ctx, pod);
+	if (!existing || existing.project !== project.key) throw new Error(`pod "${pod}" is not bound in ${project.name}`);
+	if (existing.state === "retired") throw new Error(`pod "${pod}" is already retired`);
+	return existing;
+}
+function podProjectOf(ctx, pod) {
+	const unit = ctx.store.getAgent(pod);
+	if (!unit) throw new Error(`no unit "${pod}"`);
+	if (!unit.worktree?.root) throw new Error(`pod "${pod}" has no worktree; a pod runs in its own project worktree`);
+	const worktree = existsSync(unit.worktree.root) ? realpathSync(unit.worktree.root) : unit.worktree.root;
+	return {
+		...projectAddressOf(ctx, unit.worktree.root),
+		worktree
+	};
+}
+const now = (ctx) => new Date(ctx.now?.() ?? Date.now()).toISOString();
+const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/;
+function podsDir(ctx) {
+	return join(ctx.store.root, "cyberfleet", "pods");
+}
+function bindingFile(ctx, pod) {
+	if (!SAFE_ID.test(pod)) throw new Error(`invalid pod id "${pod}"`);
+	return join(podsDir(ctx), `${pod}.json`);
+}
+function readBinding(ctx, pod) {
+	const file = bindingFile(ctx, pod);
+	return existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : void 0;
+}
+function readBindings(ctx) {
+	const dir = podsDir(ctx);
+	if (!existsSync(dir)) return [];
+	return readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => JSON.parse(readFileSync(join(dir, f), "utf8")));
+}
+function writeBinding(ctx, binding) {
+	const file = bindingFile(ctx, binding.pod);
+	mkdirSync(podsDir(ctx), { recursive: true });
+	const tmp = `${file}.${process.pid}.tmp`;
+	writeFileSync(tmp, `${JSON.stringify(binding, null, "	")}\n`);
+	renameSync(tmp, file);
+	return binding;
+}
+//#endregion
+//#region ../../node_modules/.pnpm/cyber-mux@0.12.0/node_modules/cyber-mux/dist/exec-Bmdcg_T7.mjs
 const nodeExec = (cmd, args) => {
 	try {
 		const out = execFileSync(cmd, args, {
@@ -2990,7 +10256,7 @@ function withReason(exec, message) {
 	return exec.lastError ? `${message} — ${exec.lastError}` : message;
 }
 //#endregion
-//#region ../../node_modules/.pnpm/cyber-mux@0.11.0/node_modules/cyber-mux/dist/backend-D3VSsev4.mjs
+//#region ../../node_modules/.pnpm/cyber-mux@0.12.0/node_modules/cyber-mux/dist/backend-D3VSsev4.mjs
 const KNOWN_MUX = [
 	"tmux",
 	"rmux",
@@ -3278,7 +10544,7 @@ function jumpServer(mux, env) {
 }
 /** Parse the file, reading anything unreadable or of another shape as empty history — a broken file
 * must never block a jump, and the next write replaces it. */
-function load$1(store) {
+function load(store) {
 	const raw = store.read();
 	if (raw == null) return {
 		version: 1,
@@ -3324,7 +10590,7 @@ function historyOf(file, server) {
 function recordJump(muxName, target, ctx) {
 	const self = currentPane(ctx.env);
 	if (!self || self.mux !== muxName || self.pane === target.id) return;
-	const file = load$1(ctx.store);
+	const file = load(ctx.store);
 	historyOf(file, jumpServer(muxName, ctx.env)).links[target.id] = {
 		from: self.pane,
 		at: (ctx.now ?? Date.now)()
@@ -3390,7 +10656,7 @@ function focusBack(adapter, exec, ctx) {
 	const self = currentPane(ctx.env);
 	if (!self || self.mux !== adapter.name) throw new JumpBackError("no-caller-pane", `focus --back must run inside a ${adapter.name} pane`);
 	const from = self.pane;
-	const file = load$1(ctx.store);
+	const file = load(ctx.store);
 	const before = JSON.stringify(file);
 	const history = historyOf(file, jumpServer(adapter.name, ctx.env));
 	const links = history.links;
@@ -9225,1128 +16491,6 @@ function resolveMuxAdapter(env, exec = nodeExec) {
 	if (probe.mux === "otty") return createOttyAdapter({ window: void 0 });
 	if (probe.mux === "screen") throw new Error("cyber-mux detected GNU Screen, which it cannot drive: Screen addresses its split regions positionally (no per-pane id) and leaves $WINDOW unset in panes opened via `screen -X`, so a pane has no stable identity to send to, read from, or self-identify by. Run inside tmux ($TMUX), rmux ($RMUX set), herdr ($HERDR_ENV=1), wezterm ($WEZTERM_PANE set), zellij ($ZELLIJ set), or cmux ($CMUX_WORKSPACE_ID set) instead.");
 	throw new Error("cyber-mux requires a session backend — run inside tmux ($TMUX), rmux ($RMUX set), herdr ($HERDR_ENV=1), wezterm ($WEZTERM_PANE set), zellij ($ZELLIJ set), cmux ($CMUX_WORKSPACE_ID set), or otty ($OTTY_PANE_ID set)");
-}
-//#endregion
-//#region ../../node_modules/.pnpm/cyber-mux@0.11.0/node_modules/cyber-mux/dist/worktree.mjs
-/**
-* This module's own refusals and failures — plain cyber-mux prose, never a dependency's raw words.
-* `reportWorktreeFailure` (`cli.ts`) forwards a `WorktreeGitError`'s message onto stdout verbatim
-* because it is safe to: everything thrown here is this CLI's own text. Anything else that reaches
-* that catch-all (a `session.tmux.ts`/`session.herdr.ts` throw, which embeds the backend's own name
-* and its raw stderr via `withReason`) is a different case and is translated, not forwarded.
-*/
-var WorktreeGitError = class extends Error {};
-/**
-* @deprecated Use `primaryRoot({ exec })` from `cyber-agentkit/worktrees` (re-exported here).
-*
-* Resolve the primary checkout's root regardless of whether the caller's cwd is the primary
-* checkout or a linked worktree — `--git-common-dir` always points at the main repo's `.git`.
-*/
-function resolvePrimaryRoot(exec) {
-	const commonDir = exec("git", [
-		"rev-parse",
-		"--path-format=absolute",
-		"--git-common-dir"
-	]);
-	if (!commonDir) throw new WorktreeGitError("cannot resolve the primary checkout — not inside a git repository");
-	return dirname(commonDir);
-}
-//#endregion
-//#region ../../node_modules/.pnpm/cyberlegion@1.7.0/node_modules/cyberlegion/dist/index.mjs
-/**
-* Transitional env-normalization seam (mux.feature: "a pane carrying only the legacy fast-path vars
-* is still honored"). cyber-mux's own fast-path reads `$CYBER_MUX`/`$CYBER_MUX_PANE` — its
-* `currentPane` hardcodes those names (no `envPrefix` override), and `probeMultiplexer`'s `envPrefix`
-* option renames the WHOLE pair together, so neither can be steered to fall back onto a
-* differently-named legacy pair. Every call into cyber-mux that reads the fast-path
-* (`probeMultiplexer`, `currentPane`, `callerPane`, `resolveMuxAdapter`) must be handed this seam's
-* output instead of the raw env.
-*
-* When `$CYBER_MUX`/`$CYBER_MUX_PANE` are both absent and either legacy `$CYBERLEGION_MUX`/
-* `$CYBERLEGION_MUX_PANE` var is present, copies the legacy pair onto the current names. Never
-* overwrites an already-set current var — the current pair always wins outright the moment either
-* half of it is set, exactly matching the frozen precedence chain (mux.feature: "the current
-* fast-path vars win over the legacy pair when both are set").
-*
-* Transitional — deleted once no pre-migration pane (one that only ever exported the legacy pair) is
-* still alive.
-*/
-function normalizeMuxEnv(env) {
-	const hasCurrent = env.CYBER_MUX !== void 0 || env.CYBER_MUX_PANE !== void 0;
-	const hasLegacy = env.CYBERLEGION_MUX !== void 0 || env.CYBERLEGION_MUX_PANE !== void 0;
-	if (hasCurrent || !hasLegacy) return env;
-	return {
-		...env,
-		CYBER_MUX: env.CYBERLEGION_MUX,
-		CYBER_MUX_PANE: env.CYBERLEGION_MUX_PANE
-	};
-}
-/** The tracked marker file that makes a hub root initialized (see ensureMarker). */
-const MARKER_FILE = "config.json";
-/** Walk up from `cwd` to the nearest git repo root; fall back to `cwd`. */
-function projectRoot(cwd = process.cwd()) {
-	let dir = resolve(cwd);
-	for (;;) {
-		if (existsSync(join(dir, ".git"))) return dir;
-		const parent = dirname(dir);
-		if (parent === dir) return resolve(cwd);
-		dir = parent;
-	}
-}
-/**
-* Resolve the cyberlegion hub root. Precedence: explicit --root/--space, then `$CYBERLEGION_ROOT`,
-* then the GLOBAL hub `~/.agents/cyberlegion` (addressable across every project and worktree
-* boundary — identity/mail/registry state lives here by default; `--space` isolates it), falling
-* back to a project-local `.agents/cyberlegion` only when no home directory is resolvable.
-*/
-function resolveRoot(opts = {}) {
-	const env = opts.env ?? process.env;
-	const explicit = opts.root ?? opts.space ?? env.CYBERLEGION_ROOT;
-	if (explicit) return resolve(explicit);
-	const home = homedir();
-	if (home) return join(home, ".agents", "cyberlegion");
-	return join(projectRoot(opts.cwd), ".agents", "cyberlegion");
-}
-/**
-* Create the tracked `config.json` marker at `root` (a hub root) if it does not already exist.
-* Callers pass the root under which the marker should be created/ensured; this mkdir's it as
-* needed. Idempotent — never overwrites an existing marker.
-*/
-function ensureMarker(root) {
-	mkdirSync(root, { recursive: true });
-	const marker = join(root, MARKER_FILE);
-	if (!existsSync(marker)) writeFileSync(marker, `${JSON.stringify({ version: 1 }, null, 2)}\n`);
-}
-/**
-* Thrown when an agent/message id destined to become a filename PATH SEGMENT fails
-* `assertSafeId` — see that function's doc for why this rejects rather than encodes.
-*/
-var InvalidIdError = class extends Error {
-	kind;
-	value;
-	constructor(kind, value) {
-		super(`invalid ${kind} ${JSON.stringify(value)} — must not be empty, ".", "..", or contain a path separator`);
-		this.kind = kind;
-		this.value = value;
-		this.name = "InvalidIdError";
-	}
-};
-const UNSAFE_ID = /[\\/\0]/;
-/**
-* Filename-safety guard for any id that becomes a bare PATH SEGMENT under the hub root — agent ids
-* (`agentFile`/`inboxDir`/`dataDir`/`briefFile`) and message ids (`messageFile`). Both are
-* effectively user/peer-controlled: an agent id round-trips a caller-supplied `--handle`-adjacent
-* value in some flows, and nothing upstream of the store validates it before it reaches a `join()`.
-*
-* REJECT, don't encode: unlike `sanitizePane` (which deliberately encodes, because a tmux/herdr pane
-* locator is an opaque, internally-produced token that only needs to survive as a *lookup key*, not
-* round-trip as an identity), an agent/message id is a PRIMARY KEY — `getAgent(id)` must return
-* exactly what `putAgent` stored under that same `id`. Silently encoding two different malformed ids
-* onto the same sanitized filename would let one caller's write silently clobber or read another's
-* record — a worse failure than a loud, immediate refusal. So: empty, `.`, `..`, and any embedded
-* path separator (POSIX `/`, Windows `\`) or NUL byte are rejected outright, which also rejects an
-* absolute path outright (an absolute path always contains a separator).
-*/
-function assertSafeId(id, kind) {
-	if (!id || id === "." || id === ".." || UNSAFE_ID.test(id)) throw new InvalidIdError(kind, id);
-	return id;
-}
-const paths = {
-	agentsDir: (root) => join(root, "agents"),
-	agentFile: (root, id) => join(root, "agents", `${assertSafeId(id, "agent id")}.json`),
-	panesDir: (root) => join(root, "panes"),
-	paneFile: (root, pane) => join(root, "panes", `${sanitizePane(pane)}.id`),
-	inboxDir: (root, id) => join(root, "inbox", assertSafeId(id, "agent id")),
-	inboxReadDir: (root, id) => join(root, "inbox", assertSafeId(id, "agent id"), "read"),
-	dataDir: (root, id) => join(root, "data", assertSafeId(id, "agent id")),
-	briefFile: (root, id) => join(root, "data", assertSafeId(id, "agent id"), "brief.md"),
-	mainPaneFile: (root) => join(root, "main-pane.id"),
-	projectsDir: (root) => join(root, "projects"),
-	serviceLeaseFile: (root, project, service) => join(root, "services", assertSafeId(project, "project id"), `${assertSafeId(service, "service name")}.json`),
-	projectFile: (root, id) => join(root, "projects", `${assertSafeId(id, "project id")}.json`),
-	/** A message's file path within `toId`'s unread/read inbox dir, keyed by its own collision-free
-	* id — validated the same as an agent id (it's the same class of risk: a peer- or CLI-controlled
-	* string becoming a filename). */
-	messageFile: (root, toId, msgId) => join(paths.inboxDir(root, toId), `${assertSafeId(msgId, "message id")}.json`),
-	messageReadFile: (root, toId, msgId) => join(paths.inboxReadDir(root, toId), `${assertSafeId(msgId, "message id")}.json`)
-};
-/** tmux pane ids look like "%3"; make them filesystem-safe. */
-function sanitizePane(pane) {
-	return pane.replace(/[^A-Za-z0-9_-]/g, "_");
-}
-const realExec = nodeExec;
-const nowIso = (ctx) => new Date(ctx.now?.() ?? Date.now()).toISOString();
-function loadAgent(store, id) {
-	return store.getAgent(id);
-}
-function saveAgent(store, rec) {
-	store.putAgent(rec);
-}
-function listAgents(store) {
-	return store.listAgents();
-}
-/**
-* Recover the calling agent's own id, mux-agnostically. Inside any multiplexer pane (tmux or herdr)
-* the pane index is authoritative — a pane with no pane entry is simply unregistered and must NOT
-* adopt `$CYBERLEGION_AGENT_ID` (that env fallback applies ONLY when the session is in no
-* multiplexer pane at all). There is no shared bare "self" file — self-id is always pane-keyed or
-* explicit via the env var.
-*/
-function resolveSelfId(ctx) {
-	const env = ctx.env ?? process.env;
-	const cur = currentPane(normalizeMuxEnv(env));
-	if (cur) return ctx.store.resolvePaneId(cur.pane);
-	return env.CYBERLEGION_AGENT_ID || void 0;
-}
-/** Pick the one live record a handle names. A standing record wins over the rest — an owner report
-* must land in the durable standing inbox, not a dying session's. Otherwise two or more matches are
-* ambiguous (two same-named repos give their service endpoints the same handle), and silently taking
-* the first could deliver to the wrong one, so fail loud naming the ids, as `resolveOwnerMailbox` does. */
-function pickLive(ref, live) {
-	const standing = live.find((a) => a.kind === "standing");
-	if (standing) return standing;
-	if (live.length > 1) throw new Error(`"${ref}" names ${live.length} units — pass an id (${live.map((a) => a.id).join(", ")})`);
-	return live[0];
-}
-/** Split a handle's matches into live and exited. An exited unit's pane is gone and its inbox has
-* no reader, so a *name* must never resolve to one — a handle is reusable across units, and the
-* dead holders of it outnumber the live one over time. Standing records never exit. An explicit id
-* still resolves either way: naming a unit outright is a deliberate choice, unlike reaching for a
-* handle and silently landing on a corpse. */
-function matchHandle(agents, handle) {
-	const matched = agents.filter((a) => a.handle === handle);
-	return {
-		live: matched.filter((a) => a.status !== "exited"),
-		exited: matched.filter((a) => a.status === "exited")
-	};
-}
-/** Fail loudly when a handle names only the dead — never fall through to a corpse. */
-function unaddressable(ref, exited, tried) {
-	if (exited.length > 0) {
-		const dead = exited.map((a) => `${a.id.slice(0, 6)}${a.pane ? ` (${a.pane.id})` : ""}`).join(", ");
-		return /* @__PURE__ */ new Error(`"${ref}" matches only exited unit(s) — ${dead} — which have no reader. Address a live unit ('cyberlegion unit who'), or run 'cyberlegion unit register --standing --handle ${ref}' for a durable inbox.`);
-	}
-	return /* @__PURE__ */ new Error(`no agent addressable as "${ref}" (tried ${tried})`);
-}
-/**
-* Resolve a unit reference by id, handle, or its worktree branch (the unit↔CR join key: an
-* `AgentRecord.worktree.branch` equals the SDD `<cr-ref>` it maps to, when spawned for one). Used
-* by verbs that address "the unit working on CR X" as well as "the unit named X".
-*/
-function resolveAgent(store, ref) {
-	const byId = loadAgent(store, ref);
-	if (byId) return byId;
-	const agents = listAgents(store);
-	const { live, exited } = matchHandle(agents, ref);
-	const byHandle = pickLive(ref, live);
-	if (byHandle) return byHandle;
-	const byBranchAll = agents.filter((a) => a.worktree?.branch === ref);
-	const byBranch = byBranchAll.find((a) => a.status !== "exited");
-	if (byBranch) return byBranch;
-	throw unaddressable(ref, [...exited, ...byBranchAll.filter((a) => a.status === "exited")].filter((a, i, all) => all.findIndex((b) => b.id === a.id) === i), "id, handle, and worktree branch/CR");
-}
-function bumpLastSeen(ctx, id) {
-	const rec = loadAgent(ctx.store, id);
-	if (!rec) return;
-	rec.lastSeen = nowIso(ctx);
-	saveAgent(ctx.store, rec);
-}
-/** Refresh this session's own last-seen if it is registered — best-effort, never throws. */
-function touch(ctx) {
-	const id = resolveSelfId(ctx);
-	if (id) bumpLastSeen(ctx, id);
-}
-/**
-* Whether a unit's session is still there, as far as its backend can tell. "Cannot rule out alive"
-* must never become grounds to replace an owner — the same fail-closed policy `store/lock.ts` takes
-* on an ambiguous holder — so a session reads as gone only on positive evidence: its multiplexer
-* answered with a pane list and the pane is not in it. A record with no pane cannot be probed, and a
-* backend the caller cannot reach (a different server, no client, a failed query) answers with
-* nothing; both read as live. `paneExists` is not used here because it collapses "unreachable" into
-* "gone". An exited record is never live.
-*/
-function sessionLive(ctx, rec) {
-	if (rec.status === "exited" || rec.status === "stopped") return false;
-	if (!rec.pane) return true;
-	const panes = PANE_ADAPTERS[rec.pane.mux].listPanes(ctx.exec ?? realExec);
-	if (panes.length === 0) return true;
-	const id = rec.pane.id;
-	return panes.some((p) => p.id === id);
-}
-/** The per-mux session adapters `prune` consults for pane liveness — each answers with its own
-* backend primitive so a herdr pane is never probed with a tmux query, and vice versa. */
-const PANE_ADAPTERS = {
-	tmux: tmuxMuxAdapter,
-	herdr: herdrMuxAdapter
-};
-/**
-* Backend selection via cyber-mux's two-mode mux probe, normalized through the transitional
-* `$CYBERLEGION_MUX*` → `$CYBER_MUX*` env seam (`mux-env.ts`) — tmux/herdr map to their existing
-* cyber-mux adapters.
-*
-* cyber-mux detects MORE backends than `unit/registry`'s `AgentRecord.pane` can carry a locator
-* under (`'tmux' | 'herdr'` only). A DETECTED wezterm/zellij is refused HERE, before anything opens,
-* naming the backend it found (mux.feature: "a detected backend a unit record cannot carry is
-* refused before opening anything") — driving it would open a real pane no record could name,
-* stranding a live session `prune` can never reap and no caller can nudge. Anything else (`none`,
-* `screen`) falls through to the plain "no backend" refusal, unchanged from before the migration.
-*/
-function selectSessionAdapter(env, exec = realExec) {
-	const probe = probeMultiplexer(exec, normalizeMuxEnv(env));
-	if (probe.mux === "tmux") return tmuxMuxAdapter;
-	if (probe.mux === "herdr") return herdrMuxAdapter;
-	if (probe.mux === "wezterm" || probe.mux === "zellij") throw new Error(`spawn detected ${probe.mux}, a backend unit/registry cannot store a pane locator under (only tmux and herdr) — refusing before opening anything`);
-	throw new Error("spawn requires a session backend — run inside tmux ($TMUX) or herdr ($HERDR_ENV=1)");
-}
-function stringifyCell(v) {
-	if (v == null) return "";
-	const s = String(v);
-	return /[,\n"]/.test(s) ? `"${s.replace(/"/g, "\"\"")}"` : s;
-}
-/** One TOON-encoded object: `key: value` lines, blank/undefined fields dropped. */
-function toonObject(fields) {
-	return Object.entries(fields).filter(([, v]) => v != null).map(([k, v]) => `${k}: ${v}`).join("\n");
-}
-/** One TOON-encoded list: a `name[N]{field,...}:` header plus one row per item, then an aggregate
-* summary line. Definitive on empty — still emits `name[0]{...}:` plus the summary line. */
-function toonList(name, items, fields, summary) {
-	return [
-		`${name}[${items.length}]{${fields.map((f) => f.key).join(",")}}:`,
-		...items.map((item) => fields.map((f) => stringifyCell(f.get(item))).join(",")).map((r) => `  ${r}`),
-		summary
-	].join("\n");
-}
-/** Print a command's result to stdout in the requested format. */
-function emit(format, payload) {
-	if (format === "json") console.log(JSON.stringify(payload.json, null, 2));
-	else console.log(payload.toon);
-}
-/**
-* The canonical git common dir for `dir`, or undefined outside a repository. The common dir is the
-* one path every checkout of a repository shares — the default checkout and each linked worktree
-* all report the same `.git` — so it is what makes "same project from two worktrees" one reference.
-* Realpath'd so a symlinked path to the same repository cannot mint a second id.
-*/
-function commonDirOf(exec, dir) {
-	const out = exec("git", [
-		"-C",
-		dir,
-		"rev-parse",
-		"--path-format=absolute",
-		"--git-common-dir"
-	]);
-	if (!out) return void 0;
-	return realOrResolved(out);
-}
-/**
-* Derive a project's stable reference from its canonical common dir. Deterministic rather than
-* minted, so two worktrees registering the same project at the same instant converge on one id with
-* no lock, and two unrelated repositories that merely share a directory name never collide.
-*/
-function projectIdOf(commonDir) {
-	return `prj-${createHash("sha256").update(commonDir).digest("hex").slice(0, 16)}`;
-}
-function realOrResolved(path) {
-	try {
-		return realpathSync(path);
-	} catch {
-		return resolve(path);
-	}
-}
-/**
-* The default checkout's root, and whether that answer is authoritative. Asked from the default
-* checkout itself (its git dir IS the common dir), `--show-toplevel` is exact wherever the git dir
-* lives. Asked from a linked worktree, git has no pointer back to the default checkout when its git
-* dir was separated (`git init --separate-git-dir`) — even `git worktree list` then reports the git
-* dir — so the common dir's parent is only a guess.
-*/
-function defaultCheckoutOf(exec, dir, commonDir) {
-	const gitDir = exec("git", [
-		"-C",
-		dir,
-		"rev-parse",
-		"--path-format=absolute",
-		"--git-dir"
-	]);
-	const top = exec("git", [
-		"-C",
-		dir,
-		"rev-parse",
-		"--show-toplevel"
-	]);
-	if (gitDir && top && realOrResolved(gitDir) === commonDir) return {
-		root: realOrResolved(top),
-		exact: true
-	};
-	return {
-		root: dirname(commonDir),
-		exact: false
-	};
-}
-/**
-* Register (or idempotently refresh) the project containing `dir` — any checkout of it, default or
-* linked. Keeps the first `registeredAt`, so re-registering from a worktree is a no-op in effect.
-*/
-function registerProject(ctx, input = {}) {
-	const exec = ctx.exec ?? realExec;
-	const dir = resolve(input.dir ?? process.cwd());
-	const commonDir = commonDirOf(exec, dir);
-	if (!commonDir) throw new Error(`cannot register a project at "${dir}" — not inside a git repository`);
-	ctx.store.ensureMarker();
-	const id = projectIdOf(commonDir);
-	const existing = ctx.store.getProject(id);
-	const checkout = defaultCheckoutOf(exec, dir, commonDir);
-	const root = checkout.exact || !existing ? checkout.root : existing.root;
-	const rec = {
-		id,
-		name: basename(root),
-		root,
-		commonDir,
-		registeredAt: existing?.registeredAt ?? new Date(ctx.now?.() ?? Date.now()).toISOString()
-	};
-	ctx.store.putProject(rec);
-	return rec;
-}
-function looksLikePath(ref) {
-	return isAbsolute(ref) || ref.startsWith(".") || ref.includes(sep) || ref.includes("/");
-}
-function isDirectory(path) {
-	return existsSync(path) && statSync(path).isDirectory();
-}
-/**
-* Resolve a project from anywhere — by id, by a path inside any of its checkouts, or by name when
-* exactly one registered project carries it. A path registers its project on first use: git has
-* already confirmed it is a repository, and registering is idempotent, so there is nothing a typo
-* could mint. A name never registers — nothing can be found by a name no checkout has reported —
-* and an ambiguous name names its candidates rather than picking one.
-*/
-function resolveProject(ctx, ref) {
-	const byId = ctx.store.getProject(ref);
-	if (byId) return byId;
-	const asPath = resolve(ref);
-	if (looksLikePath(ref) && isDirectory(asPath)) return byPath(ctx, asPath);
-	const named = ctx.store.listProjects().filter((p) => p.name === ref);
-	if (named.length === 1) return named[0];
-	if (named.length > 1) throw new Error(`project name "${ref}" is ambiguous — ${named.map((p) => `${p.id} (${p.root})`).join(", ")}; pass an id or a path`);
-	if (isDirectory(asPath)) return byPath(ctx, asPath);
-	throw new Error(`no registered project "${ref}" (tried id, path, and name) — pass a path inside the repository to register it`);
-}
-function byPath(ctx, dir) {
-	const commonDir = commonDirOf(ctx.exec ?? realExec, dir);
-	if (!commonDir) throw new Error(`"${dir}" is not inside a git repository`);
-	return ctx.store.getProject(projectIdOf(commonDir)) ?? registerProject(ctx, { dir });
-}
-/** A refused ownership transition. `stale` means the caller's generation, token, or holder claim is
-* not the current one — the caller is not (or no longer) the authority it claims to be. */
-var ServiceOwnershipError = class extends Error {
-	code;
-	constructor(code, message) {
-		super(message);
-		this.code = code;
-		this.name = "ServiceOwnershipError";
-	}
-};
-const SERVICE_NAME = /^[a-z0-9][a-z0-9_-]{0,62}$/;
-function assertServiceName(name) {
-	if (!SERVICE_NAME.test(name)) throw new Error(`invalid service name "${name}" — use lowercase letters, digits, "-" or "_" (max 63)`);
-}
-function serviceEndpointId(projectId, name) {
-	return `svc-${projectId}-${name}`;
-}
-const nowMs = (ctx) => ctx.now?.() ?? Date.now();
-const iso = (ms) => new Date(ms).toISOString();
-function lockName(projectId, name) {
-	return `service-${projectId}-${name}`;
-}
-function isLive$1(ctx, unit) {
-	if (unit.status === "exited") return false;
-	return ctx.isLive ? ctx.isLive(unit) : sessionLive(ctx, unit);
-}
-function ensureEndpoint(ctx, project, name) {
-	const id = serviceEndpointId(project.id, name);
-	const existing = loadAgent(ctx.store, id);
-	if (existing) return existing;
-	ctx.store.ensureMarker();
-	const ts = iso(nowMs(ctx));
-	const rec = {
-		id,
-		handle: `${name}@${project.name}`,
-		kind: "service",
-		service: {
-			project: project.id,
-			name
-		},
-		cwd: project.root,
-		pane: null,
-		status: "active",
-		createdAt: ts,
-		lastSeen: ts
-	};
-	saveAgent(ctx.store, rec);
-	return rec;
-}
-function view(ctx, project, endpoint, lease) {
-	const base = {
-		project,
-		endpoint,
-		lease
-	};
-	if (lease.state === "vacant") return {
-		...base,
-		health: "vacant",
-		control: "none"
-	};
-	if (lease.state === "reserved") {
-		const expired = nowMs(ctx) > Date.parse(lease.reservation?.expiresAt ?? "");
-		return {
-			...base,
-			health: expired ? "expired" : "starting",
-			control: "none",
-			...expired ? { note: "the reservation expired without a bound owner; the next acquire takes over" } : {}
-		};
-	}
-	const owner = lease.holder ? loadAgent(ctx.store, lease.holder) : void 0;
-	if (!owner) return {
-		...base,
-		health: "unhealthy",
-		control: "none",
-		note: "the owner has no unit record"
-	};
-	const control = owner.pane || ctx.store.findPaneByAgentId(owner.id) ? "pane" : "none";
-	const controlNote = control === "none" ? "the owner resolves, but its session control is not recoverable from here (no multiplexer pane — e.g. a native subagent only its parent can drive)" : void 0;
-	if (!isLive$1(ctx, owner)) return {
-		...base,
-		owner,
-		health: "unhealthy",
-		control,
-		note: "the owner session is gone"
-	};
-	return {
-		...base,
-		owner,
-		health: "healthy",
-		control,
-		...controlNote ? { note: controlNote } : {}
-	};
-}
-function vacantLease(ctx, projectId, name) {
-	return {
-		project: projectId,
-		service: name,
-		endpoint: serviceEndpointId(projectId, name),
-		generation: 0,
-		state: "vacant",
-		updatedAt: iso(nowMs(ctx))
-	};
-}
-/** Load the project, service endpoint, and lease — creating the endpoint and a vacant lease when
-* `create` is set, else throwing for a service that was never started. */
-function load(ctx, projectRef, name, create) {
-	assertServiceName(name);
-	const project = resolveProject(ctx, projectRef);
-	const lease = ctx.store.getServiceLease(project.id, name);
-	const endpoint = loadAgent(ctx.store, serviceEndpointId(project.id, name));
-	if (lease && endpoint) return {
-		project,
-		endpoint,
-		lease
-	};
-	if (!create) throw new Error(`no service "${name}" in project ${project.name} (${project.id})`);
-	return {
-		project,
-		endpoint: ensureEndpoint(ctx, project, name),
-		lease: lease ?? vacantLease(ctx, project.id, name)
-	};
-}
-function stale(message) {
-	return new ServiceOwnershipError("stale", message);
-}
-/** Read a service's ownership without changing anything. Throws for a service never started. */
-function resolveService(ctx, projectRef, name) {
-	const { project, endpoint, lease } = load(ctx, projectRef, name, false);
-	return view(ctx, project, endpoint, lease);
-}
-/**
-* The fencing check: succeed only when `unit` owns the service at exactly `generation`. A runtime
-* calls this before acting as the service's authority; a stale runtime — replaced, handed off, or
-* recovered past — is refused.
-*/
-function verifyOwnership(ctx, projectRef, name, input) {
-	const { project, endpoint, lease } = load(ctx, projectRef, name, false);
-	if (lease.state !== "active" || lease.holder !== input.unit || lease.generation !== input.generation) throw stale(`"${input.unit}" at generation ${input.generation} is not the owner (now ${lease.state}${lease.holder ? ` by ${lease.holder}` : ""} at ${lease.generation})`);
-	return view(ctx, project, endpoint, lease);
-}
-/**
-* Run `fn` as the verified owner, holding the service lock so no transition can interleave between
-* the check and the act. For short critical sections only — the lock is bounded-wait for everyone
-* else — and never reentrant: `fn` must not call another service transition on the same service.
-*/
-function withOwnership(ctx, projectRef, name, input, fn) {
-	assertServiceName(name);
-	const project = resolveProject(ctx, projectRef);
-	return ctx.store.withLock(lockName(project.id, name), () => fn(verifyOwnership(ctx, project.id, name, input)));
-}
-/** A record file exists but its content didn't parse as JSON — a torn write (crash mid-`writeFileSync`,
-* pre-atomic-write code path) or on-disk tampering. Carries the file path and the original parse
-* error so a caller can report exactly what's broken and where, rather than "Unexpected token" with
-* no location. */
-var CorruptRecordError = class extends Error {
-	file;
-	constructor(file, cause) {
-		super(`corrupt record at "${file}": ${cause instanceof Error ? cause.message : String(cause)}`, { cause });
-		this.file = file;
-		this.name = "CorruptRecordError";
-	}
-};
-/**
-* Probe whether `pid` is alive using `process.kill(pid, 0)` — the POSIX "does this process exist"
-* idiom; it sends no signal, it only tests deliverability. `ESRCH` (no such process) is the only
-* errno that means "definitely dead". Every other errno — `EPERM` above all, common under sandboxes
-* and containers where a genuinely live process can be unsignalable by this one, or any process
-* owned by a different uid — reads as `'unknown'`, never `'dead'`: collapsing `EPERM` into "dead" is
-* exactly the defect this three-state return exists to make structurally impossible to reintroduce
-* at a new call site. Same-pid is trivially `'alive'` (a process checking its own prior identity,
-* e.g. after a crash-and-restart that reused nothing).
-*/
-function probeProcess(pid) {
-	if (pid === process.pid) return "alive";
-	try {
-		process.kill(pid, 0);
-		return "alive";
-	} catch (err) {
-		return err.code === "ESRCH" ? "dead" : "unknown";
-	}
-}
-var LockTimeoutError = class extends Error {
-	name;
-	constructor(name) {
-		super(`timed out waiting for lock "${name}"`);
-		this.name = name;
-		this.name = "LockTimeoutError";
-	}
-};
-function locksDir(root) {
-	return join(root, "locks");
-}
-function lockDirFor(root, name) {
-	return join(locksDir(root), `${name}.lock`);
-}
-/** Read a lock dir's recorded holder. Absent/corrupt/mid-acquire (holder.json not written yet) all
-* read as "unknown" — never grounds to steal. An ambiguous read must never look like a green light. */
-function readHolder(dir) {
-	try {
-		return JSON.parse(readFileSync(join(dir, "holder.json"), "utf8"));
-	} catch {
-		return;
-	}
-}
-/** Locking's policy on `probeProcess`'s `'unknown'` state: treat it exactly like `'alive'` — i.e.
-* NOT `'dead'`. The one invariant that must never break here is stealing a lock a live holder still
-* holds, and `'unknown'` means "cannot rule out alive", so it can only ever be safe to fold it into
-* the "do not steal" side. This is a local policy decision, not `probeProcess`'s — a different call
-* site (a staleness reaper, say) folding `'unknown'` into "not provably alive" instead would be
-* reading the SAME three states toward the opposite default, which is exactly the bug class this
-* three-state type exists to force each call site to decide explicitly (see process-liveness.ts). */
-function heldByLiveOrUnknownPid(pid) {
-	return probeProcess(pid) !== "dead";
-}
-function sleepSync(ms) {
-	if (ms <= 0) return;
-	Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
-}
-/**
-* Attempt to reclaim an abandoned lock dir without ever discarding a LIVE one out from under its
-* holder — the exact defect agmsg/firstmate's lock suites exist to catch (evidence.md items 3-4).
-*
-* `mkdirSync` on the lock path itself already arbitrates ordinary contention (EEXIST = someone else
-* got there first); the harder race is a STEAL: two processes independently deciding the same lock
-* looks dead. `renameSync` gives the same exclusivity `mkdirSync` gives for a fresh path, but for an
-* EXISTING one — of any number of processes racing to rename the SAME source path away, exactly one
-* succeeds and the rest get ENOENT. So the rename-away is the sole arbiter of "who gets to attempt
-* the steal", not the earlier staleness read.
-*
-* That still leaves one race: the content we read as stale might not be the content we actually
-* capture, if the true holder released and a NEW, live holder re-acquired at this same path between
-* our staleness read and our rename. So after winning the rename, re-check the pid we ACTUALLY
-* captured (not the one from the earlier read) — if it's alive, this was a live lock we grabbed by
-* accident; put it back immediately (best-effort — if a third party has since re-mkdir'd the path,
-* the invariant we're protecting already holds, so just drop our capture) and refuse to finalize.
-*/
-function tryReclaimStale(dir) {
-	const grave = `${dir}.stale-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-	try {
-		renameSync(dir, grave);
-	} catch (err) {
-		if (err.code === "ENOENT") return false;
-		throw err;
-	}
-	const captured = readHolder(grave);
-	if (captured && heldByLiveOrUnknownPid(captured.pid)) {
-		try {
-			renameSync(grave, dir);
-		} catch {
-			rmSync(grave, {
-				recursive: true,
-				force: true
-			});
-		}
-		return false;
-	}
-	rmSync(grave, {
-		recursive: true,
-		force: true
-	});
-	return true;
-}
-/**
-* Acquire an advisory, mkdir-based lock at `root/locks/<name>.lock`. mkdir (not O_EXCL on a file) is
-* the primitive here because a lock also needs to carry its holder metadata (pid + timestamp) for
-* staleness detection, and a directory gives that a natural home (`holder.json` inside it) without a
-* second file to keep in sync; `mkdirSync` on a non-existent path is exactly as atomic as an
-* exclusive file create on every filesystem this tool targets (POSIX; NTFS via Node's Win32 mkdir).
-*
-* Blocks (busy-retries) until acquired or `timeoutMs` elapses, reclaiming a dead holder's lock along
-* the way (see `tryReclaimStale`) but NEVER a live one — contention with a live holder always waits
-* it out or times out, never steals.
-*/
-function acquireLock(root, name, opts = {}) {
-	const retryDelayMs = opts.retryDelayMs ?? 20;
-	const timeoutMs = opts.timeoutMs ?? 5e3;
-	const dir = lockDirFor(root, name);
-	mkdirSync(locksDir(root), { recursive: true });
-	const deadline = Date.now() + timeoutMs;
-	for (;;) try {
-		mkdirSync(dir);
-		writeFileSync(join(dir, "holder.json"), JSON.stringify({
-			pid: process.pid,
-			acquiredAt: Date.now()
-		}));
-		return { release: () => rmSync(dir, {
-			recursive: true,
-			force: true
-		}) };
-	} catch (err) {
-		if (err.code !== "EEXIST") throw err;
-		const holder = readHolder(dir);
-		if (holder && !heldByLiveOrUnknownPid(holder.pid) && tryReclaimStale(dir)) continue;
-		if (Date.now() > deadline) throw new LockTimeoutError(name);
-		sleepSync(retryDelayMs);
-	}
-}
-/** Acquire `name`, run `fn`, and always release — the shape every genuine read-modify-write in the
-* store should use (`setMainPane`, `identity.ts`'s `claimPresence`/`clearPresence` today). */
-function withLock(root, name, fn, opts) {
-	const handle = acquireLock(root, name, opts);
-	try {
-		return fn();
-	} finally {
-		handle.release();
-	}
-}
-/** `withLock` for an async read-decide-write: the lock is held until `fn`'s promise settles, not
-* merely until it returns one. The wait to acquire is the same bounded, synchronous one. */
-async function withLockAsync(root, name, fn, opts) {
-	const handle = acquireLock(root, name, opts);
-	try {
-		return await fn();
-	} finally {
-		handle.release();
-	}
-}
-/** Parse a record file's content, wrapping a `JSON.parse` failure in a typed, file-named
-* `CorruptRecordError` instead of letting a bare `SyntaxError` bubble up from deep inside
-* `listInbox`/`listAgents`/`getAgent` with no indication of WHICH file broke. A file that doesn't
-* exist is a caller error — callers check existence first, so this only ever sees files known to
-* be present but possibly torn (a crash mid-write predating the atomic-write fix, or on-disk
-* tampering) — see evidence.md item 5, "no silent success on a broken store". */
-function readJsonRecord(file) {
-	const raw = readFileSync(file, "utf8");
-	try {
-		return JSON.parse(raw);
-	} catch (err) {
-		throw new CorruptRecordError(file, err);
-	}
-}
-function readMessages(dir) {
-	if (!existsSync(dir)) return [];
-	return readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => readJsonRecord(join(dir, f)));
-}
-/** Write `data` to `file` crash-safely: write to a sibling temp file first, then `renameSync` into
-* place. `rename` is atomic within a filesystem (POSIX guarantees this; Node's Win32 rename is too
-* for same-volume paths, which every path here is — always under the same store root), so any
-* reader either sees the OLD complete content or the NEW complete content, never a truncated
-* in-between. Before this fix, `putMessage`/`putAgent`/`putPaneIndex`/`setMainPane` called
-* `writeFileSync` directly on the final path — only `ackMessage`'s move (a rename of an already-
-* complete file) was atomic. A process crashing mid-`writeFileSync`, or a reader racing a writer on
-* a large record, could hand `JSON.parse` a truncated file and throw an uncaught `SyntaxError` deep
-* inside `listInbox`/`listAgents`/`getAgent`.
-*
-* Deliberately no `fsync` before the rename: this tool defends against a process CRASHING mid-write
-* (the actual, observed risk in a daemonless multi-process CLI), where the page cache alone is
-* sufficient, not against a power-loss/OS-crash losing unflushed pages, which cyberlegion doesn't
-* claim to survive today (no writer here holds data the user can't just re-send). Add fsync if that
-* durability bar ever changes.
-*
-* The temp name embeds pid + a counter so two writers to the SAME final path never collide on their
-* own temp files mid-write (each writer's temp file is unique to it). */
-let tmpCounter = 0;
-function writeFileAtomic(file, data) {
-	mkdirSync(dirname(file), { recursive: true });
-	const tmp = `${file}.${process.pid}.${tmpCounter++}.tmp`;
-	writeFileSync(tmp, data);
-	renameSync(tmp, file);
-}
-function writeJson(file, data) {
-	writeFileAtomic(file, `${JSON.stringify(data, null, 2)}\n`);
-}
-function writeText(file, text) {
-	writeFileAtomic(file, text);
-}
-/** Build a path via `build()` for a READ-only lookup, treating a syntactically-invalid id
-* (`InvalidIdError`) the same as "not found" rather than throwing. Reads are the wrong place to
-* enforce id-shape: `resolveAgent`/`resolveRecipient` (identity.ts) speculatively probe an arbitrary
-* ref — which may legitimately be a worktree BRANCH NAME containing `/` — as a candidate id before
-* falling back to handle/branch lookup, so `getAgent('cyberlegion/unit-abc')` must fail soft, not
-* throw, or that fallback chain breaks. The traversal risk this guards against (an id escaping the
-* store root) only bites on a WRITE — nothing is ever created or overwritten by a probe that finds
-* nothing — so a hard reject stays reserved for the write paths below (`putAgent`, `putMessage`,
-* `putPaneIndex`, `writeBrief`), where a malformed id would otherwise put a stray file wherever it
-* pointed. */
-function readPathOrUndefined(build) {
-	try {
-		return build();
-	} catch (err) {
-		if (err instanceof InvalidIdError) return void 0;
-		throw err;
-	}
-}
-/** The on-disk `Store` implementation — current per-writer sharded `.json` layout (ADR-0020):
-* one file per message/agent, collision-free filenames, ack = atomic rename into `read/`. */
-var FileStore = class {
-	root;
-	constructor(root) {
-		this.root = root;
-	}
-	ensureMarker() {
-		ensureMarker(this.root);
-	}
-	putMessage(toId, msg) {
-		writeFileAtomic(paths.messageFile(this.root, toId, msg.id), `${JSON.stringify(msg, null, 2)}\n`);
-	}
-	listInbox(id) {
-		const inbox = readPathOrUndefined(() => paths.inboxDir(this.root, id));
-		const read = readPathOrUndefined(() => paths.inboxReadDir(this.root, id));
-		return {
-			unread: inbox ? readMessages(inbox) : [],
-			read: read ? readMessages(read) : []
-		};
-	}
-	ackMessage(id, msgId) {
-		const src = readPathOrUndefined(() => paths.messageFile(this.root, id, msgId));
-		if (!src || !existsSync(src)) throw new Error(`"${msgId}" is not an unread message in this inbox`);
-		const msg = readJsonRecord(src);
-		const dest = paths.messageReadFile(this.root, id, msgId);
-		mkdirSync(dirname(dest), { recursive: true });
-		renameSync(src, dest);
-		return msg;
-	}
-	removeMessage(id, msgId) {
-		const unreadFile = readPathOrUndefined(() => paths.messageFile(this.root, id, msgId));
-		if (unreadFile && existsSync(unreadFile)) {
-			rmSync(unreadFile);
-			return;
-		}
-		const readFile = readPathOrUndefined(() => paths.messageReadFile(this.root, id, msgId));
-		if (readFile && existsSync(readFile)) {
-			rmSync(readFile);
-			return;
-		}
-		throw new Error(`"${msgId}" is not a message in this inbox`);
-	}
-	removeMailbox(id) {
-		rmSync(paths.inboxDir(this.root, id), {
-			recursive: true,
-			force: true
-		});
-	}
-	putAgent(rec) {
-		writeJson(paths.agentFile(this.root, rec.id), rec);
-	}
-	getAgent(id) {
-		const file = readPathOrUndefined(() => paths.agentFile(this.root, id));
-		if (!file || !existsSync(file)) return void 0;
-		return readJsonRecord(file);
-	}
-	listAgents() {
-		const dir = paths.agentsDir(this.root);
-		if (!existsSync(dir)) return [];
-		return readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => readJsonRecord(join(dir, f))).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-	}
-	removeAgent(id) {
-		rmSync(paths.agentFile(this.root, id), { force: true });
-	}
-	removeAgentData(id) {
-		rmSync(paths.dataDir(this.root, id), {
-			recursive: true,
-			force: true
-		});
-	}
-	putProject(rec) {
-		writeJson(paths.projectFile(this.root, rec.id), rec);
-	}
-	getProject(id) {
-		const file = readPathOrUndefined(() => paths.projectFile(this.root, id));
-		if (!file || !existsSync(file)) return void 0;
-		return readJsonRecord(file);
-	}
-	listProjects() {
-		const dir = paths.projectsDir(this.root);
-		if (!existsSync(dir)) return [];
-		return readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => readJsonRecord(join(dir, f))).sort((a, b) => a.registeredAt.localeCompare(b.registeredAt));
-	}
-	putServiceLease(lease) {
-		writeJson(paths.serviceLeaseFile(this.root, lease.project, lease.service), lease);
-	}
-	getServiceLease(project, service) {
-		const file = readPathOrUndefined(() => paths.serviceLeaseFile(this.root, project, service));
-		if (!file || !existsSync(file)) return void 0;
-		return readJsonRecord(file);
-	}
-	putPaneIndex(pane, agentId) {
-		writeText(paths.paneFile(this.root, pane), agentId);
-	}
-	resolvePaneId(pane) {
-		const file = paths.paneFile(this.root, pane);
-		return existsSync(file) ? readFileSync(file, "utf8").trim() : void 0;
-	}
-	findPaneByAgentId(agentId) {
-		const dir = paths.panesDir(this.root);
-		if (!existsSync(dir)) return void 0;
-		for (const f of readdirSync(dir)) {
-			if (!f.endsWith(".id")) continue;
-			if (readFileSync(join(dir, f), "utf8").trim() === agentId) return f.slice(0, -3);
-		}
-	}
-	removePaneIndex(pane) {
-		rmSync(paths.paneFile(this.root, pane), { force: true });
-	}
-	writeBrief(agentId, text) {
-		writeText(paths.briefFile(this.root, agentId), text);
-	}
-	readBrief(agentId) {
-		const file = readPathOrUndefined(() => paths.briefFile(this.root, agentId));
-		return file && existsSync(file) ? readFileSync(file, "utf8") : void 0;
-	}
-	setMainPane(pane) {
-		withLock(this.root, "main-pane", () => {
-			const file = paths.mainPaneFile(this.root);
-			if (pane) {
-				writeText(file, pane);
-				return;
-			}
-			rmSync(file, { force: true });
-		});
-	}
-	getMainPane() {
-		const file = paths.mainPaneFile(this.root);
-		return existsSync(file) ? readFileSync(file, "utf8").trim() : void 0;
-	}
-	withLock(name, fn) {
-		return withLock(this.root, name, fn);
-	}
-	withLockAsync(name, fn) {
-		return withLockAsync(this.root, name, fn);
-	}
-};
-//#endregion
-//#region src/project-address.ts
-const KEY_SCHEME = "cyberlegion";
-/** The project address of a checkout: a path in any checkout, a key this returned, or a unique name. */
-function projectAddressOf(ctx, ref) {
-	const project = resolveProject(ctx, ref);
-	return {
-		key: project.id,
-		scheme: KEY_SCHEME,
-		name: project.name,
-		home: project.root
-	};
-}
-//#endregion
-//#region src/captain.ts
-const CAPTAIN_SERVICE = "captain";
-/**
-* Where the project's Captain stands, read-only: no claim, no start. A project whose Captain was
-* never started reads as `vacant` at generation 0.
-*/
-function showCaptain(ctx, projectRef) {
-	const address = projectAddressOf(ctx, projectRef);
-	const exec = ctx.exec ?? realExec;
-	const branches = {
-		homeBranch: exec("git", [
-			"-C",
-			address.home,
-			"branch",
-			"--show-current"
-		]) || void 0,
-		defaultBranch: exec("git", [
-			"-C",
-			address.home,
-			"symbolic-ref",
-			"--short",
-			"refs/remotes/origin/HEAD"
-		])?.replace(/^origin\//, "")
-	};
-	const base = {
-		project: address.key,
-		name: address.name,
-		home: address.home,
-		...branches
-	};
-	let view;
-	try {
-		view = resolveService(ctx, address.key, CAPTAIN_SERVICE);
-	} catch {
-		return {
-			...base,
-			health: "vacant",
-			generation: 0,
-			control: "none",
-			note: "no Captain has been started"
-		};
-	}
-	return {
-		...base,
-		health: view.health,
-		generation: view.lease.generation,
-		owner: view.lease.holder,
-		ownerHandle: view.owner?.handle,
-		control: view.control,
-		note: view.note
-	};
-}
-/**
-* Record the project's Captain role as the one owner of `pod`, acting as the session that holds the
-* role's lease at `generation`. The pod must run in its own worktree of this project — not the
-* Captain's home, not another project's checkout. A pod the role already owns is left as it is,
-* whichever Captain session binds it again; a retired pod stays retired.
-*/
-function bindPod(ctx, act) {
-	const podProject = podProjectOf(ctx, act.pod);
-	return fenced(ctx, act, (project) => {
-		if (podProject.key !== project.key) throw new Error(`pod "${act.pod}" runs in another project's checkout (${podProject.name}), not ${project.name}`);
-		if (podProject.worktree === project.home) throw new Error(`pod "${act.pod}" sits in the Captain's home; a pod needs its own worktree`);
-		const existing = readBinding(ctx, act.pod);
-		if (existing?.state === "retired") throw new Error(`pod "${act.pod}" is already retired`);
-		if (existing) return existing;
-		return writeBinding(ctx, {
-			pod: act.pod,
-			project: project.key,
-			keyScheme: project.scheme,
-			role: CAPTAIN_SERVICE,
-			...act.sortie ? { sortie: act.sortie } : {},
-			state: "active",
-			boundAt: now(ctx),
-			boundBy: act.captain,
-			boundAtGeneration: act.generation
-		});
-	});
-}
-/**
-* Retire a pod once its work is merged or abandoned — exactly once, and only by the session holding
-* the Captain's lease now. The pod's unit is torn down separately (`cyberlegion unit close`).
-*/
-function retirePod(ctx, act) {
-	return fenced(ctx, act, (project) => {
-		return writeBinding(ctx, {
-			...activeBinding(ctx, act.pod, project),
-			state: "retired",
-			retiredAt: now(ctx),
-			retiredBy: act.captain,
-			retiredAtGeneration: act.generation
-		});
-	});
-}
-/** Every recorded pod — of one project, or of all — with where its ownership stands now. */
-function listPods(ctx, projectRef) {
-	const bindings = readBindings(ctx);
-	const key = projectRef === void 0 || bindings.some((b) => b.project === projectRef) ? projectRef : projectAddressOf(ctx, projectRef).key;
-	const views = /* @__PURE__ */ new Map();
-	const viewOf = (project) => {
-		if (!views.has(project)) try {
-			views.set(project, resolveService(ctx, project, CAPTAIN_SERVICE));
-		} catch {
-			views.set(project, void 0);
-		}
-		return views.get(project);
-	};
-	return bindings.filter((b) => key === void 0 || b.project === key).map((b) => {
-		const unit = ctx.store.getAgent(b.pod);
-		return {
-			...b,
-			handle: unit?.handle,
-			branch: unit?.worktree?.branch,
-			live: unit ? isLive(ctx, unit) : false,
-			owner: ownerState(b, viewOf(b.project))
-		};
-	});
-}
-function ownerState(b, view) {
-	if (b.state === "retired") return "retired";
-	return view?.lease.state === "active" && view.health === "healthy" ? "current" : "unavailable";
-}
-/** The registry's view of a pod's session; `cyberlegion unit show` probes its multiplexer. */
-function isLive(ctx, unit) {
-	if (unit.status === "exited" || unit.status === "stopped") return false;
-	return ctx.isLive ? ctx.isLive(unit) : true;
-}
-function fenced(ctx, act, fn) {
-	const project = projectAddressOf(ctx, act.project);
-	return withOwnership(ctx, project.key, CAPTAIN_SERVICE, {
-		unit: act.captain,
-		generation: act.generation
-	}, () => fn(project));
-}
-function activeBinding(ctx, pod, project) {
-	const existing = readBinding(ctx, pod);
-	if (!existing || existing.project !== project.key) throw new Error(`pod "${pod}" is not bound in ${project.name}`);
-	if (existing.state === "retired") throw new Error(`pod "${pod}" is already retired`);
-	return existing;
-}
-function podProjectOf(ctx, pod) {
-	const unit = ctx.store.getAgent(pod);
-	if (!unit) throw new Error(`no unit "${pod}"`);
-	if (!unit.worktree?.root) throw new Error(`pod "${pod}" has no worktree; a pod runs in its own project worktree`);
-	const worktree = existsSync(unit.worktree.root) ? realpathSync(unit.worktree.root) : unit.worktree.root;
-	return {
-		...projectAddressOf(ctx, unit.worktree.root),
-		worktree
-	};
-}
-const now = (ctx) => new Date(ctx.now?.() ?? Date.now()).toISOString();
-const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/;
-function podsDir(ctx) {
-	return join(ctx.store.root, "cyberfleet", "pods");
-}
-function bindingFile(ctx, pod) {
-	if (!SAFE_ID.test(pod)) throw new Error(`invalid pod id "${pod}"`);
-	return join(podsDir(ctx), `${pod}.json`);
-}
-function readBinding(ctx, pod) {
-	const file = bindingFile(ctx, pod);
-	return existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : void 0;
-}
-function readBindings(ctx) {
-	const dir = podsDir(ctx);
-	if (!existsSync(dir)) return [];
-	return readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => JSON.parse(readFileSync(join(dir, f), "utf8")));
-}
-function writeBinding(ctx, binding) {
-	const file = bindingFile(ctx, binding.pod);
-	mkdirSync(podsDir(ctx), { recursive: true });
-	const tmp = `${file}.${process.pid}.tmp`;
-	writeFileSync(tmp, `${JSON.stringify(binding, null, "	")}\n`);
-	renameSync(tmp, file);
-	return binding;
 }
 //#endregion
 //#region src/jump.ts
