@@ -222,8 +222,8 @@ importers:
         specifier: ^15.0.0
         version: 15.0.0
       cyber-mux:
-        specifier: ^0.11.0
-        version: 0.11.0
+        specifier: ^0.12.0
+        version: 0.12.0
       cyberlegion:
         specifier: ^1.7.0
         version: 1.7.0
@@ -2452,6 +2452,16 @@ packages:
 
   cyber-mux@0.11.0:
     resolution: {integrity: sha512-yaeTqPtwQb4GsmkhKTfyYwLPJVXitQBkloDd5X5rBVnDoSEuoJ5xRFJtfAg5Q2HxYOWPSPOSbSTsY9fcEb3GCg==}
+    engines: {node: '>=22'}
+    hasBin: true
+    peerDependencies:
+      clibuilder: ^12.2.0
+    peerDependenciesMeta:
+      clibuilder:
+        optional: true
+
+  cyber-mux@0.12.0:
+    resolution: {integrity: sha512-sEStYZyDsPE3sEFWvYK0FnXcE5P79pPoNQOt+EMxiOsEPm/ERg8MdFKjxZYDNNePWqhVNmjaDV7hCzWdwsCL2Q==}
     engines: {node: '>=22'}
     hasBin: true
     peerDependencies:
@@ -5708,6 +5718,10 @@ snapshots:
   cyber-agentkit@2.1.0: {}
 
   cyber-mux@0.11.0:
+    dependencies:
+      cyber-agentkit: 2.1.0
+
+  cyber-mux@0.12.0:
     dependencies:
       cyber-agentkit: 2.1.0
 
