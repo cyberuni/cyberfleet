@@ -1,6 +1,6 @@
 ---
 name: jump
-description: "Use this skill when the Council runs /jump, or asks to go to, switch to, or show the pane working on a repo, a branch, a pod, an issue or pull request (`#123`, `color-map#123`), or a task described in words — and to go back to the pane the last jump came from (`/jump back`). Not for opening a new pane or spawning a pod, and not for messaging a unit."
+description: "Moves the attached view to the one pane working on a repo, a branch, a pod, a GitHub issue or pull request (`#123`, `color-map#123`), or a task described in words, and back along the last jump. Use when the Council runs /jump, or asks to go to, switch to, or show the pane working on one of these, or to go back to the pane the last jump came from (`/jump back`). Not for opening a new pane or spawning a pod, and not for messaging a unit."
 argument-hint: "[repo|branch|pod|task|back|<prose>]"
 ---
 
@@ -11,15 +11,13 @@ jump. Every jump goes through the `cyberlegion` CLI, so cyber-mux records where 
 and `back` can return there.
 
 The one rule above all others: **more than one match lists the candidates and stops.** Never pick
-one, not even the newest or the most likely. A jump to the wrong pane interrupts the Council's
-attention in the wrong place, and the Council can always narrow the argument.
+one, not even the newest or the most likely.
 
 ## Resolving `cyberlegion`
 
 Every `cyberlegion …` command below runs whichever CLI resolves here, resolved afresh in each
 session and again after any plugin reload. Never hardcode a versioned
-`~/.claude/plugins/cache/…/<version>/` path: a reload installs a new version beside the old one, and a
-remembered path keeps running the old CLI. The pin is `1.7.0`, the first release with
+`~/.claude/plugins/cache/…/<version>/` path. The pin is `1.7.0`, the first release with
 `unit focus --repo` and `--branch`. Take the first rung that resolves and whose
 `cyberlegion --version` is at or above it; skip a rung that reports an older version:
 
@@ -70,9 +68,12 @@ Every form except Back starts from the same list:
   `status`, `pane`, `cwd`, `brief` (a path to the unit's brief file, when it was spawned with one),
   and `worktree` (`root`, `branch`, and `primaryRoot`).
 - A unit's **repo name** is the folder name of `worktree.primaryRoot`, or of `cwd` when it has no
-  `primaryRoot`. This is the rule `unit focus --repo` uses, so the skill and the CLI agree.
-- `cyberlegion unit whoami` gives this session's own id, when it has one. Leave this session out of
-  every candidate list the skill builds itself: a jump to the pane you are in does nothing.
+  `primaryRoot`, the same rule `unit focus --repo` uses.
+- `cyberlegion unit whoami --format json` gives this session's own `id`, when it has one. Leave this
+  session out of every match and every candidate list.
+- `unit focus --repo` and `--branch` count this session as a match. When this session is one of the
+  units such a command would match and exactly one other unit remains, run `cyberlegion unit focus
+  <id>` with that unit's id instead.
 
 ## 3. Jump
 
@@ -82,9 +83,8 @@ Run `cyber-mux focus --back` from this session's shell. It follows cyber-mux's r
 last jump into this pane came from. Report its result. If it fails (for example, `no jump into <pane>`),
 quote the error and its next-step hint verbatim and stop; never jump somewhere else instead.
 
-`/jump back` waits for this session's turn, so in a busy agent's pane it is slow. The tmux key that
-cyber-mux's `setup-tmux` binds to `focus --back` is the fast path; mention it when the Council uses
-`back` often.
+`/jump back` waits for this session's turn. When the Council uses `back` often, mention the tmux key
+(prefix+B) that cyber-mux's `setup-tmux` binds to `focus --back`.
 
 ### Repo, branch, or pod
 
@@ -93,7 +93,7 @@ Collect the live units the word matches exactly, and note which field each match
 - repo name → `cyberlegion unit focus --repo <name>`
 - branch → `cyberlegion unit focus --branch <name>`
 - id or handle → the pod form: `cyberlegion unit focus <id>`, using the matched unit's id. Handles
-  are not unique, so never pass the handle itself.
+  are not unique: never pass the handle itself.
 
 If every match is in one field, run that field's command. `unit focus --repo` and `--branch` fail on
 their own when more than one unit matches, listing each candidate. If the word matches in more than
@@ -101,8 +101,8 @@ one field, or names more than one unit by handle, list the candidates and stop.
 
 ### Task
 
-A task is an issue or pull request ref. GitHub numbers issues and pull requests in one sequence, so a
-ref names one of them.
+A task is a GitHub issue or pull request ref; one number names exactly one of them. This form needs
+an authenticated `gh`. When `gh` is missing or not logged in, quote its error and stop.
 
 1. **Find the repo.**
    - `#123` or `123`: the caller's own repo. Its name is the folder name of the primary checkout
@@ -142,3 +142,14 @@ None: say no live unit matches, and list the units so the Council can name one.
   Council can narrow the argument (a form word, a repo, or an id). Do not jump.
 - A failure: quote the CLI's error verbatim with its exit code. Do not retry with other flags, prune,
   or reach the pane any other way.
+
+## Validate
+
+Before reporting, check the result against `cyberlegion unit who --format json`:
+
+- A reported jump names one live unit by id and handle, and the pane it reports equals that unit's
+  `pane` in the fleet list. The unit is not this session.
+- Every `unit focus` command run took an id, `--repo`, or `--branch`, never a handle.
+- A candidates report has at least two rows. Each row's id is a live unit in the fleet list, no row
+  is this session, and no `unit focus` or `focus --back` ran after the matches were collected.
+- A failure report quotes the CLI's error and exit code, and no other focus command ran after it.
