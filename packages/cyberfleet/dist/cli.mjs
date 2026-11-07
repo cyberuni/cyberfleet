@@ -3367,6 +3367,84 @@ function withJumpHistory(adapter) {
 	unwrapped.set(wrapped, original);
 	return wrapped;
 }
+var JumpBackError = class extends Error {
+	code;
+	pane;
+	lastOrigin;
+	constructor(code, message, pane, lastOrigin) {
+		super(message);
+		this.code = code;
+		this.pane = pane;
+		this.lastOrigin = lastOrigin;
+		this.name = "JumpBackError";
+	}
+};
+/**
+* Follow the link for the caller's pane and focus where it leads. Records nothing (S9).
+*
+* A link to a closed pane is followed through that pane's own stored link to the first live pane
+* (S8). Links to panes that no longer exist are removed on this read; a live pane whose origin
+* closed is re-pointed to the first live pane up its chain, so the chain survives the removal.
+*/
+function focusBack(adapter, exec, ctx) {
+	const self = currentPane(ctx.env);
+	if (!self || self.mux !== adapter.name) throw new JumpBackError("no-caller-pane", `focus --back must run inside a ${adapter.name} pane`);
+	const from = self.pane;
+	const file = load$1(ctx.store);
+	const before = JSON.stringify(file);
+	const history = historyOf(file, jumpServer(adapter.name, ctx.env));
+	const links = history.links;
+	let listed;
+	try {
+		listed = new Set(adapter.listPanes(exec).map((p) => p.id));
+	} catch {
+		listed = void 0;
+	}
+	const isLive = (id) => listed ? listed.has(id) : adapter.paneExists(exec, { id });
+	/** The first live pane up the chain from `start`'s link, and the closed panes passed on the way. */
+	const resolve = (start) => {
+		const skipped = [];
+		const seen = /* @__PURE__ */ new Set([start]);
+		let cur = links[start]?.from;
+		while (cur != null && !seen.has(cur)) {
+			if (isLive(cur)) return {
+				to: cur,
+				skipped
+			};
+			skipped.push(cur);
+			seen.add(cur);
+			cur = links[cur]?.from;
+		}
+		return { skipped };
+	};
+	const hasLink = links[from] != null;
+	const found = hasLink ? resolve(from) : { skipped: [] };
+	if (listed) {
+		const pruned = {};
+		for (const [target, link] of Object.entries(links)) {
+			if (!listed.has(target)) continue;
+			const origin = listed.has(link.from) ? link.from : resolve(target).to;
+			if (origin != null) pruned[target] = {
+				from: origin,
+				at: link.at
+			};
+		}
+		history.links = pruned;
+	}
+	if (Object.keys(history.links).length === 0) file.servers = file.servers.filter((s) => s !== history);
+	if (JSON.stringify(file) !== before) save(ctx.store, file);
+	if (!hasLink) {
+		const latest = Object.values(history.links).filter((link) => isLive(link.from)).sort((a, b) => b.at - a.at)[0];
+		throw new JumpBackError("no-jump", `no jump into ${from}`, from, latest?.from);
+	}
+	if (found.to == null) throw new JumpBackError("chain-gone", `every pane back from ${from} is gone`, from);
+	rawFocus(adapter)(exec, { id: found.to });
+	return {
+		from,
+		to: found.to,
+		skipped: found.skipped
+	};
+}
 /**
 * The launch-line fallbacks — the compensations for what a creating route could not set natively.
 *
@@ -8174,7 +8252,7 @@ function createWeztermAdapter(deps) {
 	};
 	return withJumpHistory(adapter);
 }
-createWeztermAdapter({ newId: nodeNewId });
+const weztermMuxAdapter = createWeztermAdapter({ newId: nodeNewId });
 /**
 * `wezterm cli spawn`/`split-pane` report ONLY the new pane's bare id on stdout — unlike tmux/herdr,
 * neither embeds the tab (or workspace) in that same output. So the tab this pane landed in is a
@@ -9104,6 +9182,49 @@ function samePane(a, b) {
 function lastLines(text, n) {
 	const lines = text.split("\n");
 	return lines.slice(Math.max(0, lines.length - n)).join("\n");
+}
+/**
+* Resolve the raw backend for the multiplexer this process is inside, via the two-mode mux probe
+* (`$CYBER_MUX` fast-path/override, else ancestry discovery from `$$` falling back to the
+* `$RMUX`/`$TMUX`/`$HERDR_ENV`/`$WEZTERM_PANE`/`$ZELLIJ`/`$CMUX_WORKSPACE_ID` hint when the walk is
+* inconclusive) — tmux/rmux/herdr/wezterm/zellij/cmux/otty map to their adapters; anything else throws,
+* because a caller asking to drive panes with no multiplexer has an unmet precondition, and a loud,
+* actionable failure beats a silent no-op.
+*
+* The zellij adapter is bound to the ambient session name (`$ZELLIJ_SESSION_NAME`) at resolution — it
+* reports that as `OpenedPane.workspace`, so the session name has to come from the SAME `env` the
+* probe reads. A missing name simply omits `workspace`; see `createZellijAdapter`. The cmux adapter
+* is similarly bound to the ambient workspace id (`$CMUX_WORKSPACE_ID`).
+*
+* `screen` is a KNOWN mux — the probe detects it (ancestry) and honors it as an override (fast-path)
+* — but it is NOT a drivable backend, so it throws its OWN message naming the reason rather than the
+* generic "no multiplexer" one. That distinction is the whole point of issue #45: a caller who
+* pinned `CYBER_MUX=screen` declared a real multiplexer, and telling them "run inside a multiplexer"
+* would be a lie. The empirical probe behind the rejection is recorded in the ADR log
+* (`.agents/spec/design/decisions`): GNU Screen addresses its split regions POSITIONALLY (no
+* per-pane id), and `$WINDOW` is left unset in panes opened via `screen -X`, so a driver-created
+* pane has no stable identity to send to, read from, self-identify by, or enumerate — the exact
+* affordance `SessionTarget.id`/`currentPane`/`LivePane.id` are load-bearing on, and the exact one
+* wezterm (#47) had and screen lacks. Keeping the value KNOWN-but-rejected honors the override's
+* whole reason to exist: pinning it tells the caller the truth immediately instead of silently
+* discovering something else.
+*
+* Returns the PURE, exec-injected `MuxAdapter` seam — the one whose methods each take an `Exec`.
+* `resolveMux` binds one of these into a `MuxSession`; this is the lower layer, exported for a caller
+* that wants to thread its own runner per call rather than bind one. Not in a multiplexer? Gate on
+* `probeMultiplexer(env).mux !== 'none'` first — that answer never throws.
+*/
+function resolveMuxAdapter(env, exec = nodeExec) {
+	const probe = probeMultiplexer(exec, env);
+	if (probe.mux === "tmux") return tmuxMuxAdapter;
+	if (probe.mux === "rmux") return rmuxMuxAdapter;
+	if (probe.mux === "herdr") return herdrMuxAdapter;
+	if (probe.mux === "wezterm") return weztermMuxAdapter;
+	if (probe.mux === "zellij") return createZellijAdapter({ session: env["ZELLIJ_SESSION_NAME"] });
+	if (probe.mux === "cmux") return createCmuxAdapter({ workspace: env["CMUX_WORKSPACE_ID"] });
+	if (probe.mux === "otty") return createOttyAdapter({ window: void 0 });
+	if (probe.mux === "screen") throw new Error("cyber-mux detected GNU Screen, which it cannot drive: Screen addresses its split regions positionally (no per-pane id) and leaves $WINDOW unset in panes opened via `screen -X`, so a pane has no stable identity to send to, read from, or self-identify by. Run inside tmux ($TMUX), rmux ($RMUX set), herdr ($HERDR_ENV=1), wezterm ($WEZTERM_PANE set), zellij ($ZELLIJ set), or cmux ($CMUX_WORKSPACE_ID set) instead.");
+	throw new Error("cyber-mux requires a session backend — run inside tmux ($TMUX), rmux ($RMUX set), herdr ($HERDR_ENV=1), wezterm ($WEZTERM_PANE set), zellij ($ZELLIJ set), cmux ($CMUX_WORKSPACE_ID set), or otty ($OTTY_PANE_ID set)");
 }
 //#endregion
 //#region ../../node_modules/.pnpm/cyber-mux@0.11.0/node_modules/cyber-mux/dist/worktree.mjs
@@ -10228,6 +10349,207 @@ function writeBinding(ctx, binding) {
 	return binding;
 }
 //#endregion
+//#region src/jump.ts
+/** A unit's repo name: the folder of its primary checkout, else of its cwd. cyberlegion's rule. */
+function repoNameOf(rec) {
+	return basename(rec.worktree?.primaryRoot ?? rec.cwd);
+}
+const checkoutOf = (rec) => rec.worktree?.primaryRoot ?? rec.cwd;
+function rowOf(rec) {
+	const branch = rec.worktree?.branch;
+	return {
+		id: rec.id,
+		handle: rec.handle,
+		...branch ? { branch } : {},
+		repo: repoNameOf(rec)
+	};
+}
+/** Live session units. Exited units and standing/service records have no session to focus. */
+function liveUnits(store) {
+	return store.listAgents().filter((a) => a.status !== "exited" && (a.kind === void 0 || a.kind === "session")).sort((a, b) => a.id.localeCompare(b.id));
+}
+const TASK = /^(?:([\w.-]+)#|#)?(\d+)$/;
+function jump(deps, req) {
+	const { target, repo, branches, mentions } = req;
+	if (target !== void 0 && repo !== void 0) throw new Error("pass a target or --repo, not both");
+	if (repo === void 0 && (branches.length > 0 || mentions !== void 0)) throw new Error("--branch and --mentions need --repo");
+	if (repo !== void 0) return jumpInRepo(deps, repo, branches, mentions);
+	if (target === void 0 || target.trim() === "") throw new Error("a target or --repo is required");
+	const word = target.trim();
+	if (word === "back") return goBack(deps);
+	const task = TASK.exec(word);
+	if (task) return taskOf(deps, task[1], Number(task[2]));
+	const live = liveUnits(deps.store);
+	const matches = live.filter((a) => a.id === word || a.handle === word || a.worktree?.branch === word || repoNameOf(a) === word);
+	if (matches.length === 0) return {
+		result: "prose",
+		words: word,
+		units: live.filter((a) => a.id !== deps.selfId).map((a) => ({
+			...rowOf(a),
+			...a.brief ? { brief: a.brief } : {}
+		}))
+	};
+	return settle(deps, matches, `"${word}"`) ?? fail(`"${word}"`);
+}
+function fail(named) {
+	throw new Error(`${named} matches only this session — jump never focuses its caller`);
+}
+/**
+* Focus the one match that is not the caller, or return the candidates when several remain.
+* `undefined` when no match is left once the caller is taken out.
+*/
+function settle(deps, matches, named) {
+	const others = matches.filter((a) => a.id !== deps.selfId);
+	if (others.length > 1) return {
+		result: "candidates",
+		units: others.map(rowOf)
+	};
+	const [only] = others;
+	if (!only) return void 0;
+	const pane = only.pane?.id ?? deps.store.findPaneByAgentId(only.id);
+	if (!pane) throw new Error(`${named} matched unit ${only.id} (${only.handle}), which has no known session pane`);
+	deps.focus(pane);
+	return {
+		result: "jumped",
+		id: only.id,
+		handle: only.handle,
+		pane
+	};
+}
+function jumpInRepo(deps, repo, branches, mentions) {
+	const inRepo = liveUnits(deps.store).filter((a) => repoNameOf(a) === repo);
+	const onBranch = branches.length > 0 ? inRepo.filter((a) => branches.includes(a.worktree?.branch ?? "")) : mentions === void 0 ? inRepo : [];
+	const named = [`--repo ${repo}`, ...branches.map((b) => `--branch ${b}`)].join(" ");
+	const byBranch = settle(deps, onBranch, named);
+	if (byBranch) return byBranch;
+	if (mentions !== void 0) {
+		const naming = inRepo.filter((a) => mentionsNumber(deps.store, a, mentions));
+		const byMention = settle(deps, naming, `${named} --mentions ${mentions}`);
+		if (byMention) return byMention;
+		if (naming.length > 0 || onBranch.length > 0) fail(`${named} --mentions ${mentions}`);
+		throw new Error(`no live unit in ${repo} is on ${branches.length ? branches.join(", ") : "any branch"} or names #${mentions}`);
+	}
+	if (onBranch.length > 0) fail(named);
+	throw new Error(`no live unit matches ${named}`);
+}
+/** A handle ending in `-<n>`, or a brief naming `#<n>`, `<repo>#<n>`, `/issues/<n>`, or `/pull/<n>`. */
+function mentionsNumber(store, rec, n) {
+	if (new RegExp(`-${n}$`).test(rec.handle)) return true;
+	const brief = readBrief(store, rec);
+	return brief !== void 0 && new RegExp(`(?:#|/issues/|/pull/)${n}(?!\\d)`).test(brief);
+}
+function readBrief(store, rec) {
+	if (rec.brief) try {
+		return readFileSync(rec.brief, "utf8");
+	} catch {}
+	return store.readBrief(rec.id);
+}
+function goBack(deps) {
+	const { from, to } = deps.back();
+	const id = deps.store.resolvePaneId(to);
+	const rec = id ? deps.store.getAgent(id) : void 0;
+	return {
+		result: "jumped",
+		...rec ? {
+			id: rec.id,
+			handle: rec.handle
+		} : {},
+		pane: to,
+		from
+	};
+}
+function taskOf(deps, repo, number) {
+	const git = (dir, ...args) => deps.exec("git", [
+		"-C",
+		dir,
+		...args
+	]);
+	let checkouts;
+	let name;
+	if (repo === void 0) {
+		const common = git(deps.cwd, "rev-parse", "--path-format=absolute", "--git-common-dir");
+		if (!common) throw new Error(`#${number} names a task in this repo, but ${deps.cwd} is not in a git repository`);
+		checkouts = [dirname(common)];
+		name = basename(checkouts[0]);
+	} else {
+		name = repo;
+		checkouts = [...new Set(liveUnits(deps.store).filter((a) => repoNameOf(a) === repo).map(checkoutOf))];
+		if (checkouts.length === 0) throw new Error(`no live unit is in a repo named ${repo}`);
+	}
+	const slugs = /* @__PURE__ */ new Map();
+	for (const dir of checkouts) {
+		const url = git(dir, "remote", "get-url", "origin");
+		const slug = url ? slugOf(url) : void 0;
+		if (slug) slugs.set(dir, slug);
+	}
+	const distinct = [...new Set(slugs.values())];
+	if (distinct.length === 0) throw new Error(`no GitHub origin remote in ${checkouts.join(", ")}`);
+	if (distinct.length > 1) {
+		const list = [...slugs].map(([dir, slug]) => `${dir} (${slug})`).join(", ");
+		throw new Error(`the checkouts named ${name} disagree on their origin: ${list}`);
+	}
+	return {
+		result: "task",
+		repo: name,
+		slug: distinct[0],
+		number
+	};
+}
+/** `<owner>/<repo>` from an ssh or https remote URL. */
+function slugOf(url) {
+	const m = /[:/]([^/:]+)\/([^/]+?)(?:\.git)?\/?$/.exec(url.trim());
+	return m ? `${m[1]}/${m[2]}` : void 0;
+}
+/**
+* `back` through the bundled cyber-mux library: follow the calling pane's jump history. A failure
+* keeps cyber-mux's own words and adds where to go instead, without naming the cyber-mux CLI.
+*/
+function jumpBack(env) {
+	try {
+		return focusBack(resolveMuxAdapter(env, realExec), realExec, {
+			env,
+			store: nodeJumpStore(jumpStatePath(env))
+		});
+	} catch (err) {
+		if (!(err instanceof JumpBackError)) throw err;
+		const hint = err.code === "no-caller-pane" ? "run it in the pane you jumped into" : err.code === "no-jump" && err.lastOrigin ? `the last jump came from ${err.lastOrigin}` : err.code === "no-jump" ? "no jump is recorded yet" : "every pane on the way back has closed";
+		throw new Error(`${err.message} — ${hint}`);
+	}
+}
+const ROW = [
+	{
+		key: "id",
+		get: (u) => u.id
+	},
+	{
+		key: "handle",
+		get: (u) => u.handle
+	},
+	{
+		key: "branch",
+		get: (u) => u.branch ?? "-"
+	},
+	{
+		key: "repo",
+		get: (u) => u.repo
+	}
+];
+/** The toon rendering: a `result:` line naming the kind, then its fields or its list of units. */
+function jumpToon(r) {
+	switch (r.result) {
+		case "jumped":
+		case "task": return toonObject({ ...r });
+		case "candidates": return ["result: candidates", toonList("candidates", r.units, ROW, `${r.units.length} units match — nothing focused; jump to one by id`)].join("\n");
+		case "prose": return [toonObject({
+			result: "prose",
+			words: r.words
+		}), toonList("units", r.units, [...ROW, {
+			key: "brief",
+			get: (u) => u.brief ?? "-"
+		}], `${r.units.length} live units — no exact match, nothing focused`)].join("\n");
+	}
+}
+//#endregion
 //#region src/sdd/hal.ts
 /**
 * Infer whether a CR's persisted gate lines show a self-assertion the run-level leash did not
@@ -10647,26 +10969,29 @@ rootOpts(program.command("missions")).description("who needs the Council's hands
 		json: rows
 	});
 });
-rootOpts(program.command("jump")).description("select/focus a ship's session (tmux pane), or print its worktree path to cd into").argument("<peer>", "handle, id, or worktree branch/CR ref").action((peer, opts) => {
+rootOpts(program.command("jump")).description("focus the one live unit a repo, branch, unit, or task names, or go back — never this session, never a pick among several").argument("[target...]", "back, a unit id/handle/branch/repo name, a task ref (#123, color-map#123), or words").option("--repo <name>", "pick the live unit in this repo (its primary checkout's folder name)").option("--branch <name>", "with --repo: a branch the unit may be on (repeatable)", (v, all) => [...all, v], []).option("--mentions <n>", "with --repo: when no branch has a unit, one whose handle ends in -<n> or brief names #<n>").action((words, opts) => {
 	const ctx = ctxOf(opts);
 	touch(ctx);
-	const agent = resolveAgent(ctx.store, peer);
-	const pane = agent.pane?.id ?? ctx.store.findPaneByAgentId(agent.id);
-	if (pane) try {
-		selectSessionAdapter(ctx.env ?? process.env).focus(realExec, { id: pane });
-		emit(formatOf(opts), {
-			toon: toonObject({
-				jumped: agent.handle,
-				pane
-			}),
-			json: {
-				jumped: agent.handle,
-				pane
-			}
-		});
-		return;
-	} catch {}
-	console.log(agent.worktree?.root ?? agent.cwd);
+	const env = ctx.env ?? process.env;
+	const mentions = opts.mentions === void 0 ? void 0 : Number(opts.mentions);
+	if (mentions !== void 0 && !(Number.isInteger(mentions) && mentions > 0)) throw new Error("--mentions must be a positive integer");
+	const result = jump({
+		store: ctx.store,
+		selfId: resolveSelfId(ctx),
+		cwd: process.cwd(),
+		exec: realExec,
+		focus: (pane) => selectSessionAdapter(env, realExec).focus(realExec, { id: pane }),
+		back: () => jumpBack(env)
+	}, {
+		target: words.length > 0 ? words.join(" ") : void 0,
+		repo: opts.repo,
+		branches: opts.branch,
+		mentions
+	});
+	emit(formatOf(opts), {
+		toon: jumpToon(result),
+		json: result
+	});
 });
 rootOpts(program.command("pause")).description("pause a ship's mission — a cyberfleet-level status marker only (see note)").argument("<peer>", "handle, id, or worktree branch/CR ref").action((peer, opts) => {
 	const ctx = ctxOf(opts);

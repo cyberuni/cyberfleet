@@ -221,6 +221,9 @@ importers:
       commander:
         specifier: ^15.0.0
         version: 15.0.0
+      cyber-mux:
+        specifier: ^0.11.0
+        version: 0.11.0
       cyberlegion:
         specifier: ^1.7.0
         version: 1.7.0

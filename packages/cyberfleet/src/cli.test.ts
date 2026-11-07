@@ -87,10 +87,44 @@ describe('fleet verbs', () => {
 		expect(out).toContain('status: paused')
 	})
 
-	it("jump prints the ship's cwd when there is no live tmux pane to select", () => {
-		seedShip('alice1', 'alice')
-		const out = cf(['jump', 'alice'], {}, work)
-		expect(out.trim()).toBe(work)
+	it('jump lists the candidates and focuses nothing when a word names several units', () => {
+		seedShip('alice1', 'alice', { pane: { mux: 'tmux', id: '%1' } })
+		seedShip('alice2', 'alice', { pane: { mux: 'tmux', id: '%2' } })
+		expect(cf(['jump', 'alice'])).toMatch(/^result: candidates\ncandidates\[2\]\{id,handle,branch,repo\}:/)
+		expect(JSON.parse(cf(['jump', 'alice', '--format', 'json']))).toMatchObject({
+			result: 'candidates',
+			units: [{ id: 'alice1' }, { id: 'alice2' }],
+		})
+	})
+
+	it('jump returns the live units for the skill to match when nothing matches exactly', () => {
+		seedShip('alice1', 'alice', { brief: '/briefs/alice.md' })
+		const out = JSON.parse(cf(['jump', 'the', 'auth', 'refactor', '--format', 'json']))
+		expect(out).toMatchObject({
+			result: 'prose',
+			words: 'the auth refactor',
+			units: [{ id: 'alice1', handle: 'alice', brief: '/briefs/alice.md' }],
+		})
+	})
+
+	it("jump reads a task ref's owner/repo from the checkout's origin", () => {
+		const repo = join(work, 'color-map')
+		mkdirSync(repo)
+		execFileSync('git', ['init', '-q', repo])
+		execFileSync('git', ['-C', repo, 'remote', 'add', 'origin', 'git@github.com:cyberuni/color-map.git'])
+		expect(cf(['jump', '#123'], {}, repo)).toBe(
+			'result: task\nrepo: color-map\nslug: cyberuni/color-map\nnumber: 123\n',
+		)
+	})
+
+	it('jump exits non-zero rather than focusing the calling session', () => {
+		// the caller is found by its pane, whatever multiplexer the test itself runs in
+		seedShip('alice1', 'alice', { pane: { mux: 'tmux', id: '%me' } })
+		new FileStore(root).putPaneIndex('%me', 'alice1')
+		const env = { CYBER_MUX: 'tmux', CYBER_MUX_PANE: '%me' }
+		expect(() => cf(['jump', 'alice'], env)).toThrow(
+			expect.objectContaining({ stderr: expect.stringMatching(/only this session/) }),
+		)
 	})
 
 	it('gate approve is a stub that prints what it would write and exits non-zero', () => {
