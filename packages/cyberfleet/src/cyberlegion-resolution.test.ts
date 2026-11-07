@@ -14,7 +14,7 @@ const ENTRY_POINTS = [
 	'skills/operator/SKILL.md',
 	'skills/pod/SKILL.md',
 	'skills/crimp/SKILL.md',
-	'skills/jump/SKILL.md',
+	// not skills/jump: it runs only the `cyberfleet` this plugin ships (cyberfleet#156)
 	'agents/headless-operator.md',
 ]
 
