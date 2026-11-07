@@ -1,5 +1,16 @@
 # cyberfleet
 
+## 0.8.0
+
+### Minor Changes
+
+- d5e7c75: Rewrite the `close-sessions` skill: it acts only on units in the caller's multiplexer, fetches pull requests once per repository instead of once per unit, and asks each live unit that passes the mechanical close whether it has unfinished work (by mail) instead of inspecting transcripts. A reply can only keep a unit.
+- 70e6817: `cyberfleet jump` now does `/jump`'s deterministic work, and the `/jump` skill needs only `cyberfleet`. **Breaking:** its arguments and output changed. `cyberfleet jump <target> [--repo <name>] [--branch <name>]... [--mentions <n>]` focuses the one live unit an id, handle, branch, or repo name equals, follows the jump history on `back`, and otherwise prints `candidates`, a `task` (repo, `<owner>/<repo>` from `origin`, number), or `prose` (the live units, for the skill to match) without focusing anything. It never focuses the calling session and never picks among several matches. It no longer prints a worktree path when a unit has no pane; it fails instead. cyber-mux is now bundled into the CLI, so `/jump back` works when the `cyber-mux` on `PATH` is old or missing.
+
+### Patch Changes
+
+- f4490e6: `/jump` no longer fails as ambiguous when the calling session is one of the units a repo or branch matches: it jumps to the one other unit by id. The skill also says the task form needs GitHub and an authenticated `gh`, reads this session's id as JSON, and checks its result against the fleet list before reporting.
+
 ## 0.7.0
 
 ### Minor Changes
