@@ -18,11 +18,12 @@ import {
 	touch,
 } from 'cyberlegion'
 import { bindPod, listPods, type PodAct, retirePod, showCaptain } from './captain.ts'
+import { jump, jumpBack, jumpToon } from './jump.ts'
 import { buildMissions, resolveAgentsRoot } from './missions.ts'
 
 // cyberfleet — the fleet layer on top of cyberlegion's mechanism. It carries ONLY fleet-specific
 // logic: `missions` (the SDD-derived mission view), `jump` (session
-// focus), `pause` (a status-only marker), and the `gate approve` stub. The mechanism verbs
+// focus, the deterministic half of the /jump skill), `pause` (a status-only marker), and the `gate approve` stub. The mechanism verbs
 // (register/who/send/inbox/read/ack/spawn/prune/decommission/install) are NOT re-exposed here — they
 // live in the `cyberlegion` CLI, which cyberfleet depends up on. A fleet persona runs those directly
 // (`cyberlegion unit register`, `cyberlegion mail send`, `cyberlegion unit spawn`, …).
@@ -107,23 +108,37 @@ rootOpts(program.command('missions'))
 	})
 
 rootOpts(program.command('jump'))
-	.description("select/focus a ship's session (tmux pane), or print its worktree path to cd into")
-	.argument('<peer>', 'handle, id, or worktree branch/CR ref')
-	.action((peer, opts) => {
+	.description(
+		'focus the one live unit a repo, branch, unit, or task names, or go back — never this session, never a pick among several',
+	)
+	.argument('[target...]', 'back, a unit id/handle/branch/repo name, a task ref (#123, color-map#123), or words')
+	.option('--repo <name>', "pick the live unit in this repo (its primary checkout's folder name)")
+	.option(
+		'--branch <name>',
+		'with --repo: a branch the unit may be on (repeatable)',
+		(v, all: string[]) => [...all, v],
+		[],
+	)
+	.option('--mentions <n>', 'with --repo: when no branch has a unit, one whose handle ends in -<n> or brief names #<n>')
+	.action((words: string[], opts) => {
 		const ctx = ctxOf(opts)
 		touch(ctx)
-		const agent = resolveAgent(ctx.store, peer)
-		const pane = agent.pane?.id ?? ctx.store.findPaneByAgentId(agent.id)
-		if (pane) {
-			try {
-				selectSessionAdapter(ctx.env ?? process.env).focus(realExec, { id: pane })
-				emit(formatOf(opts), { toon: toonObject({ jumped: agent.handle, pane }), json: { jumped: agent.handle, pane } })
-				return
-			} catch {
-				// no live session backend, or the pane is gone — fall through to printing a cd target
-			}
-		}
-		console.log(agent.worktree?.root ?? agent.cwd)
+		const env = ctx.env ?? process.env
+		const mentions = opts.mentions === undefined ? undefined : Number(opts.mentions)
+		if (mentions !== undefined && !(Number.isInteger(mentions) && mentions > 0))
+			throw new Error('--mentions must be a positive integer')
+		const result = jump(
+			{
+				store: ctx.store,
+				selfId: resolveSelfId(ctx),
+				cwd: process.cwd(),
+				exec: realExec,
+				focus: (pane) => selectSessionAdapter(env, realExec).focus(realExec, { id: pane }),
+				back: () => jumpBack(env),
+			},
+			{ target: words.length > 0 ? words.join(' ') : undefined, repo: opts.repo, branches: opts.branch, mentions },
+		)
+		emit(formatOf(opts), { toon: jumpToon(result), json: result })
 	})
 
 rootOpts(program.command('pause'))

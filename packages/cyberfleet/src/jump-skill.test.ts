@@ -2,10 +2,10 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-// `/jump` resolves its argument to one unit and focuses it through the `cyberlegion` CLI, so
-// cyber-mux records the jump; `back` follows that record (cyberfleet#146). These checks pin the
-// rules an edit could quietly drop: each form's command, the never-pick rule, and how the skill
-// finds both CLIs without a cyberlegion skill or a stale plugin-cache path.
+// `/jump` runs `cyberfleet jump`, which does the matching and focusing (cyberfleet#156). The skill
+// keeps two steps: the `gh` lookup for a task ref and matching free text. These checks pin the
+// rules an edit could quietly drop: the four steps, the never-pick rule, and that the skill reaches
+// only the `cyberfleet` this plugin ships, never a cyberlegion or cyber-mux CLI.
 
 const PLUGIN_ROOT = new URL('../', import.meta.url)
 const read = (path: string) => readFileSync(fileURLToPath(new URL(path, PLUGIN_ROOT)), 'utf8')
@@ -16,13 +16,6 @@ function section(heading: string): string {
 	expect(start, `missing section ${heading}`).toBeGreaterThan(-1)
 	const end = text.indexOf('\n## ', start + 1)
 	return text.slice(start, end === -1 ? undefined : end)
-}
-
-const semver = (v: string) => v.split('.').map(Number)
-function atLeast(v: string, floor: string): boolean {
-	const [a, b] = [semver(v), semver(floor)]
-	for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return (a[i] ?? 0) > (b[i] ?? 0)
-	return true
 }
 
 describe('jump skill: discovery', () => {
@@ -38,84 +31,52 @@ describe('jump skill: discovery', () => {
 	})
 })
 
-describe('jump skill: resolving cyberlegion', () => {
-	const s = section('## Resolving `cyberlegion`')
-	const pin = /The pin is `(\d+\.\d+\.\d+)`/.exec(s)?.[1]
-
-	it('tries PATH, then the installed plugin, then a pinned npx, checking --version', () => {
-		const path = s.indexOf('on `PATH`')
-		const plugin = s.indexOf('~/.claude/plugins/installed_plugins.json')
-		const npx = s.indexOf(`npx -y cyberlegion@${pin}`)
-		expect(path).toBeGreaterThan(-1)
-		expect(plugin).toBeGreaterThan(path)
-		expect(npx).toBeGreaterThan(plugin)
-		expect(s).toContain('<installPath>/bin/cyberlegion.mjs')
-		expect(s).toContain('--version')
+describe('jump skill: runs the cyberfleet this plugin ships', () => {
+	it("runs bin/cyberfleet.mjs from the skill's own directory, with no install", () => {
+		const s = section('## Running `cyberfleet`')
+		expect(s).toContain("node <this skill's directory>/../../bin/cyberfleet.mjs jump")
+		expect(read('bin/cyberfleet.mjs')).toBeTruthy()
 	})
 
-	it('needs at least the bundled pin, since it relies on unit focus --repo/--branch', () => {
-		expect(pin).toBeDefined()
-		expect(atLeast(pin as string, JSON.parse(read('.plugin/pins.json')).cyberlegion)).toBe(true)
-	})
-
-	it('re-resolves after a reload and fails with an install hint', () => {
-		expect(s).toMatch(/reload/)
-		expect(s).toMatch(/never hardcode/i)
-		expect(s).toMatch(/install hint/i)
+	it('resolves no cyberlegion or cyber-mux CLI', () => {
+		expect(text).not.toMatch(/`cyberlegion /)
+		expect(text).not.toMatch(/`cyber-mux /)
+		expect(text).not.toMatch(/npx -y/)
+		expect(text).not.toContain('installed_plugins.json')
 	})
 })
 
-describe('jump skill: resolving cyber-mux', () => {
-	const s = section('## Resolving `cyber-mux`')
-
-	it('tries PATH, then the installed plugin, then a pinned npx, checking --version', () => {
-		const path = s.indexOf('on `PATH`')
-		const plugin = s.indexOf('cyber-mux@<marketplace>')
-		const npx = s.search(/npx -y cyber-mux@\d+\.\d+\.\d+/)
-		expect(path).toBeGreaterThan(-1)
-		expect(plugin).toBeGreaterThan(path)
-		expect(npx).toBeGreaterThan(plugin)
-		expect(s).toContain('<installPath>/bin/cyber-mux.mjs')
-		expect(s).toContain('--version')
-	})
-})
-
-describe('jump skill: forms', () => {
-	it('back follows cyber-mux history and nothing else', () => {
-		expect(section('### Back')).toContain('cyber-mux focus --back')
+describe('jump skill: the four steps', () => {
+	it('step 1 runs cyberfleet jump and branches on each result kind', () => {
+		const s = section('## 1. Run `cyberfleet jump <argument>`')
+		for (const kind of ['jumped', 'candidates', 'task', 'prose']) expect(s).toContain(`\`${kind}\``)
+		expect(s).toMatch(/non-zero exit/)
 	})
 
-	it('repo and branch go to unit focus --repo / --branch', () => {
-		const s = section('### Repo, branch, or pod')
-		expect(s).toContain('unit focus --repo')
-		expect(s).toContain('unit focus --branch')
-	})
-
-	it('a pod is focused by its id, after the handle is matched to exactly one unit', () => {
-		const s = section('### Repo, branch, or pod')
-		expect(s).toContain('unit focus <id>')
-		expect(s).toMatch(/handle/)
-	})
-
-	it('a task ref reads the repo from primaryRoot and the org from origin, then focuses the branch', () => {
-		const s = section('### Task')
-		expect(s).toMatch(/#123/)
-		expect(s).toMatch(/color-map#123/)
-		expect(s).toContain('primaryRoot')
-		expect(s).toContain('origin')
+	it('step 2 finds the branches with gh, then focuses by --repo, --branch, and --mentions', () => {
+		const s = section('## 2. On `task`, look up the branches with `gh`')
+		expect(s).toContain('.pull_request != null')
 		expect(s).toContain('headRefName')
 		expect(s).toContain('closedByPullRequestsReferences')
-		expect(s).toMatch(/unit focus --repo \S+ --branch/)
+		expect(s).toContain('cyberfleet jump --repo <repo> --branch <b>... --mentions <number>')
 	})
 
-	it('a task ref with no branch match falls back to a unit whose handle or brief names the number', () => {
-		const s = section('### Task')
-		expect(s).toMatch(/handle or\s+brief names the number/)
-	})
-
-	it('prose is matched against handle, branch, repo, and brief', () => {
-		const s = section('### Prose')
+	it('step 3 matches the words against handle, branch, repo, and brief, then jumps by id', () => {
+		const s = section('## 3. On `prose`, match the words to one unit')
 		for (const field of ['handle', 'branch', 'repo', 'brief']) expect(s).toContain(field)
+		expect(s).toContain('cyberfleet jump <id>')
+	})
+
+	it('step 4 reports a jump, the candidates, or the error verbatim', () => {
+		const s = section('## 4. Report the result')
+		expect(s).toContain('`jumped`')
+		expect(s).toContain('`candidates`')
+		expect(s).toMatch(/verbatim/)
+	})
+
+	it('runs the steps in order', () => {
+		const order = ['## 1. ', '## 2. ', '## 3. ', '## 4. '].map((h) => text.indexOf(h))
+		expect(order.every((at, i) => at > -1 && (i === 0 || at > (order[i - 1] as number)))).toBe(true)
 	})
 })
 
@@ -125,16 +86,12 @@ describe('jump skill: boundaries', () => {
 		expect(text).toMatch(/never pick/i)
 	})
 
-	it('focuses through cyberlegion, not the cyberfleet jump command', () => {
-		expect(text).not.toMatch(/`cyberfleet jump/)
-	})
-
 	it('references no cyberlegion skill', () => {
 		expect(text).not.toMatch(/cyberlegion:[a-z]/)
 		expect(text).not.toMatch(/\blegate\b/)
 	})
 
-	it('reaches nothing outside its own folder', () => {
+	it('reaches nothing outside its plugin', () => {
 		expect(text).not.toContain('pins.json')
 		expect(text).not.toMatch(/plugins\/cache\/[^\s`]*\/\d+\.\d+\.\d+/)
 	})

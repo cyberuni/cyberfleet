@@ -26,8 +26,8 @@ npx cyberfleet@0.0.4 <command>
 npx cyberfleet missions
 npx cyberfleet missions --agents-root <path>
 
-# Select/focus a ship's session (tmux pane), or print its worktree path to cd into
-npx cyberfleet jump <peer>
+# Focus the one live unit a repo, branch, unit, or task names, or go back along the last jump
+npx cyberfleet jump <target> [--repo <name>] [--branch <name>]... [--mentions <n>]
 
 # Pause a ship's mission — a cyberfleet-level status marker only (NOT the SDD pause-mission checkpoint)
 npx cyberfleet pause <peer>
@@ -112,7 +112,8 @@ Under the automatons sit two CLIs — cold, deterministic mechanism with no judg
 **`cyberfleet`** is the thin fleet layer on top, and carries only what is fleet-specific:
 
 - `missions` — the Council view: ships × mission × gate × leash, derived from SDD state
-- `jump` — focus a ship's pane, or print its worktree path to `cd` into
+- `jump` — focus the one live unit a repo, branch, unit, or task names, or go `back`; on several
+  matches, a task ref, or free text it focuses nothing and returns what the `/jump` skill decides
 - `pause` — mark a ship's mission paused (a status marker only, not an SDD mission checkpoint)
 - `gate approve` — deliberately stubbed: a Council ratification can't be safely relayed through a
   CLI, so it refuses and tells you to ratify in-session
