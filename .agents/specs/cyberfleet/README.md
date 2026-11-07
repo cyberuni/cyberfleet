@@ -13,8 +13,8 @@ peers, surface mail) into a **fleet** view: ships, missions, and the Council. It
 
 - **`cyberfleet missions`** — the Council view: ships × mission × gate × leash, derived from SDD
   state (the one place cyberfleet reads SDD).
-- **`cyberfleet jump <peer>`** — focus a ship's session pane, or print its worktree path to `cd`
-  into.
+- **`cyberfleet jump <target>`** — focus the one live unit a repo, branch, unit, or task names, or
+  go `back`; otherwise return the candidates, the task ref, or the units for the skill to match.
 - **`cyberfleet pause <peer>`** — flip a ship record to `status: paused` (a marker only, not the SDD
   `pause-mission` checkpoint — that gap is flagged).
 - **`cyberfleet gate approve`** — stubbed; a human ratification is not safely relayable through this

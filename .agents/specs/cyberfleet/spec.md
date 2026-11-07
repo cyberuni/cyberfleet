@@ -76,7 +76,7 @@ Only the verbs with genuine fleet logic live here — everything else is `cyberl
 | Verb | What |
 |---|---|
 | `cyberfleet missions` | the Council view — ships × mission × gate × leash, **derived from SDD state** (the one place cyberfleet reads SDD) |
-| `cyberfleet jump <peer>` | select/focus a ship's session (tmux pane), or print its worktree path to `cd` into |
+| `cyberfleet jump <target>` | focus the one live unit a repo, branch, unit, or task names, or go `back`; otherwise return the candidates, the task ref, or the units for the `/jump` skill to match |
 | `cyberfleet pause <peer>` | flip a ship record to `status: paused` — a marker only (**not** a bridge to SDD's `pause-mission` checkpoint; that gap is flagged, never papered over) |
 | `cyberfleet gate approve` | **stubbed** — a human ratification cannot be safely relayed through this CLI (the relayed-ratification seam); it prints what it would write and exits non-zero |
 
@@ -124,7 +124,7 @@ Where a new concept lives — slot here, do not invent placement:
   (the Mechanic persona).
 - **a new Council/mission-view CLI operation** (joining ships to SDD mission/gate/leash state) → the
   `missions` surface — the only place cyberfleet reads SDD — as a new CLI node when backfilled.
-- **a new ship-navigation CLI operation** (focus a pane, resolve a worktree path) → the `jump`
+- **a new ship-navigation CLI operation** (focus a unit's pane, follow the jump history) → the `jump`
   surface, as a new CLI node when backfilled.
 - **a new identity / message-queue / peer-launch / hook-injection / dispatch / wake operation** →
   **not here** — that is the `cyberlegion` project (`packages/cyberlegion`). cyberfleet depends up on

@@ -5,6 +5,9 @@
 Accepted, 2026-10-15. Renames the commands named in [ADR-0024](0024-ship-crew.md) and the
 commands that ship today. Uses the single work noun from [ADR-0026](0026-one-noun-for-work-in-flight.md).
 
+Amended, 2026-11-07: `jump` keeps its name instead of folding into `ship board`
+([#156](https://github.com/cyberuni/cyberfleet/issues/156)).
+
 ## Context
 
 cyberfleet has two surfaces. Skills address an automaton: the Council calls `/captain` and says
@@ -28,7 +31,7 @@ singular group (`pods` beside `pod bind`), one is a bare noun (`captain`), and t
    | `pods [project]` | `pod list [project]` |
    | `pod bind\|retire` | unchanged |
    | `gate approve` | unchanged, and still stubbed |
-   | `jump <peer>` | folded into `ship board`; `pod focus <pod>` if focusing a Pod's pane is still wanted |
+   | `jump <peer>` | keeps the name `jump`, an exception to rule 2 ([#156](https://github.com/cyberuni/cyberfleet/issues/156)): it is the deterministic half of the `/jump` skill, so the command and the skill share one name. It focuses the one unit a repo, branch, unit, or task names, which `ship board` does not; `ship board` still brings up and focuses a ship's workspace |
    | `pause <peer>` | removed: it marks a session, and nothing in the design reads the mark |
    | `ship open` (design) | `ship board <name\|project\|path>`: bring the ship's workspace up from its template if it is down, and focus it |
    | `pr clean` (design) | `pr check <pr>`: check the clean bar and report it through the exit status |

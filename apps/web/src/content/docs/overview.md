@@ -68,14 +68,14 @@ Under the personas sits the `cyberfleet` **console**: the CLI. It is determinist
 | Command | What it does |
 |---|---|
 | `cyberfleet missions` | Who needs the Council's hands: ships × SDD-mission × gate × leash, derived from SDD state |
-| `cyberfleet jump <peer>` | Select or focus a ship's session, or print its worktree path to `cd` into |
+| `cyberfleet jump <target>` | Focus the one live unit a repo, branch, unit, or task names, or go `back`. Several matches, a task ref, or free text focus nothing and return what the `/jump` skill decides |
 | `cyberfleet pause <peer>` | Flip a ship's status marker (**not** the SDD `pause-mission` checkpoint) |
 | `cyberfleet gate approve <cr> <gate>` | Council ratification. **Stubbed**: a human-attributed gate write can't be safely relayed through a CLI |
 | `cyberfleet captain [project]` | Read a project's Captain lease: home checkout, holder, generation, health. Starts nothing |
 | `cyberfleet pods [project]` | List the Pods a project's Captain role owns, and whether a Captain holds that role now (`--all` for every project) |
 | `cyberfleet pod bind\|retire <pod>` | Record the Captain role as a Pod's one owner, or retire the Pod once. Fenced by the caller's Captain lease generation |
 
-The design adds `cyberfleet ship` (the ship registry, and `ship board` to open a ship from its template or focus it), `cyberfleet pr check` (the clean bar), and `cyberfleet mission` (`add-sub`, `block`, `unblock`, `close`). None of them ship yet. The design also renames the shipped commands to noun-verb form (`missions` becomes `status`, `captain` becomes `captain show`, `pods` becomes `pod list`, `jump` folds into `ship board`, and `pause` is removed) per [ADR-0027](https://github.com/cyberuni/cyberfleet/blob/main/docs/adr/0027-cli-commands-are-noun-verb.md).
+The design adds `cyberfleet ship` (the ship registry, and `ship board` to open a ship from its template or focus it), `cyberfleet pr check` (the clean bar), and `cyberfleet mission` (`add-sub`, `block`, `unblock`, `close`). None of them ship yet. The design also renames the shipped commands to noun-verb form (`missions` becomes `status`, `captain` becomes `captain show`, `pods` becomes `pod list`, and `pause` is removed; `jump` keeps its name) per [ADR-0027](https://github.com/cyberuni/cyberfleet/blob/main/docs/adr/0027-cli-commands-are-noun-verb.md).
 
 ## What ships today
 
