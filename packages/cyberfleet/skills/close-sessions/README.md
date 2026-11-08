@@ -31,7 +31,9 @@ for retiring a pod's record: that belongs to the pod's Captain (`cyberfleet pod 
   work? Reply DONE or UNFINISHED: <reason>". A unit the multiplexer shows working is kept without
   asking. UNFINISHED or no reply keeps the unit, with the reason listed. A reply never closes a unit
   the evidence keeps. It never types into a pane or reads its screen, and needs no transcript or hook.
-- Keeps this session, standing owners, and units with no worktree.
+- Keeps this session, standing owners, and live units with no worktree. An exited unit with no
+  worktree has nothing on disk to lose, so it is closed, unless its mailbox holds unread mail: then
+  it is listed with that mail and closed only when the Council names it.
 - Judges a seat on a main checkout (Captain, Coordinator, Operator, the Council's desk) like any other
   unit: it closes when the checkout is clean, the branch is not ahead of its upstream, and a live seat
   answers DONE. Closing a seat never touches the checkout. This needs cyberlegion 1.8.0 or later
