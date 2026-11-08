@@ -150,7 +150,7 @@ the Council's words with `unit nudge --message`, never reaches for an MCP messag
 Every `cyberlegion …` command in this skill runs whichever CLI resolves below, resolved afresh in each
 session and again after any plugin reload. Never hardcode a versioned
 `~/.claude/plugins/cache/…/<version>/` path: a reload installs a new version beside the old one, and a
-remembered path keeps running the old CLI. The pin is `1.7.0`. Take the first rung that
+remembered path keeps running the old CLI. The pin is `1.8.0`. Take the first rung that
 resolves and whose `cyberlegion --version` is at or above it; skip a rung that reports an older
 version:
 
@@ -158,11 +158,11 @@ version:
 2. The installed cyberlegion plugin: read `~/.claude/plugins/installed_plugins.json` now, take the
    `installPath` of its `cyberlegion@<marketplace>` entry, and run `node
    <installPath>/bin/cyberlegion.mjs`.
-3. `npx -y cyberlegion@1.7.0`.
+3. `npx -y cyberlegion@1.8.0`.
 
 When no rung resolves, stop and report it to the Council with the
 install hint: install the `cyberlegion` plugin beside this one, or `npm install -g
-cyberlegion@1.7.0`.
+cyberlegion@1.8.0`.
 
 ## Headless — the lifecycle loop
 

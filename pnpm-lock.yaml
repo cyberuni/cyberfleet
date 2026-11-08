@@ -225,8 +225,8 @@ importers:
         specifier: ^0.12.0
         version: 0.12.0
       cyberlegion:
-        specifier: ^1.7.0
-        version: 1.7.0
+        specifier: ^1.8.0
+        version: 1.8.0
       tsdown:
         specifier: ^0.23.0
         version: 0.23.0(oxc-resolver@11.24.2)(tsx@4.23.13)(typescript@7.0.2)
@@ -2450,16 +2450,6 @@ packages:
       clibuilder:
         optional: true
 
-  cyber-mux@0.11.0:
-    resolution: {integrity: sha512-yaeTqPtwQb4GsmkhKTfyYwLPJVXitQBkloDd5X5rBVnDoSEuoJ5xRFJtfAg5Q2HxYOWPSPOSbSTsY9fcEb3GCg==}
-    engines: {node: '>=22'}
-    hasBin: true
-    peerDependencies:
-      clibuilder: ^12.2.0
-    peerDependenciesMeta:
-      clibuilder:
-        optional: true
-
   cyber-mux@0.12.0:
     resolution: {integrity: sha512-sEStYZyDsPE3sEFWvYK0FnXcE5P79pPoNQOt+EMxiOsEPm/ERg8MdFKjxZYDNNePWqhVNmjaDV7hCzWdwsCL2Q==}
     engines: {node: '>=22'}
@@ -2470,8 +2460,8 @@ packages:
       clibuilder:
         optional: true
 
-  cyberlegion@1.7.0:
-    resolution: {integrity: sha512-niEvei+PMADiO0K1NFmteS+8KGjbaTuBEFj86MzriQrK9sH6wp8JJt5yI9X7iexvIZGtj2xzCL8GHkxjVSwAeA==}
+  cyberlegion@1.8.0:
+    resolution: {integrity: sha512-/Ma7ZtM72EUUbJLsDGho48KAFn1uzDEPK4w4oi9nZwbvN7uekv6TS+lgS+n1BNP6jubJ+oH2QX5E82QjhURPtQ==}
     engines: {node: '>=22'}
     hasBin: true
     peerDependencies:
@@ -5717,18 +5707,14 @@ snapshots:
 
   cyber-agentkit@2.1.0: {}
 
-  cyber-mux@0.11.0:
-    dependencies:
-      cyber-agentkit: 2.1.0
-
   cyber-mux@0.12.0:
     dependencies:
       cyber-agentkit: 2.1.0
 
-  cyberlegion@1.7.0:
+  cyberlegion@1.8.0:
     dependencies:
       cyber-agentkit: 2.1.0
-      cyber-mux: 0.11.0
+      cyber-mux: 0.12.0
     transitivePeerDependencies:
       - clibuilder
 
