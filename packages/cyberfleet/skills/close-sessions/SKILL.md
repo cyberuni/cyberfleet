@@ -13,7 +13,7 @@ mail, and its answer can only keep the unit.
 A unit is closable only when **all** of its work is visible on the host as finished: every pull
 request from its branch is merged or closed, and none of its commits are missing from those pull
 requests. An exited unit may also close with no pull request, when every commit it holds is already
-on the default branch. A seat on a project's main checkout closes only when the checkout is clean
+on the default branch, and an exited unit with no worktree closes unless it holds unread mail. A seat on a project's main checkout closes only when the checkout is clean
 and not ahead of its upstream, and closing it never touches the checkout. Mechanical evidence always decides first; nothing a unit says can close one the evidence keeps.
 A live unit that passes that evidence is then asked one question (step 4), because the unit is the best
 judge of whether it has unfinished work. A unit whose work landed but whose worktree still has
@@ -66,6 +66,13 @@ reads this note.
    A failed step here marks the repository's units for rule 11.
 7. When the caller's multiplexer is `herdr`, read each live in-scope pane's state once, with
    `herdr pane list` (or `herdr pane get <pane id>`). It reports `agent_status` from metadata. Never read a pane's screen.
+8. For each in-scope exited unit with no `worktree`, list its unread mail. `cyberlegion mail inbox`
+   reads only the caller's own mailbox or a standing owner's, so read the files: each unread message
+   is a JSON file directly under `<hub root>/inbox/<id>/` (acked mail sits in its `read/` subdirectory,
+   which does not count). The hub root is `$CYBERLEGION_ROOT` when set, otherwise
+   `~/.agents/cyberlegion`. No directory, or no `.json` file directly in it, means no unread mail.
+   From each file take `id`, `fromHandle` (or `from`), `subject`, and `sentAt`. When the directory
+   exists but cannot be read, treat the unit as holding unread mail, so rule 4b asks rather than closes.
 
 ## 3. Classify each unit
 
@@ -76,7 +83,8 @@ Apply these rules in order to each unit. The first rule that matches decides it.
 | 1 | `id` is this session's own id | keep: this session |
 | 2 | It is a standing owner (no pane, and no `harness` field or `harness` is `-`) | keep: standing owner |
 | 3 | Its pane is absent, or its `mux` (or legacy `tmux` key) is not the caller's multiplexer | keep: out of scope |
-| 4 | It has no `worktree` | keep: no worktree |
+| 4a | It has no `worktree`, and `status` is not `exited` | keep: no worktree |
+| 4b | It has no `worktree`, and `status` is `exited` | close: no worktree, session ended. If its mailbox holds unread mail (step 2.8), ask: no worktree, unread mail |
 | 5 | `worktree.root` does not exist on disk, and `status` is not `exited` | keep: worktree gone, session live |
 | 6 | `worktree.root` does not exist on disk, and `status` is `exited` | close: worktree gone, session ended |
 | 7 | Either `git -C <root> rev-parse --git-dir` or `git -C <root> rev-parse --git-common-dir` fails | keep: cannot read worktree |
@@ -98,6 +106,14 @@ Rules 8a–8d decide it, in order, and rules 9–15 do not apply to it:
 | 8b | `git -C <root> status --porcelain --untracked-files=all` prints any line other than `?? .agents/cyberlegion/config.json` | keep: seat checkout has changes |
 | 8c | `git -C <root> rev-list --count @{upstream}..HEAD` fails or prints anything but `0` | keep: seat ahead of upstream |
 | 8d | Anything else | close: seat finished |
+
+Rules 4a and 4b handle a unit that never had a worktree of its own: a pod spawned into its own clone,
+a unit spawned into another unit's worktree, or a session registered from a directory that is not a
+repository. With no worktree there is nothing on disk to check, so the session's own state decides,
+as in rules 5 and 6. A live unit may still be working, so rule 4a keeps it. An exited unit has ended,
+and nothing on disk belongs to it, so closing it loses only its record, its brief, and its mailbox;
+`cyberlegion unit close` has no worktree to remove. The one thing it can lose is mail nobody read,
+so rule 4b puts a unit with unread mail in ask, with that mail, instead of closing it.
 
 Rules 5 and 6 handle a worktree that was deleted from disk. Nothing is left on disk to check, so
 the session's own state decides: a live session may still be in use, and an exited one has nothing
@@ -189,6 +205,8 @@ request numbers. Handles are not unique, so the id is what identifies a unit. Ma
 8a–8d) as a seat, and say that closing it leaves its checkout untouched. Under each ask row, show what
 the Council needs to decide:
 
+- for unread mail (rule 4b): each unread message's sender, subject, and sent time, the first 10,
+  then how many more;
 - for leftover files (rule 14): the lines rule 14 counted, the first 10, then how many more;
 - for commits not on the default branch (rule 13): the `+` lines of `git -C <root> cherry -v
   origin/<default branch> HEAD`, the first 10, then how many more, and also the rule-14 lines when
@@ -197,8 +215,8 @@ the Council needs to decide:
 Then ask two questions, in this order:
 
 1. "Close these N units?" for the close group.
-2. "These M units have commits not on the default branch or leftover files, listed above. Closing one
-   deletes its worktree with them. Which should I close?"
+2. "These M units have commits not on the default branch, leftover files, or unread mail, listed
+   above. Closing one deletes its worktree and mailbox with them. Which should I close?"
 
 The Council may drop units from either list. A yes to the first question never covers the ask group.
 Close only the units the Council's answer names or covers. If an answer names a handle that more than
