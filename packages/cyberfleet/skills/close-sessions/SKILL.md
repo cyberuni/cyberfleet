@@ -31,7 +31,7 @@ Take the first rung that resolves and whose `cyberlegion --version` is `1.6.0` o
 1. `cyberlegion` on `PATH`.
 2. The installed cyberlegion plugin: read `~/.claude/plugins/installed_plugins.json`, take the
    `installPath` of its `cyberlegion@<marketplace>` entry, and run `node <installPath>/bin/cyberlegion.mjs`.
-3. `npx -y cyberlegion@1.6.0`.
+3. `npx -y cyberlegion@1.8.0`.
 
 When no rung resolves, stop and tell the Council to install the `cyberlegion` plugin.
 
