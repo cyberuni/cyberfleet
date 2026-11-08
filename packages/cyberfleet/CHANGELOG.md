@@ -1,5 +1,12 @@
 # cyberfleet
 
+## 0.8.1
+
+### Patch Changes
+
+- 4aa8c3c: close-sessions closes finished units it used to keep. It fetches each pull request's head before checking that `HEAD` is inside it, so a merged pull request is no longer read as unlanded work. An exited unit closes when its worktree is clean and every commit is on the default branch, pull request or not. A seat on a main checkout closes when its checkout is clean, not ahead of its upstream, and the seat answers DONE, without touching the checkout (needs cyberlegion 1.8.0 or later). The report counts live sessions and exited records separately.
+- ed7b2dd: Require cyberlegion 1.8.0. The plugin now pins and bundles cyberlegion 1.8.0, whose `unit close` removes a unit on a main checkout without touching the checkout, so close-sessions can close finished main-checkout seats. A `cyberlegion` older than 1.8.0 found on `PATH` still keeps those seats open.
+
 ## 0.8.0
 
 ### Minor Changes
