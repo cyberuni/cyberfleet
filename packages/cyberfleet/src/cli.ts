@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { Command, Option } from 'commander'
 import {
 	type AgentRecord,
@@ -8,6 +10,7 @@ import {
 	type Format,
 	type IdContext,
 	listAgents,
+	prune,
 	realExec,
 	resolveAgent,
 	resolveRoot,
@@ -20,6 +23,10 @@ import {
 import { bindPod, listPods, type PodAct, retirePod, showCaptain } from './captain.ts'
 import { jump, jumpBack, jumpToon } from './jump.ts'
 import { buildMissions, resolveAgentsRoot } from './missions.ts'
+import { ASK_BUDGET_MS, askUnits } from './sessions/ask.ts'
+import { closeUnits } from './sessions/close.ts'
+import { buildPlan, readPlan, writePlan } from './sessions/plan.ts'
+import { closeToon, summarize, summaryToon } from './sessions/summary.ts'
 
 // cyberfleet — the fleet layer on top of cyberlegion's mechanism. It carries ONLY fleet-specific
 // logic: `missions` (the SDD-derived mission view), `jump` (session
@@ -226,6 +233,82 @@ podAct(podCmd.command('retire'))
 		const ctx = ctxOf(opts)
 		const binding = retirePod(ctx, actOf(ctx, pod, opts))
 		emit(formatOf(opts), { toon: toonObject({ ...binding }), json: binding })
+	})
+
+const sessionsCmd = program
+	.command('sessions')
+	.description(
+		"sweep the caller's multiplexer for finished agent sessions — plan, ask the live ones, close what the Council confirms",
+	)
+
+/** The caller's multiplexer: the sweep acts only on units on it. */
+function callerMux(env: NodeJS.ProcessEnv): string {
+	if (env.HERDR_ENV) return 'herdr'
+	if (env.TMUX) return 'tmux'
+	throw new Error("not inside herdr or tmux — sessions acts only on units in the caller's multiplexer")
+}
+
+function selfOf(ctx: IdContext): AgentRecord {
+	const id = resolveSelfId(ctx)
+	const rec = id ? ctx.store.getAgent(id) : undefined
+	if (!rec) throw new Error('no session identity — run as a registered cyberlegion unit')
+	return rec
+}
+
+const ids = (v: string, all: string[]) => [...all, ...v.split(/[\s,]+/).filter(Boolean)]
+
+rootOpts(sessionsCmd.command('plan'))
+	.description(
+		'classify every unit as close, ask, or keep by the close-sessions rules; write the full plan to a file and print the summary',
+	)
+	.option('--out <path>', 'where to write the plan (default: a new file under the OS temp dir)')
+	.action(async (opts) => {
+		const ctx = ctxOf(opts)
+		const mux = callerMux(ctx.env ?? process.env)
+		prune(ctx)
+		const self = selfOf(ctx)
+		const plan = await buildPlan({ store: ctx.store, caller: { id: self.id, handle: self.handle }, callerMux: mux })
+		const path =
+			opts.out ?? join(tmpdir(), 'cyberfleet-sessions', `plan-${plan.createdAt.replace(/[:.]/g, '-')}-${self.id}.json`)
+		writePlan(path, plan)
+		const s = summarize(plan, path)
+		emit(formatOf(opts), { toon: summaryToon(s), json: s })
+	})
+
+rootOpts(sessionsCmd.command('ask'))
+	.description(
+		'mail every live close-group unit one question, await all replies within one budget, and record them in the plan — an answer can only keep a unit',
+	)
+	.argument('<plan>', 'the plan file `sessions plan` wrote')
+	.option('--budget <ms>', 'total wait for every reply together', String(ASK_BUDGET_MS))
+	.action(async (path, opts) => {
+		const ctx = ctxOf(opts)
+		const plan = readPlan(path)
+		const self = selfOf(ctx)
+		if (self.id !== plan.caller.id)
+			throw new Error(
+				`this plan was made by ${plan.caller.id}; replies would go to its inbox — run ask from that session`,
+			)
+		const budgetMs = Number(opts.budget)
+		if (!(Number.isInteger(budgetMs) && budgetMs > 0)) throw new Error('--budget must be a positive integer (ms)')
+		await askUnits({ store: ctx.store, plan, budgetMs })
+		writePlan(path, plan)
+		const s = summarize(plan, path)
+		emit(formatOf(opts), { toon: summaryToon(s), json: s })
+	})
+
+rootOpts(sessionsCmd.command('close'))
+	.description(
+		'close the units the Council confirmed, refusing any the plan keeps, any that changed since, and any --force the rules do not allow; never retires a pod',
+	)
+	.argument('<plan>', 'the plan file `sessions plan` wrote (and `sessions ask` updated)')
+	.requiredOption('--ids <id...>', 'the confirmed unit ids, full ids only (space- or comma-separated)', ids, [])
+	.option('--force <id...>', 'confirmed ask-group units whose leftover files to discard', ids, [])
+	.action(async (path, opts) => {
+		const ctx = ctxOf(opts)
+		const plan = readPlan(path)
+		const out = await closeUnits({ ctx, plan, ids: opts.ids, force: opts.force, selfId: resolveSelfId(ctx) })
+		emit(formatOf(opts), { toon: closeToon(out), json: out })
 	})
 
 const gateCmd = program.command('gate').description('SDD gate operations')

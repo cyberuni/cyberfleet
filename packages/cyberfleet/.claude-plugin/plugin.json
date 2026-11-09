@@ -15,6 +15,7 @@
 	],
 	"skills": "./skills",
 	"agents": [
-		"./agents/headless-operator.md"
+		"./agents/headless-operator.md",
+		"./agents/headless-close-sessions.md"
 	]
 }
