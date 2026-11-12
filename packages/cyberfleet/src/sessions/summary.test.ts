@@ -33,6 +33,12 @@ const plan: Plan = {
 			evidence: { commits: { lines: ['+ c1 a'], more: 12 } },
 		}),
 		u('k', { rule: '10', result: 'keep', reason: 'pull request open' }),
+		u('g', {
+			rule: '4c',
+			live: false,
+			reason: 'no worktree, session ended',
+			shared: { root: '/wt/owner', branch: 'feat/x', owner: 'o1' },
+		}),
 	],
 }
 
@@ -40,11 +46,11 @@ describe('sessions summary', () => {
 	const s = summarize(plan, '/tmp/plan.json')
 
 	it('counts live sessions and exited records in scope, apart, leaving out rules 1–3', () => {
-		expect(s.scope).toEqual({ live: 3, exited: 2 })
+		expect(s.scope).toEqual({ live: 3, exited: 3 })
 	})
 
 	it('lists close and ask rows live first, with the ask evidence and how many more', () => {
-		expect(s.close.map((r) => r.id)).toEqual(['y', 's', 'x'])
+		expect(s.close.map((r) => r.id)).toEqual(['y', 's', 'x', 'g'])
 		expect(s.ask[0]?.evidence).toEqual([
 			{ id: 'a', kind: 'commit', line: '+ c1 a' },
 			{ id: 'a', kind: 'more', line: '12 more commits' },
@@ -61,11 +67,12 @@ describe('sessions summary', () => {
 		expect(summarize({ ...plan, askedAt: 'now' }, '/tmp/plan.json').next).toBeUndefined()
 	})
 
-	it('prints the groups as toon, marking seats and pull requests', () => {
+	it('prints the groups as toon, marking seats, shared worktrees, and pull requests', () => {
 		const text = summaryToon(s)
-		expect(text).toContain('scope: 3 live sessions, 2 exited records')
-		expect(text).toContain('  s,h-s,live,seat,-,8d,seat finished,-')
-		expect(text).toContain('  x,h-x,exited,,-,15,work landed,#4')
-		expect(text).toContain('close: 3 (2 live, 1 exited)')
+		expect(text).toContain('scope: 3 live sessions, 3 exited records')
+		expect(text).toContain('  s,h-s,live,seat,-,-,8d,seat finished,-')
+		expect(text).toContain('  x,h-x,exited,,-,-,15,work landed,#4')
+		expect(text).toContain('  g,h-g,exited,,-,/wt/owner,4c,"no worktree, session ended",-')
+		expect(text).toContain('close: 4 (2 live, 2 exited)')
 	})
 })

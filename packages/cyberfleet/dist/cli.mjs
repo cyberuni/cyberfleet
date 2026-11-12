@@ -10357,7 +10357,7 @@ function resolvePrimaryRoot(exec) {
 	return dirname(commonDir);
 }
 //#endregion
-//#region ../../node_modules/.pnpm/cyberlegion@1.8.0/node_modules/cyberlegion/dist/index.mjs
+//#region ../../node_modules/.pnpm/cyberlegion@1.10.0/node_modules/cyberlegion/dist/index.mjs
 /**
 * Transitional env-normalization seam (mux.feature: "a pane carrying only the legacy fast-path vars
 * is still honored"). cyber-mux's own fast-path reads `$CYBER_MUX`/`$CYBER_MUX_PANE` — its
@@ -11458,6 +11458,10 @@ var FileStore = class {
 			read: read ? readMessages(read) : []
 		};
 	}
+	hasMailbox(id) {
+		const dir = readPathOrUndefined(() => paths.inboxDir(this.root, id));
+		return dir !== void 0 && existsSync(dir);
+	}
 	ackMessage(id, msgId) {
 		const src = readPathOrUndefined(() => paths.messageFile(this.root, id, msgId));
 		if (!src || !existsSync(src)) throw new Error(`"${msgId}" is not an unread message in this inbox`);
@@ -12378,14 +12382,23 @@ function classify(f) {
 	if (f.mux === void 0 || f.mux !== f.callerMux) return v("3", "keep", "out of scope");
 	if (!f.hasWorktree) {
 		if (f.live) return v("4a", "keep", "no worktree");
-		if (f.unread === null || f.unread && f.unread.length > 0) {
-			const items = f.unread ?? [];
-			return v("4b", "ask", "no worktree, unread mail", { mail: {
-				items: items.slice(0, SHOWN),
-				more: Math.max(0, items.length - SHOWN)
-			} });
+		const unread = f.unread === null || f.unread && f.unread.length > 0 ? f.unread ?? [] : void 0;
+		const mail = unread ? { mail: {
+			items: unread.slice(0, SHOWN),
+			more: Math.max(0, unread.length - SHOWN)
+		} } : {};
+		const s = f.shared;
+		if (s && !s.ownerExists && s.rootExists) {
+			const leftover = s.gitReadable && s.porcelain ? leftoverOf(s.porcelain) : void 0;
+			const plus = s.headInPr ? [] : s.cherry?.filter((l) => l.startsWith("+"));
+			if (!leftover || !plus || leftover.length > 0 || plus.length > 0) return v("4b", "ask", "shared worktree holds unlanded work, owner gone", {
+				...plus && plus.length > 0 ? { commits: cap(plus) } : {},
+				...leftover && leftover.length > 0 ? { leftover: cap(leftover) } : {},
+				...mail
+			});
 		}
-		return v("4b", "close", "no worktree, session ended");
+		if (unread) return v("4c", "ask", "no worktree, unread mail", mail);
+		return v("4c", "close", "no worktree, session ended");
 	}
 	if (!f.rootExists) return f.live ? v("5", "keep", "worktree gone, session live") : v("6", "close", "worktree gone, session ended");
 	if (!f.gitReadable) return v("7", "keep", "cannot read worktree");
@@ -12504,6 +12517,68 @@ async function snapshotOf(run, rec) {
 		porcelain
 	};
 }
+/** Rule 13's two tests and rule 14's status, for one linked or shared worktree. */
+async function landedOf(run, root, branch, repo, live) {
+	const porcelain = await status(run, root);
+	const matching = (repo.prs ?? []).filter((p) => p.headRefName === branch && p.state !== "OPEN");
+	const headInPr = (await Promise.all(matching.map((p) => run("git", [
+		"-C",
+		root,
+		"merge-base",
+		"--is-ancestor",
+		"HEAD",
+		p.headRefOid
+	])))).some((r) => r.ok);
+	if (headInPr || live) return {
+		porcelain,
+		headInPr
+	};
+	if (!repo.fetched || !repo.defaultBranch) return {
+		porcelain,
+		headInPr,
+		cherry: null
+	};
+	const cherry = await run("git", [
+		"-C",
+		root,
+		"cherry",
+		"-v",
+		`origin/${repo.defaultBranch}`,
+		"HEAD"
+	]);
+	return {
+		porcelain,
+		headInPr,
+		cherry: cherry.ok ? lines(cherry.stdout) : null
+	};
+}
+const real = (p) => {
+	try {
+		return realpathSync(p.trim());
+	} catch {
+		return p.trim();
+	}
+};
+/** Where a checkout's git directory and object store are; `undefined` when git cannot read it. */
+async function gitDirsOf(run, root) {
+	const [gitDir, commonDir] = await Promise.all([run("git", [
+		"-C",
+		root,
+		"rev-parse",
+		"--absolute-git-dir"
+	]), run("git", [
+		"-C",
+		root,
+		"rev-parse",
+		"--path-format=absolute",
+		"--git-common-dir"
+	])]);
+	if (!gitDir.ok || !commonDir.ok) return void 0;
+	return {
+		gitDir: real(gitDir.stdout),
+		commonDir: real(commonDir.stdout)
+	};
+}
 async function buildPlan(input) {
 	const run = input.run ?? realRun;
 	const limit = input.concurrency ?? 8;
@@ -12526,14 +12601,43 @@ async function buildPlan(input) {
 		};
 		const root = rec.worktree?.root;
 		if (!root) {
-			if (!facts.live) try {
+			if (facts.live) return {
+				rec,
+				facts
+			};
+			try {
 				facts.unread = unreadOf(store, rec.id);
 			} catch {
 				facts.unread = null;
 			}
-			return {
+			const sw = rec.sharedWorktree;
+			if (!sw?.root) return {
 				rec,
 				facts
+			};
+			const shared = { ownerExists: !!sw.owner && !!store.getAgent(sw.owner) };
+			facts.shared = shared;
+			if (shared.ownerExists) return {
+				rec,
+				facts
+			};
+			shared.rootExists = existsSync(sw.root);
+			if (!shared.rootExists) return {
+				rec,
+				facts
+			};
+			const dirs = await gitDirsOf(run, sw.root);
+			shared.gitReadable = !!dirs;
+			if (!dirs) return {
+				rec,
+				facts
+			};
+			return {
+				rec,
+				facts,
+				root: sw.root,
+				...sw.branch ? { branch: sw.branch } : {},
+				commonDir: dirs.commonDir
 			};
 		}
 		facts.rootExists = existsSync(root);
@@ -12541,36 +12645,19 @@ async function buildPlan(input) {
 			rec,
 			facts
 		};
-		const [gitDir, commonDir] = await Promise.all([run("git", [
-			"-C",
-			root,
-			"rev-parse",
-			"--absolute-git-dir"
-		]), run("git", [
-			"-C",
-			root,
-			"rev-parse",
-			"--path-format=absolute",
-			"--git-common-dir"
-		])]);
-		facts.gitReadable = gitDir.ok && commonDir.ok;
-		if (!facts.gitReadable) return {
+		const dirs = await gitDirsOf(run, root);
+		facts.gitReadable = !!dirs;
+		if (!dirs) return {
 			rec,
 			facts
 		};
-		const real = (p) => {
-			try {
-				return realpathSync(p.trim());
-			} catch {
-				return p.trim();
-			}
-		};
-		const common = real(commonDir.stdout);
-		facts.primary = real(gitDir.stdout) === common;
+		facts.primary = dirs.gitDir === dirs.commonDir;
 		return {
 			rec,
 			facts,
-			commonDir: common
+			root,
+			...facts.branch ? { branch: facts.branch } : {},
+			commonDir: dirs.commonDir
 		};
 	});
 	const repos = /* @__PURE__ */ new Map();
@@ -12582,7 +12669,7 @@ async function buildPlan(input) {
 	}
 	const repoFacts = /* @__PURE__ */ new Map();
 	await pool([...repos], limit, async ([key, units]) => {
-		const cwd = units[0]?.rec.worktree?.root;
+		const cwd = units[0]?.root;
 		const [list, view] = await Promise.all([run("gh", [
 			"pr",
 			"list",
@@ -12613,7 +12700,7 @@ async function buildPlan(input) {
 			});
 			return;
 		}
-		const branches = new Set(units.map((u) => u.facts.branch).filter(Boolean));
+		const branches = new Set(units.map((u) => u.branch).filter(Boolean));
 		const heads = prs.filter((p) => branches.has(p.headRefName) && p.state !== "OPEN").map((p) => `pull/${p.number}/head`);
 		const fetch = await run("git", [
 			"-C",
@@ -12630,9 +12717,13 @@ async function buildPlan(input) {
 			fetched: fetch.ok
 		});
 	});
-	await pool(located, limit, async ({ rec, facts, commonDir }) => {
-		if (!commonDir) return;
-		const root = rec.worktree?.root;
+	await pool(located, limit, async ({ facts, root, branch, commonDir }) => {
+		if (!commonDir || !root) return;
+		if (facts.shared) {
+			const repo = repoFacts.get(commonDir);
+			Object.assign(facts.shared, await landedOf(run, root, branch, repo, false));
+			return;
+		}
 		if (facts.primary) {
 			const [porcelain, ahead] = await Promise.all([status(run, root), run("git", [
 				"-C",
@@ -12647,27 +12738,7 @@ async function buildPlan(input) {
 		}
 		const repo = repoFacts.get(commonDir);
 		facts.repo = repo;
-		facts.porcelain = await status(run, root);
-		const matching = (repo.prs ?? []).filter((p) => p.headRefName === facts.branch && p.state !== "OPEN");
-		facts.headInPr = (await Promise.all(matching.map((p) => run("git", [
-			"-C",
-			root,
-			"merge-base",
-			"--is-ancestor",
-			"HEAD",
-			p.headRefOid
-		])))).some((r) => r.ok);
-		if (!facts.headInPr && !facts.live && repo.defaultBranch) {
-			const cherry = await run("git", [
-				"-C",
-				root,
-				"cherry",
-				"-v",
-				`origin/${repo.defaultBranch}`,
-				"HEAD"
-			]);
-			facts.cherry = cherry.ok ? lines(cherry.stdout) : null;
-		} else if (!facts.headInPr && !facts.live) facts.cherry = null;
+		Object.assign(facts, await landedOf(run, root, branch, repo, facts.live));
 	});
 	const statuses = callerMux === "herdr" ? await herdrStatuses(run) : /* @__PURE__ */ new Map();
 	const units = await pool(located, limit, async ({ rec, facts }) => {
@@ -12681,6 +12752,11 @@ async function buildPlan(input) {
 			seat: !!facts.primary,
 			...rec.worktree?.branch ? { branch: rec.worktree.branch } : {},
 			...rec.worktree?.root ? { root: rec.worktree.root } : {},
+			...!rec.worktree?.root && rec.sharedWorktree?.root ? { shared: {
+				root: rec.sharedWorktree.root,
+				...rec.sharedWorktree.branch ? { branch: rec.sharedWorktree.branch } : {},
+				...rec.sharedWorktree.owner ? { owner: rec.sharedWorktree.owner } : {}
+			} } : {},
 			...verdict,
 			...agentStatus ? { agentStatus } : {},
 			snapshot: await snapshotOf(run, rec)
@@ -12814,6 +12890,7 @@ function guard(u, plan, force, selfId) {
 	if (u.result === "close" && u.live && u.answer?.kind !== "done") return plan.askedAt ? "live unit did not answer DONE" : "live unit not asked yet: run `cyberfleet sessions ask` first";
 	if (force) {
 		if (u.seat) return "--force refused for a seat: closing a seat never touches its checkout";
+		if (!u.root) return "--force refused: the unit owns no worktree, and closing never touches a shared one";
 		if (u.result !== "ask" || !u.evidence?.leftover?.lines.length) return "--force refused: only an ask-group unit with leftover files may be forced";
 	}
 }
@@ -12907,6 +12984,7 @@ const row = (u) => ({
 	live: u.live,
 	seat: u.seat,
 	...u.branch ? { branch: u.branch } : {},
+	...u.shared ? { shared: u.shared.root } : {},
 	rule: u.rule,
 	reason: u.reason,
 	prs: u.prs
@@ -12997,6 +13075,10 @@ const rowFields = [
 	{
 		key: "branch",
 		get: (r) => r.branch ?? "-"
+	},
+	{
+		key: "shared",
+		get: (r) => r.shared ?? "-"
 	},
 	{
 		key: "rule",

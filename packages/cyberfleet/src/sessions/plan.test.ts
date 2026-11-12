@@ -232,10 +232,49 @@ describe('sessions plan: local facts', () => {
 		unit('mailed', { status: 'exited' })
 		send({ store }, { fromId: caller.id, to: 'mailed', subject: 'report', body: 'x' })
 		const p = await plan()
-		expect(p.units.find((u) => u.id === 'quiet')).toMatchObject({ rule: '4b', result: 'close' })
+		expect(p.units.find((u) => u.id === 'quiet')).toMatchObject({ rule: '4c', result: 'close' })
 		const mailed = p.units.find((u) => u.id === 'mailed')
-		expect(mailed).toMatchObject({ rule: '4b', result: 'ask' })
+		expect(mailed).toMatchObject({ rule: '4c', result: 'ask' })
 		expect(mailed?.evidence?.mail?.items[0]).toMatchObject({ from: caller.handle, subject: 'report' })
+	})
+
+	it('closes an exited unit sharing a worktree whose owner is still recorded, without reading it', async () => {
+		const r = repo('alpha')
+		const wt = r.worktree('feat/x')
+		commit(wt, 'lost')
+		unit('owner', { worktree: { root: wt, branch: 'feat/x' } })
+		unit('guest', { status: 'exited', sharedWorktree: { root: wt, branch: 'feat/x', owner: 'owner' } })
+		const p = await plan()
+		expect(p.units.find((u) => u.id === 'guest')).toMatchObject({
+			rule: '4c',
+			result: 'close',
+			shared: { root: wt, owner: 'owner' },
+		})
+		expect(p.units.find((u) => u.id === 'owner')).toMatchObject({ rule: '12', result: 'keep' })
+	})
+
+	it("asks about an exited unit sharing a worktree whose owner is gone, showing the worktree's unlanded work", async () => {
+		const r = repo('alpha')
+		const wt = r.worktree('feat/x')
+		commit(wt, 'lost')
+		writeFileSync(join(wt, 'scratch.txt'), 'x')
+		unit('guest', { status: 'exited', sharedWorktree: { root: wt, branch: 'feat/x', owner: 'gone0000' } })
+		const u = await unitOf('guest')
+		expect(u).toMatchObject({ rule: '4b', result: 'ask' })
+		expect(u?.evidence?.commits?.lines[0]).toMatch(/^\+ [0-9a-f]+ lost$/)
+		expect(u?.evidence?.leftover?.lines).toEqual(['?? scratch.txt'])
+		expect(u?.root).toBeUndefined()
+	})
+
+	it('closes an exited unit sharing a worktree with no owner whose work was squash-merged', async () => {
+		const r = repo('alpha')
+		const wt = r.worktree('feat/x')
+		commit(wt, 'x')
+		commit(wt, 'y')
+		r.open(wt, 'feat/x', 1)
+		r.squash(1)
+		unit('guest', { status: 'exited', sharedWorktree: { root: wt, branch: 'feat/x' } })
+		expect(await unitOf('guest')).toMatchObject({ rule: '4c', result: 'close', prs: [] })
 	})
 
 	it('records herdr agent_status for a live pane', async () => {

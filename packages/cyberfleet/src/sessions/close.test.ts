@@ -107,7 +107,7 @@ describe('sessions close: guards', () => {
 
 	it('accepts --force only for an ask-group unit with leftover files', async () => {
 		const units = [
-			await planned('ok', { result: 'ask', rule: '14', evidence: leftover }),
+			await planned('ok', { result: 'ask', rule: '14', root: '/wt/ok', evidence: leftover }),
 			await planned('commits', { result: 'ask', rule: '13', evidence: { commits: { lines: ['+ a'], more: 0 } } }),
 			await planned('close', {}),
 		]
@@ -117,8 +117,22 @@ describe('sessions close: guards', () => {
 		expect(out.refused.map((r) => r.id)).toEqual(['commits', 'close'])
 	})
 
+	it('refuses --force for a unit that owns no worktree, even with leftover files in a shared one', async () => {
+		const guest = await planned('guest', {
+			result: 'ask',
+			rule: '4b',
+			shared: { root: '/wt/owner', owner: 'gone0000' },
+			evidence: leftover,
+		})
+		const out = await run([guest], ['guest'], ['guest'])
+		expect(closedIds).toEqual([])
+		expect(out.refused.map((r) => r.reason)).toEqual([
+			'--force refused: the unit owns no worktree, and closing never touches a shared one',
+		])
+	})
+
 	it('refuses --force for a seat, and for an id --ids does not confirm', async () => {
-		const seat = await planned('seat', { seat: true, result: 'ask', rule: '14', evidence: leftover })
+		const seat = await planned('seat', { seat: true, result: 'ask', rule: '14', root: '/wt/seat', evidence: leftover })
 		const out = await run([seat, await planned('other')], ['seat'], ['seat', 'other'])
 		expect(closedIds).toEqual([])
 		expect(out.refused.map((r) => r.reason)).toEqual([

@@ -23,8 +23,11 @@ costs a pane. So:
 - The sweep acts only on units in the caller's multiplexer. Another session may resume the rest.
 - A seat on a project's main checkout (Captain, Coordinator, Operator, the Council's desk) can close,
   but closing it never touches the checkout.
+- A unit that works in another unit's worktree (its `shared` worktree) does not own it. Closing the
+  unit never touches that worktree.
 - `--force` discards a worktree's uncommitted files. It is only for an ask-group unit with leftover
-  files that the Council named in answer to the second question, and never for a seat.
+  files in a worktree it owns, named by the Council in answer to the second question. It is never
+  for a seat, and never for a unit that only shares its worktree.
 
 The rules themselves, and every guard above, are enforced by `cyberfleet sessions`, not by this
 text: the rule table is code with one test per rule (`src/sessions/classify.ts`).
@@ -63,7 +66,8 @@ Open with the `scope` line: live sessions and exited records, never summed into 
 Then show the three groups from the summary: **close**, **ask**, then **keep**, each with live
 sessions before exited records. Each close and ask row gives the id, handle, branch, reason, and pull
 requests. Handles are not unique, so the id is what identifies a unit. Mark a seat as a seat, and say
-that closing it leaves its checkout untouched. Under each ask row, show its `evidence` lines: unread
+that closing it leaves its checkout untouched. Likewise, say that closing a unit with a `shared`
+worktree leaves that worktree untouched. Under each ask row, show its `evidence` lines: unread
 mail, `+` commits not on the default branch, or leftover files, with the "N more" line when there is
 one. The keep group is shown by reason with its counts.
 
@@ -88,7 +92,7 @@ cyberfleet sessions close <plan path> --ids <id> <id> … [--force <id> …]
 ```
 
 Pass `--force` only for an ask-group unit the Council named in answer to the second question whose
-evidence lists leftover files. The command refuses any other `--force`, any keep-group unit, any live
+evidence lists leftover files, and that has its own worktree (no `shared` worktree). The command refuses any other `--force`, any keep-group unit, any live
 unit that did not answer DONE, and any unit that changed since the plan. It never retires a pod.
 
 A refusal is the answer: report it, and do not retry, add `--force`, or close the unit another way.

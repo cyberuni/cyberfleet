@@ -15,6 +15,8 @@ interface Row {
 	live: boolean
 	seat: boolean
 	branch?: string
+	/** The root of a worktree the unit works in but does not own; closing it never touches that. */
+	shared?: string
 	rule: string
 	reason: string
 	prs: number[]
@@ -41,6 +43,7 @@ const row = (u: UnitPlan): Row => ({
 	live: u.live,
 	seat: u.seat,
 	...(u.branch ? { branch: u.branch } : {}),
+	...(u.shared ? { shared: u.shared.root } : {}),
 	rule: u.rule,
 	reason: u.reason,
 	prs: u.prs,
@@ -95,6 +98,7 @@ const rowFields = [
 	{ key: 'live', get: (r: Row) => (r.live ? 'live' : 'exited') },
 	{ key: 'seat', get: (r: Row) => (r.seat ? 'seat' : '') },
 	{ key: 'branch', get: (r: Row) => r.branch ?? '-' },
+	{ key: 'shared', get: (r: Row) => r.shared ?? '-' },
 	{ key: 'rule', get: (r: Row) => r.rule },
 	{ key: 'reason', get: (r: Row) => r.reason },
 	{ key: 'prs', get: (r: Row) => r.prs.map((n) => `#${n}`).join(' ') || '-' },

@@ -8,7 +8,15 @@ import { execFile } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import type { AgentRecord, Store } from 'cyberlegion'
-import { classify, type MailItem, type PullRequest, type RepoFacts, type UnitFacts, type Verdict } from './classify.ts'
+import {
+	classify,
+	type MailItem,
+	type PullRequest,
+	type RepoFacts,
+	type SharedFacts,
+	type UnitFacts,
+	type Verdict,
+} from './classify.ts'
 
 interface RunResult {
 	ok: boolean
@@ -55,6 +63,8 @@ export interface UnitPlan extends Verdict {
 	seat: boolean
 	branch?: string
 	root?: string
+	/** The worktree the unit works in but does not own. Closing the unit never touches it. */
+	shared?: { root: string; branch?: string; owner?: string }
 	/** herdr's `agent_status` for the unit's pane, when the caller is on herdr. */
 	agentStatus?: string
 	/** The unit's answer to the step-4 question, once `sessions ask` ran. */
@@ -138,10 +148,51 @@ export async function snapshotOf(run: Run, rec: AgentRecord): Promise<Snapshot> 
 	return { status: rec.status, rootExists, ...(h ? { head: h } : {}), porcelain }
 }
 
+/** Rule 13's two tests and rule 14's status, for one linked or shared worktree. */
+async function landedOf(
+	run: Run,
+	root: string,
+	branch: string | undefined,
+	repo: RepoFacts,
+	live: boolean,
+): Promise<Pick<UnitFacts, 'porcelain' | 'headInPr' | 'cherry'>> {
+	const porcelain = await status(run, root)
+	const matching = (repo.prs ?? []).filter((p) => p.headRefName === branch && p.state !== 'OPEN')
+	const inPr = await Promise.all(
+		matching.map((p) => run('git', ['-C', root, 'merge-base', '--is-ancestor', 'HEAD', p.headRefOid])),
+	)
+	const headInPr = inPr.some((r) => r.ok)
+	if (headInPr || live) return { porcelain, headInPr }
+	if (!repo.fetched || !repo.defaultBranch) return { porcelain, headInPr, cherry: null }
+	const cherry = await run('git', ['-C', root, 'cherry', '-v', `origin/${repo.defaultBranch}`, 'HEAD'])
+	return { porcelain, headInPr, cherry: cherry.ok ? lines(cherry.stdout) : null }
+}
+
 interface Located {
 	rec: AgentRecord
 	facts: UnitFacts
+	/** The checkout the git checks read: the owned worktree, or for rule 4b the shared one. */
+	root?: string
+	branch?: string
 	commonDir?: string
+}
+
+const real = (p: string) => {
+	try {
+		return realpathSync(p.trim())
+	} catch {
+		return p.trim()
+	}
+}
+
+/** Where a checkout's git directory and object store are; `undefined` when git cannot read it. */
+async function gitDirsOf(run: Run, root: string): Promise<{ gitDir: string; commonDir: string } | undefined> {
+	const [gitDir, commonDir] = await Promise.all([
+		run('git', ['-C', root, 'rev-parse', '--absolute-git-dir']),
+		run('git', ['-C', root, 'rev-parse', '--path-format=absolute', '--git-common-dir']),
+	])
+	if (!gitDir.ok || !commonDir.ok) return undefined
+	return { gitDir: real(gitDir.stdout), commonDir: real(commonDir.stdout) }
 }
 
 export async function buildPlan(input: PlanInput): Promise<Plan> {
@@ -166,36 +217,36 @@ export async function buildPlan(input: PlanInput): Promise<Plan> {
 		if (facts.self || facts.standing || mux !== callerMux) return { rec, facts }
 		const root = rec.worktree?.root
 		if (!root) {
-			if (!facts.live) {
-				try {
-					facts.unread = unreadOf(store, rec.id)
-				} catch {
-					facts.unread = null
-				}
+			if (facts.live) return { rec, facts }
+			try {
+				facts.unread = unreadOf(store, rec.id)
+			} catch {
+				facts.unread = null
 			}
-			return { rec, facts }
+			// Rule 4b reads a shared worktree only when no owner's record is left to judge it.
+			const sw = rec.sharedWorktree
+			if (!sw?.root) return { rec, facts }
+			const shared: SharedFacts = { ownerExists: !!sw.owner && !!store.getAgent(sw.owner) }
+			facts.shared = shared
+			if (shared.ownerExists) return { rec, facts }
+			shared.rootExists = existsSync(sw.root)
+			if (!shared.rootExists) return { rec, facts }
+			const dirs = await gitDirsOf(run, sw.root)
+			shared.gitReadable = !!dirs
+			if (!dirs) return { rec, facts }
+			return { rec, facts, root: sw.root, ...(sw.branch ? { branch: sw.branch } : {}), commonDir: dirs.commonDir }
 		}
 		facts.rootExists = existsSync(root)
 		if (!facts.rootExists) return { rec, facts }
-		const [gitDir, commonDir] = await Promise.all([
-			run('git', ['-C', root, 'rev-parse', '--absolute-git-dir']),
-			run('git', ['-C', root, 'rev-parse', '--path-format=absolute', '--git-common-dir']),
-		])
-		facts.gitReadable = gitDir.ok && commonDir.ok
-		if (!facts.gitReadable) return { rec, facts }
-		const real = (p: string) => {
-			try {
-				return realpathSync(p.trim())
-			} catch {
-				return p.trim()
-			}
-		}
-		const common = real(commonDir.stdout)
-		facts.primary = real(gitDir.stdout) === common
-		return { rec, facts, commonDir: common }
+		const dirs = await gitDirsOf(run, root)
+		facts.gitReadable = !!dirs
+		if (!dirs) return { rec, facts }
+		facts.primary = dirs.gitDir === dirs.commonDir
+		return { rec, facts, root, ...(facts.branch ? { branch: facts.branch } : {}), commonDir: dirs.commonDir }
 	})
 
-	// Repositories: every linked worktree that reached rule 9, grouped by the object store it shares.
+	// Repositories: every linked worktree that reached rule 9, and every shared worktree rule 4b reads,
+	// grouped by the object store it shares.
 	const repos = new Map<string, Located[]>()
 	for (const l of located) {
 		if (!l.commonDir || l.facts.primary) continue
@@ -205,7 +256,7 @@ export async function buildPlan(input: PlanInput): Promise<Plan> {
 	}
 	const repoFacts = new Map<string, RepoFacts>()
 	await pool([...repos], limit, async ([key, units]) => {
-		const cwd = units[0]?.rec.worktree?.root as string
+		const cwd = units[0]?.root as string
 		const [list, view] = await Promise.all([
 			run(
 				'gh',
@@ -225,7 +276,7 @@ export async function buildPlan(input: PlanInput): Promise<Plan> {
 			repoFacts.set(key, { prs, ...(defaultBranch ? { defaultBranch } : {}), fetched: false })
 			return
 		}
-		const branches = new Set(units.map((u) => u.facts.branch).filter(Boolean))
+		const branches = new Set(units.map((u) => u.branch).filter(Boolean))
 		const heads = prs
 			.filter((p) => branches.has(p.headRefName) && p.state !== 'OPEN')
 			.map((p) => `pull/${p.number}/head`)
@@ -233,10 +284,15 @@ export async function buildPlan(input: PlanInput): Promise<Plan> {
 		repoFacts.set(key, { prs, defaultBranch, fetched: fetch.ok })
 	})
 
-	// Per-worktree checks, in parallel: the seat rules, rule 13's two tests, and rule 14.
-	await pool(located, limit, async ({ rec, facts, commonDir }) => {
-		if (!commonDir) return
-		const root = rec.worktree?.root as string
+	// Per-worktree checks, in parallel: the seat rules, rule 13's two tests, and rule 14; and rule 4b's
+	// same tests on a shared worktree.
+	await pool(located, limit, async ({ facts, root, branch, commonDir }) => {
+		if (!commonDir || !root) return
+		if (facts.shared) {
+			const repo = repoFacts.get(commonDir) as RepoFacts
+			Object.assign(facts.shared, await landedOf(run, root, branch, repo, false))
+			return
+		}
 		if (facts.primary) {
 			const [porcelain, ahead] = await Promise.all([
 				status(run, root),
@@ -248,16 +304,7 @@ export async function buildPlan(input: PlanInput): Promise<Plan> {
 		}
 		const repo = repoFacts.get(commonDir) as RepoFacts
 		facts.repo = repo
-		facts.porcelain = await status(run, root)
-		const matching = (repo.prs ?? []).filter((p) => p.headRefName === facts.branch && p.state !== 'OPEN')
-		const inPr = await Promise.all(
-			matching.map((p) => run('git', ['-C', root, 'merge-base', '--is-ancestor', 'HEAD', p.headRefOid])),
-		)
-		facts.headInPr = inPr.some((r) => r.ok)
-		if (!facts.headInPr && !facts.live && repo.defaultBranch) {
-			const cherry = await run('git', ['-C', root, 'cherry', '-v', `origin/${repo.defaultBranch}`, 'HEAD'])
-			facts.cherry = cherry.ok ? lines(cherry.stdout) : null
-		} else if (!facts.headInPr && !facts.live) facts.cherry = null
+		Object.assign(facts, await landedOf(run, root, branch, repo, facts.live))
 	})
 
 	const statuses = callerMux === 'herdr' ? await herdrStatuses(run) : new Map<string, string>()
@@ -272,6 +319,15 @@ export async function buildPlan(input: PlanInput): Promise<Plan> {
 			seat: !!facts.primary,
 			...(rec.worktree?.branch ? { branch: rec.worktree.branch } : {}),
 			...(rec.worktree?.root ? { root: rec.worktree.root } : {}),
+			...(!rec.worktree?.root && rec.sharedWorktree?.root
+				? {
+						shared: {
+							root: rec.sharedWorktree.root,
+							...(rec.sharedWorktree.branch ? { branch: rec.sharedWorktree.branch } : {}),
+							...(rec.sharedWorktree.owner ? { owner: rec.sharedWorktree.owner } : {}),
+						},
+					}
+				: {}),
 			...verdict,
 			...(agentStatus ? { agentStatus } : {}),
 			snapshot: await snapshotOf(run, rec),
