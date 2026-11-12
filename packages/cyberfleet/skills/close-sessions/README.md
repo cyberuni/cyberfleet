@@ -35,7 +35,13 @@ Not for retiring a pod's record: that belongs to the pod's Captain (`cyberfleet 
 - **`sessions close <plan> --ids <id…> [--force <id…>]`** closes each confirmed unit with
   cyberlegion's `unit close`. It refuses a keep-group unit, a live unit that did not answer DONE, a
   unit whose status, HEAD, or worktree status changed since the plan, and `--force` for anything but
-  an ask-group unit with leftover files, or for any seat. It never retires a pod.
+  an ask-group unit with leftover files in a worktree it owns, or for any seat. It never retires a pod.
+
+A unit spawned into another unit's worktree owns none: cyberlegion records that worktree as its
+`sharedWorktree`, and closing the unit never touches it. While the owner's record exists, the
+owner's own row judges the worktree, so the unit falls to 4c. Once the owner is gone, the unit may be
+the last record pointing at that worktree, so rule 4b asks when the worktree still holds unlanded
+work.
 
 ## The rules
 
@@ -47,7 +53,9 @@ The first rule that matches decides. The code and one test per rule are in
 | 1 | this session | keep |
 | 2 | a standing owner | keep |
 | 3 | no pane, or a pane on another multiplexer | keep: out of scope |
-| 4a / 4b | no worktree: live / exited | keep / close (ask when it holds unread mail) |
+| 4a | no worktree, live | keep |
+| 4b | no worktree, exited, sharing one whose owner's record is gone, with commits not on the default branch, leftover files, or a worktree git cannot read | ask |
+| 4c | no worktree, exited | close (ask when it holds unread mail) |
 | 5 / 6 | worktree gone: live / exited | keep / close |
 | 7 | git cannot read the worktree | keep |
 | 8b–8d | a seat on a primary checkout: dirty / ahead of upstream / otherwise | keep / keep / close |

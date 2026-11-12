@@ -2,7 +2,8 @@
 // still what the plan says it is. Every guard the skill used to state as prose is enforced here:
 // a keep-group unit never closes, a live close-group unit closes only after it answered DONE, a unit
 // that changed since the plan is refused, and `--force` (which discards leftover files) is accepted
-// only for an ask-group unit with leftover files, never for a seat. Pod records are the Captain's,
+// only for an ask-group unit with leftover files in a worktree it owns, never for a seat or for a
+// unit that only shares a worktree (rule 4b). Pod records are the Captain's,
 // so this never retires one.
 
 import { decommission, type IdContext } from 'cyberlegion'
@@ -58,6 +59,7 @@ function guard(u: UnitPlan, plan: Plan, force: boolean, selfId: string | undefin
 			: 'live unit not asked yet: run `cyberfleet sessions ask` first'
 	if (force) {
 		if (u.seat) return '--force refused for a seat: closing a seat never touches its checkout'
+		if (!u.root) return '--force refused: the unit owns no worktree, and closing never touches a shared one'
 		if (u.result !== 'ask' || !u.evidence?.leftover?.lines.length)
 			return '--force refused: only an ask-group unit with leftover files may be forced'
 	}

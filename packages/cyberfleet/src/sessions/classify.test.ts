@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { classify, type UnitFacts } from './classify.ts'
+import { classify, type SharedFacts, type UnitFacts } from './classify.ts'
 
 // The close-sessions rule table, one fixture per rule. `landed` is a live unit on a linked worktree
 // whose one pull request merged, whose HEAD that pull request contains, and whose worktree is clean:
@@ -27,6 +27,17 @@ const landed: UnitFacts = {
 const exited = { ...landed, live: false }
 const seat = { ...landed, primary: true, aheadOfUpstream: 0 }
 const mail = { id: 'm1', from: 'pod-1', subject: 'hi', sentAt: '2026-11-08T00:00:00Z' }
+/** An exited unit that owns no worktree but shares one; `orphan` is that worktree, landed and clean,
+ * with no owner's record left to judge it. */
+const sharing = { ...exited, hasWorktree: false, unread: [] }
+const orphan: SharedFacts = {
+	ownerExists: false,
+	rootExists: true,
+	gitReadable: true,
+	porcelain: ['?? .agents/cyberlegion/config.json'],
+	headInPr: true,
+	cherry: [],
+}
 
 const table: [string, Partial<UnitFacts>, string, string, RegExp][] = [
 	['this session', { self: true }, '1', 'keep', /this session/],
@@ -34,20 +45,62 @@ const table: [string, Partial<UnitFacts>, string, string, RegExp][] = [
 	['a unit with no pane', { mux: undefined }, '3', 'keep', /out of scope/],
 	['a unit on another multiplexer', { mux: 'tmux' }, '3', 'keep', /out of scope/],
 	['a live unit with no worktree', { hasWorktree: false }, '4a', 'keep', /no worktree/],
-	['an exited unit with no worktree', { ...exited, hasWorktree: false, unread: [] }, '4b', 'close', /no worktree/],
+	[
+		'an exited unit sharing a worktree with unlanded work whose owner is gone',
+		{ ...sharing, shared: { ...orphan, headInPr: false, cherry: ['+ abc1 extra work'] } },
+		'4b',
+		'ask',
+		/owner gone/,
+	],
+	[
+		'an exited unit sharing a worktree with leftover files whose owner is gone',
+		{ ...sharing, shared: { ...orphan, porcelain: ['?? scratch.txt'] } },
+		'4b',
+		'ask',
+		/owner gone/,
+	],
+	[
+		'an exited unit sharing an unreadable worktree whose owner is gone',
+		{ ...sharing, shared: { ownerExists: false, rootExists: true, gitReadable: false } },
+		'4b',
+		'ask',
+		/owner gone/,
+	],
+	['an exited unit with no worktree', { ...exited, hasWorktree: false, unread: [] }, '4c', 'close', /no worktree/],
 	[
 		'an exited unit with no worktree and unread mail',
 		{ ...exited, hasWorktree: false, unread: [mail] },
-		'4b',
+		'4c',
 		'ask',
 		/unread mail/,
 	],
 	[
 		'an exited unit with no worktree whose mailbox cannot be read',
 		{ ...exited, hasWorktree: false, unread: null },
-		'4b',
+		'4c',
 		'ask',
 		/unread mail/,
+	],
+	[
+		'an exited unit sharing a worktree with unlanded work whose owner is still recorded',
+		{ ...sharing, shared: { ...orphan, ownerExists: true, headInPr: false, cherry: ['+ abc1 extra work'] } },
+		'4c',
+		'close',
+		/no worktree/,
+	],
+	[
+		'an exited unit sharing a worktree whose owner is gone but whose work landed',
+		{ ...sharing, shared: { ...orphan, headInPr: false, cherry: ['- abc1 done'] } },
+		'4c',
+		'close',
+		/no worktree/,
+	],
+	[
+		'an exited unit sharing a worktree that is gone',
+		{ ...sharing, shared: { ownerExists: false, rootExists: false } },
+		'4c',
+		'close',
+		/no worktree/,
 	],
 	['a live unit whose worktree is gone', { rootExists: false }, '5', 'keep', /worktree gone, session live/],
 	['an exited unit whose worktree is gone', { ...exited, rootExists: false }, '6', 'close', /worktree gone/],
@@ -146,7 +199,18 @@ describe('classify: evidence step 5 shows', () => {
 		expect(v.evidence?.leftover).toEqual({ lines: ['?? x'], more: 0 })
 	})
 
-	it("shows rule 4b's unread mail", () => {
+	it("shows rule 4b's commits and leftover lines, and the unread mail alongside", () => {
+		const v = classify({
+			...sharing,
+			unread: [mail],
+			shared: { ...orphan, headInPr: false, cherry: ['- a done', '+ b extra'], porcelain: ['?? x'] },
+		})
+		expect(v.evidence?.commits).toEqual({ lines: ['+ b extra'], more: 0 })
+		expect(v.evidence?.leftover).toEqual({ lines: ['?? x'], more: 0 })
+		expect(v.evidence?.mail).toEqual({ items: [mail], more: 0 })
+	})
+
+	it("shows rule 4c's unread mail", () => {
 		const v = classify({ ...exited, hasWorktree: false, unread: [mail] })
 		expect(v.evidence?.mail).toEqual({ items: [mail], more: 0 })
 	})

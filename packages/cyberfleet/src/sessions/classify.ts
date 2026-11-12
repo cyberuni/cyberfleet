@@ -29,6 +29,22 @@ export interface MailItem {
 	sentAt: string
 }
 
+/** The checkout a unit works in but does not own (cyberlegion's `sharedWorktree`), read only when
+ * the unit has exited and no owner's record is left to judge it through its own row. */
+export interface SharedFacts {
+	/** The owning unit's record still exists. False when no owner was recorded. */
+	ownerExists: boolean
+	rootExists?: boolean
+	/** Both `rev-parse --git-dir` and `--git-common-dir` succeeded. */
+	gitReadable?: boolean
+	/** `git status --porcelain --untracked-files=all` lines; null when it failed. */
+	porcelain?: string[] | null
+	/** HEAD is an ancestor of some matching pull request's head commit. */
+	headInPr?: boolean
+	/** `git cherry -v origin/<default> HEAD` lines; null when it failed or could not run. */
+	cherry?: string[] | null
+}
+
 export interface UnitFacts {
 	self: boolean
 	/** A standing owner or service endpoint: no session of its own. */
@@ -55,6 +71,8 @@ export interface UnitFacts {
 	cherry?: string[] | null
 	/** Unread mail in the unit's mailbox; null when it could not be read. */
 	unread?: MailItem[] | null
+	/** The worktree the unit shares, when it owns none and cyberlegion recorded one. */
+	shared?: SharedFacts
 }
 
 interface Lines {
@@ -105,13 +123,23 @@ export function classify(f: UnitFacts): Verdict {
 	if (f.mux === undefined || f.mux !== f.callerMux) return v('3', 'keep', 'out of scope')
 	if (!f.hasWorktree) {
 		if (f.live) return v('4a', 'keep', 'no worktree')
-		if (f.unread === null || (f.unread && f.unread.length > 0)) {
-			const items = f.unread ?? []
-			return v('4b', 'ask', 'no worktree, unread mail', {
-				mail: { items: items.slice(0, SHOWN), more: Math.max(0, items.length - SHOWN) },
-			})
+		const unread = f.unread === null || (f.unread && f.unread.length > 0) ? (f.unread ?? []) : undefined
+		const mail = unread ? { mail: { items: unread.slice(0, SHOWN), more: Math.max(0, unread.length - SHOWN) } } : {}
+		// Rule 4b: the unit may be the last record pointing at a shared worktree's unfinished work. While
+		// the owner's record exists, the owner's own row judges that worktree, so this one does not.
+		const s = f.shared
+		if (s && !s.ownerExists && s.rootExists) {
+			const leftover = s.gitReadable && s.porcelain ? leftoverOf(s.porcelain) : undefined
+			const plus = s.headInPr ? [] : s.cherry?.filter((l) => l.startsWith('+'))
+			if (!leftover || !plus || leftover.length > 0 || plus.length > 0)
+				return v('4b', 'ask', 'shared worktree holds unlanded work, owner gone', {
+					...(plus && plus.length > 0 ? { commits: cap(plus) } : {}),
+					...(leftover && leftover.length > 0 ? { leftover: cap(leftover) } : {}),
+					...mail,
+				})
 		}
-		return v('4b', 'close', 'no worktree, session ended')
+		if (unread) return v('4c', 'ask', 'no worktree, unread mail', mail)
+		return v('4c', 'close', 'no worktree, session ended')
 	}
 	if (!f.rootExists)
 		return f.live ? v('5', 'keep', 'worktree gone, session live') : v('6', 'close', 'worktree gone, session ended')
