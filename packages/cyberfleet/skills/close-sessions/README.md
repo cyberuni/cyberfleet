@@ -22,9 +22,11 @@ Not for retiring a pod's record: that belongs to the pod's Captain (`cyberfleet 
 ## The commands
 
 - **`sessions plan [--out <path>] [--format json]`** prunes, reads every unit, and acts only on units
-  in the caller's multiplexer. Since cyberlegion 2.0.0 the prune deletes every exited unit with no
-  worktree of its own left on disk (a seat on a primary checkout counts as none), with its brief and
-  mailbox, and the plan lists those under `pruned`. They reach no rule below. Per repository, in parallel: one `gh pr list`, the default branch, and
+  in the caller's multiplexer. The prune deletes every exited unit with no worktree of its own left
+  on disk (a seat on a primary checkout counts as none), with its brief and mailbox, and the plan
+  lists those under `pruned`. It keeps an exited unit that is the last record for a shared worktree
+  still on disk whose work has not landed (clean, its branch on the default branch), so that unit
+  reaches rule 4b. Per repository, in parallel: one `gh pr list`, the default branch, and
   one fetch of it and of every matched, non-open pull request's head, so a squash-merged pull request
   whose branch the host deleted still reads as merged. Then the per-worktree git checks, in parallel.
   Each unit gets a rule, a result (close, ask, or keep), a reason, its pull requests, and the
@@ -69,8 +71,10 @@ The first rule that matches decides. The code and one test per rule are in
 | 14 | landed, with leftover files | ask |
 | 15 | landed and clean | close |
 
-Rules 4b, 4c, 6, and the exited side of 8 still decide a unit handed to the classifier, but since
-cyberlegion 2.0.0 `sessions plan` sees no such exited unit: the prune before it has deleted them.
+Of the exited units with no worktree of their own, the prune leaves only the last sharers of
+unlanded work. Rule 4b asks about them; one whose pull request was squash-merged, which git alone
+does not count as landed, falls to 4c. Rules 6 and the exited side of 8 still decide a unit handed to
+the classifier, but `sessions plan` sees none: the prune before it has deleted them.
 
 A live unit that a rule puts in close is then asked (`sessions ask`). This is the interim home for
 the sweep: the planned design moves the close into the Coordinator, at the moment a unit's last pull

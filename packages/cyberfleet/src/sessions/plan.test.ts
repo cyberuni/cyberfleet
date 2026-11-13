@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { type AgentRecord, FileStore, send } from 'cyberlegion'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { buildPlan, pool, type Run, realRun } from './plan.ts'
+import { buildPlan, pool, pruneBeforePlan, type Run, realRun } from './plan.ts'
 
 // The planner against real git repositories. Only `gh` and `herdr` are stubbed: `gh` answers from
 // the pull requests each test opens, and `herdr pane list` from a fixed pane table.
@@ -293,6 +293,45 @@ describe('sessions plan: local facts', () => {
 		const p = await plan()
 		expect(p.units.find((u) => u.id === 't1')).toMatchObject({ rule: '3', result: 'keep' })
 		expect(p.units.find((u) => u.id === caller.id)).toMatchObject({ rule: '1', result: 'keep' })
+	})
+})
+
+describe('sessions plan: the prune before it', () => {
+	const prune = () => pruneBeforePlan({ store })
+	// No pane for the caller, so prune judges it by its fresh last-seen and no herdr is asked.
+	beforeEach(() => unit(caller.id, { handle: caller.handle, pane: null }))
+
+	it('keeps an exited sharer while it is the last record for a worktree with unlanded work, so rule 4b asks', async () => {
+		const r = repo('alpha')
+		const wt = r.worktree('feat/x')
+		commit(wt, 'lost')
+		unit('guest', { status: 'exited', sharedWorktree: { root: wt, branch: 'feat/x', owner: 'gone0000' } })
+		expect(await prune()).toEqual([])
+		expect(await unitOf('guest')).toMatchObject({ rule: '4b', result: 'ask' })
+	})
+
+	it('deletes an exited sharer of a worktree whose work has landed, and names it', async () => {
+		const r = repo('alpha')
+		const wt = r.worktree('feat/x')
+		unit('guest', { status: 'exited', sharedWorktree: { root: wt, branch: 'feat/x', owner: 'gone0000' } })
+		expect(await prune()).toEqual([{ id: 'guest', handle: 'h-guest' }])
+		expect(store.getAgent('guest')).toBeUndefined()
+	})
+
+	it('keeps an exited sharer whose pull request was squash-merged, which rule 4c then closes', async () => {
+		const r = repo('alpha')
+		const wt = r.worktree('feat/x')
+		commit(wt, 'x')
+		r.open(wt, 'feat/x', 1)
+		r.squash(1)
+		unit('guest', { status: 'exited', sharedWorktree: { root: wt, branch: 'feat/x', owner: 'gone0000' } })
+		expect(await prune()).toEqual([])
+		expect(await unitOf('guest')).toMatchObject({ rule: '4c', result: 'close' })
+	})
+
+	it('deletes an exited unit with no worktree, and names it', async () => {
+		unit('old', { status: 'exited' })
+		expect(await prune()).toEqual([{ id: 'old', handle: 'h-old' }])
 	})
 })
 

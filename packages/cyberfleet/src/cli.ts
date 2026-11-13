@@ -10,7 +10,6 @@ import {
 	type Format,
 	type IdContext,
 	listAgents,
-	prune,
 	realExec,
 	resolveAgent,
 	resolveRoot,
@@ -25,7 +24,7 @@ import { jump, jumpBack, jumpToon } from './jump.ts'
 import { buildMissions, resolveAgentsRoot } from './missions.ts'
 import { ASK_BUDGET_MS, askUnits } from './sessions/ask.ts'
 import { closeUnits } from './sessions/close.ts'
-import { buildPlan, readPlan, writePlan } from './sessions/plan.ts'
+import { buildPlan, pruneBeforePlan, readPlan, writePlan } from './sessions/plan.ts'
 import { closeToon, summarize, summaryToon } from './sessions/summary.ts'
 
 // cyberfleet — the fleet layer on top of cyberlegion's mechanism. It carries ONLY fleet-specific
@@ -265,11 +264,8 @@ rootOpts(sessionsCmd.command('plan'))
 	.action(async (opts) => {
 		const ctx = ctxOf(opts)
 		const mux = callerMux(ctx.env ?? process.env)
-		// cyberlegion 2.0.0's prune deletes every exited unit that left nothing on disk to close; the
-		// plan names them so the Council sees what went, though they reach no group.
-		const pruned = prune(ctx)
-			.filter((r) => r.pruned === 'deleted')
-			.map((r) => ({ id: r.id, handle: r.handle }))
+		// The plan names what prune deleted so the Council sees what went, though it reaches no group.
+		const pruned = await pruneBeforePlan(ctx)
 		const self = selfOf(ctx)
 		const plan = await buildPlan({
 			store: ctx.store,
