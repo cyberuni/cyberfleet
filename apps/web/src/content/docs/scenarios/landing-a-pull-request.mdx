@@ -25,8 +25,8 @@ is needed, and otherwise to report once, when its queue settles.
 
 ## Why a separate Coordinator
 
-Landing is a loop: check a pull request, tell a Pod to rebase, wait for CI, merge, tell the next
-Pods that trunk moved, and repeat. Almost every turn is a status read and a command. Running that
+Landing is a loop: check a pull request, tell a Pod to rebase, wait for CI, merge, call the next
+Pod in the merge queue, and repeat. Almost every turn is a status read and a command. Running that
 loop on the Captain's Opus session spends the most expensive tier on the cheapest turns, and keeps
 the Captain's context full of CI logs. Splitting it out lets the Captain sleep through a run of clean
 merges and start only for the ones that need judgment, and once for the review of what landed.
@@ -68,7 +68,7 @@ links give, and green on the merged result:
   order -- yes --> spec{"CI on the<br/>merged result"}
   spec -- red --> esc["hold, bisect,<br/>escalate"]
   spec -- green --> merge["merge, close<br/>the Pod, count down"]
-  merge --> moved["other Pods:<br/>trunk moved"]
+  merge --> moved["next Pod in the queue:<br/>trunk moved, rebase"]
   merge --> zero{"open PRs<br/>= 0?"}
   zero -- yes --> report["one report to the Captain,<br/>then exit"]
   zero -- no --> wait["wait for news"]`}
@@ -120,7 +120,9 @@ The command computes four conditions. The first three come from `gh`, the fourth
 ### 2. Handle the mechanical cases itself
 
 - **A merge conflict, and nothing else.** The Coordinator decides which pull request goes first and
-  tells the other Pod to rebase once the first one lands.
+  tells the other Pod to rebase once the first one lands. With a host merge queue that builds the
+  merged result, a pull request with no conflict goes into it without a rebase; only a conflict needs
+  one.
 - **CI red, caused by this pull request.** The Pod fixes it, as it already does while shepherding.
 
 Each instruction goes in the pull request's queue thread, mentioning the Pod's handle. The mention
@@ -141,9 +143,18 @@ The Coordinator runs speculative CI on the merged result first, as
 [merge-backstop-governance](https://github.com/cyberuni/cyberfleet/blob/main/packages/cyberfleet/skills/merge-backstop-governance/SKILL.md)
 requires, and merges only on green. Before `gh pr merge` it checks its lease with `service verify`.
 After a merge it closes the merged Pod's unit (`cyberlegion unit close`), posts the landing in the
-pull request's queue thread, and mentions every other open Pod there that trunk moved. The landing
+pull request's queue thread, and calls only the next Pod in the merge queue to rebase (below). The landing
 reaches the mission channel when the Captain posts the outcome. The pull request references its
 issue and never closes it: no `Closes #n`.
+
+The Coordinator keeps one merge queue per delegated request, so each Pod rebases about once rather than
+once per merge, the same discipline as
+[merge-backstop-governance](https://github.com/cyberuni/cyberfleet/blob/main/packages/cyberfleet/skills/merge-backstop-governance/SKILL.md)
+§5. The queue order is fixed as pull requests come ready: the blocking links first, then the order
+that keeps conflicts small. Pods behind the head are told to hold, with no rebase or push for trunk
+changes until called, and they keep working their review threads. After each merge only the next Pod
+is mentioned. A Pod that is not ready when called (still working, or blocked) drops back, and the next
+ready Pod is called. A Pod is never called ahead of a pull request that blocks it.
 
 The Coordinator stays alive while it has pull requests to land. It counts the open pull requests of
 each delegated request: up when a Pod opens one, down when it merges or closes. Both are host events,

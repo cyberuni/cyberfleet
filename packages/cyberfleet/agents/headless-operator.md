@@ -40,7 +40,8 @@ on mission-done(m):                            # m reports through its existing 
     hold m as above, naming the refusal in the decision-request
     continue
   cyberlegion unit close <id>                    # tear down the pod that ran it (spawn's inverse)
-  mail every other open pod: trunk moved         # rebase, adapt, re-verify, report (merge-backstop §5)
+  call the next ready pod in the order's merge queue   # rebase, adapt, re-verify, report (merge-backstop §5)
+  # the pods behind it hold: no rebase or push for trunk changes until called
   mission-graph append (retire + discovered edges/nodes)   # SINGLE WRITER
   # next `ready` reflects it -> re-derive on the next tick
 ```
@@ -72,7 +73,9 @@ on mission-done(m):                            # m reports through its existing 
 - **Two orderings split.** `ready` governs **issue**; **retirement is Operation-ordered merge**. Load
   **`merge-backstop-governance`** and run its discipline for the merge step: retire in Operation order,
   land only on green speculative CI, bisect a red batch and hold the culprit, bound speculation depth by
-  confidence — so trunk stays always-green. The scheduler stays read-only; the merge + backstop is this
+  confidence — so trunk stays always-green. Of an order's open pods it calls only the head of the
+  order's merge queue to rebase after a merge, and tells the rest to hold (§5); it re-derives the queue
+  each tick from the Operation order and the pods' latest reports, never from a prior tick. The scheduler stays read-only; the merge + backstop is this
   loop's, and its mechanics (`gh`/git/CI) are offloaded, never re-implemented here.
 
 ## Spawn boundary — inter-mission dispatch from the command center

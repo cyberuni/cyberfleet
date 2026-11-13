@@ -70,23 +70,55 @@ Speculation is an optimization over serial CI-gated merges; it never weakens the
 — every mission's merge is still proven green (in isolation, after a bisect) before it counts as
 retired.
 
-## 5. After a merge — the open pods rebase, and are gated again
+## 5. The merge queue — one pod rebases at a time
 
-A landed merge moves trunk under every mission still open. After each merge, mail every other
-still-open pod of the same dispatch, on its own brief's thread, that trunk moved and it must:
+A landed merge moves trunk under every pod still open, but only the pull request that merges next has
+to sit on the new trunk. Telling every open pod to rebase after each merge costs about n²/2 rebases for
+n pull requests, and each pod's rebases but its last are thrown away. So keep **one merge queue per
+order** (per dispatch), and call only its head.
 
-- rebase onto the new trunk;
-- adapt its work to what just landed, not only resolve textual conflicts;
-- re-run its verification, push, and report again on the thread.
+1. **Fix the order as pods report done.** When a pod reports done, place its pull request in the
+   order's queue: dependency order first (a consumer behind its producer, §1), then, among pull
+   requests with no dependency between them, the order that keeps conflicts small, judged from the
+   files each one touches (`gh pr view <pr> --json files`). A pod that reports later takes its place
+   by the same rules; a consumer already queued moves behind its producer when the producer reports.
+2. **Tell the pods behind the head to hold.** Mail each one, on its own brief's thread, its place and
+   that it holds: it does not rebase or push for trunk changes until it is called. A holding pod keeps
+   working on its review threads and on Council decisions.
 
-```bash
-cyberlegion mail send --to <pod-handle> --thread <brief-thread> --body "trunk moved: <pr> merged. Rebase, adapt, re-verify, push, report again."
-```
+   ```bash
+   cyberlegion mail send --to <pod-handle> --thread <brief-thread> --body "queued: place <n>, behind <pr>. Hold: no rebase or push for trunk changes until called. Keep working review threads and Council decisions."
+   ```
 
-Send nothing to the pod whose work just merged — tear it down instead (`cyberlegion unit close`). A
-rebased pull request is **a new candidate**: gate it from scratch on its new report (§2, and the
-clean bar the dispatcher's authority rule sets). A green result from before the rebase never carries
-over.
+3. **After a merge, call only the next pod.** Tear down the pod whose work merged (`cyberlegion unit
+   close`) and send it nothing. Then call only the next pod in the queue: rebase onto the new trunk,
+   adapt its work to what just landed (not only resolve textual conflicts), re-run its verification,
+   push, and report again on the thread. Send the pods behind it nothing; they are still holding.
+
+   ```bash
+   cyberlegion mail send --to <pod-handle> --thread <brief-thread> --body "your turn: <pr> merged, trunk moved. Rebase, adapt, re-verify, push, report again."
+   ```
+
+   The rebased pull request is **a new candidate**: gate it from scratch on its new report (§2, and
+   the clean bar the dispatcher's authority rule sets). A green result from before the rebase never
+   carries over. Merge it, then call the next. The head of a queue that trunk has not moved under
+   since its last green needs no call: gate it as it stands.
+4. **A pod that is not ready when called drops back.** When the called pod is still working or is
+   blocked, it drops back in the queue behind the next ready pod, and that pod is called instead. The
+   next ready pod is the first one behind it whose producers have all merged: a consumer is never
+   called ahead of its producer, even when the producer drops back. The pod that dropped back is
+   called again when it reaches the head ready.
+
+**When the host has a merge queue** that builds CI on the merged result (a required GitHub merge
+queue, for instance), queue the head pull request without a rebase when it has no conflict (`gh pr
+merge <pr>`, which the required queue turns into an enqueue). The host's build on the merged result is
+the §2 gate: a red one is not clean, and the pull request is held. Call the pod to rebase only on a
+conflict.
+
+Speculating merges ahead of trunk (§4) is the backstop's own integration check; it never calls more
+than one pod to rebase. The queue is not memory: whoever runs the merge step derives it from the
+Operation order and each pod's latest report on its thread, so a headless tick re-derives the queue
+rather than carrying it from a prior tick.
 
 ## The invariant
 

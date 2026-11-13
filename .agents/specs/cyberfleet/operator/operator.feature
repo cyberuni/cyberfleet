@@ -189,7 +189,8 @@ Feature: operator — the command-center persona
     Then the brief tells the pod to open a pull request and report on the brief's thread to the session that spawned it
     And the brief tells the pod to shepherd that pull request until CI is green, and names the per-turn timeout and which review threads the pod resolves
     And the brief tells the pod never to merge that pull request
-    And the brief tells the pod that when it is told the default branch moved, it rebases onto it, adapts its work to what landed, re-verifies, and reports again
+    And the brief tells the pod not to rebase or push for default-branch changes until it is called, while it keeps working on review threads and Council decisions
+    And the brief tells the pod that when it is called, it rebases onto the default branch, adapts its work to what landed, re-verifies, and reports again
 
   @behavior
   Scenario: dispatching announces the merges up front
@@ -286,16 +287,51 @@ Feature: operator — the command-center persona
     Then the date parser's pull request merges before the report's pull request
 
   @behavior
-  Scenario: after a merge, every other open pod of the order is told the default branch moved
-    Given Operator dispatched three pods on one Council order
-    And one pod's pull request has just merged while the other two pull requests are still open
+  Scenario: pods that report done behind the head of the merge queue are told to hold
+    Given Operator dispatched three independent pods on one Council order
+    And all three report done, each with a clean pull request
+    When Operator places them in the order's merge queue
+    Then it mails each pod behind the head, on its own brief's thread, its place in the queue and that it must not rebase or push for default-branch changes until it is called
+    And that message tells the pod it keeps working on its review threads and Council decisions
+
+  @behavior
+  Scenario: after a merge, only the next pod in the merge queue is called to rebase
+    Given Operator dispatched three pods on one Council order, and all three are in the order's merge queue
+    And the head pod's pull request has just merged
     When that merge lands
-    Then Operator mails each of the two open pods, on its own brief's thread, that the default branch moved and it must rebase, adapt its work, re-verify, and report again
+    Then Operator mails only the next pod in the queue, on its own brief's thread, to rebase onto the default branch, adapt its work, re-verify, and report again
+    And it sends no such message to the third pod, which keeps holding
     And it sends no such message to the pod whose work merged
 
   @behavior
+  Scenario: a pod that is not ready when called drops back and the next ready pod is called
+    Given Operator dispatched three independent pods on one Council order, and all three are in the order's merge queue
+    And the head pod's pull request has just merged
+    And Operator calls the next pod, and that pod replies that it is blocked on a Council decision
+    When Operator reads the reply
+    Then the blocked pod drops back behind the third pod in the queue
+    And Operator calls the third pod to rebase, adapt its work, re-verify, and report again
+
+  @behavior
+  Scenario: a consumer is not called ahead of a producer that dropped back
+    Given Operator dispatched two pods on one Council order, one adding a shared date parser and one adding a report that uses it
+    And both are in the order's merge queue behind a merged pull request, the date parser first
+    And Operator calls the date parser's pod, and that pod replies that it is still working on a review thread
+    When Operator reads the reply
+    Then it does not call the report's pod to rebase
+    And it calls the date parser's pod again once that pod reports ready
+
+  @behavior
+  Scenario: with a host merge queue, a head pull request with no conflict is queued without a rebase
+    Given the repository's host has a required merge queue that builds CI on the merged result
+    And the pull request now at the head of the order's merge queue has no merge conflict with the default branch, which moved since its last CI run
+    When Operator takes that pull request
+    Then it queues the pull request on the host's merge queue without calling its pod to rebase
+    And it calls the pod to rebase only if the pull request has a merge conflict
+
+  @behavior
   Scenario: a rebased pull request is gated again before it merges
-    Given a pod's pull request was clean, and Operator then told the pod the default branch moved
+    Given a pod's pull request was clean, and Operator then called the pod to rebase after the default branch moved
     And the pod reports again after rebasing, and CI is red on the rebased pull request merged onto the default branch
     When Operator reads the new report
     Then it does not merge the rebased pull request on the earlier green result
@@ -303,7 +339,7 @@ Feature: operator — the command-center persona
 
   @behavior
   Scenario: a rebased pull request that is clean again merges
-    Given a pod's pull request was clean and covered by the Council's reply to Operator's merge announcement, and Operator then told the pod the default branch moved
+    Given a pod's pull request was clean and covered by the Council's reply to Operator's merge announcement, and Operator then called the pod to rebase after the default branch moved
     And the pod reports again after rebasing, and the rebased pull request has no merge conflict, no review requesting changes or left unresolved, and CI green on the merged result
     When Operator reads the new report
     Then it merges the rebased pull request with no further turn from the Council
@@ -436,6 +472,15 @@ Feature: operator — the command-center persona
     When the lifecycle loop handles the completion
     Then it does not merge, and leaves the mission claimed and unretired with its pod running
     And it batches a decision-request naming that merge into its return packet, or pushes it to the owner inbox when started frameless
+
+  @behavior
+  Scenario: after a tick merges, the loop calls only the head of the order's merge queue
+    Given the loop's summons carries the Council's own words authorizing the merges of this tick
+    And three missions of one order reported done, and the loop has just merged the first
+    When the lifecycle loop handles that merge
+    Then it calls only the next ready pod in the order's merge queue to rebase, adapt its work, re-verify, and report again
+    And it tells the remaining pod to hold, with no rebase or push for default-branch changes until it is called
+    And it re-derives that queue from the Operation order and the pods' latest reports rather than from a prior tick
 
   @behavior
   Scenario: the loop's spawns invoke no rule of the in-ship Pod persona

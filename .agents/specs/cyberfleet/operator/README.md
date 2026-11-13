@@ -104,8 +104,9 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
 - **Watch the pods it spawned, and merge clean work** — Operator does not spawn and forget. Every
   brief sets the pod's side of the watch: open a pull request and shepherd it until CI is green
   (with the per-turn timeout and which review threads to resolve), report on the brief's thread to the
-  session that spawned it, never merge, and when told the default branch moved, rebase onto it, adapt the work to
-  what landed, re-verify, and report again. With the dispatch, Operator **announces** that it will merge
+  session that spawned it, never merge, hold for default-branch changes until called (while still working
+  review threads and Council decisions), and when called, rebase onto it, adapt the work to what landed,
+  re-verify, and report again. With the dispatch, Operator **announces** that it will merge
   each of the order's pull requests once clean, and asks the Council to reply. Operator then acts on each
   report as it arrives: a **clean** pull request (the four-part bar the
   [`authority/`](../authority/README.md) node's UC10 defines) that the Council's reply covers merges
@@ -132,11 +133,20 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
   (`authority-governance` §7, the [`authority/`](../authority/README.md) node's UC10). The headless
   loop does not read it. Re-reading at each merge, and holding a not-clean or refused merge under the
   record, are specified in the authority node's suite rather than repeated here.
-- **Orchestrate several pods on one order** — their pull requests merge in dependency order (a
-  consumer never before its producer, per `merge-backstop-governance`), not the order they finished.
-  After each merge, Operator mails every other still-open pod of the order, on its own thread, that the
-  default branch moved; a rebased pull request is gated again from scratch, never merged on the green
-  result it had before the rebase.
+- **Orchestrate several pods on one order through a merge queue** — Operator keeps one merge queue
+  per order (`merge-backstop-governance` §5) and calls only its head to rebase, so n pull requests cost
+  about n rebases, not the n²/2 of telling every open pod after each merge (cyberfleet#180). The queue's
+  order is fixed as pods report done: dependency order first (a consumer never before its producer),
+  then the order that keeps conflicts small; never the order they finished. Pods behind the head are
+  told to hold: no rebase or push for default-branch changes until called, while they keep working
+  review threads and Council decisions. After each merge Operator calls only the next pod; its rebased
+  pull request is gated again from scratch, never merged on the green result it had before the rebase,
+  then merged, and the next pod is called. A pod not ready when called (still working, or blocked)
+  drops back, and the next ready pod whose producers have all merged is called instead. When the host
+  has a merge queue that builds CI on the merged result, a head pull request with no conflict is queued
+  there without a rebase; its pod is called to rebase only on a conflict. The headless loop does the
+  same after each merge it makes, re-deriving the queue each tick from the Operation order and the
+  pods' latest reports.
 - **List the fleet** — when the Council asks what's out there, `cyberlegion unit who`; add `--all` to
   include exited ships.
 - **Route messages between ships** — when a message must cross ships, `cyberlegion mail send --to
@@ -216,7 +226,7 @@ Every scenario in [`operator.feature`](./operator.feature) maps to one of these 
 | **every spawn carries a brief and its own workspace** | `cyberlegion unit spawn` with a self-contained brief, `--at workspace` so the ship opens in its own workspace — binds every spawn, not only the first |
 | **watch and merge clean work** | every brief sets the pod's side (PR, report on thread, never merge, rebase when told); the dispatch announces the merges; a clean PR the Council's reply covers merges with no further turn and its pod is closed; with no reply, or a refused merge, or an unclean PR, it is held and raised, its pod left running |
 | **merge under a standing delegation** | a Council-written record naming the dispatch's repository makes the announcement quote it and ask for nothing, and a clean PR of that dispatch merges with no reply; the record is re-read at each merge; an unnamed repository falls back to announce-and-wait; Operator never writes the record and tells the Council its path and shape instead |
-| **orchestrate several pods** | dependency-order merge; after each merge every other open pod of the order is told the default branch moved; a rebased PR is re-gated from scratch |
+| **orchestrate several pods** | dependency-order merge; one merge queue per order, fixed as pods report done; pods behind the head hold but keep working threads and decisions; after each merge only the next pod is called to rebase, and its rebased PR is re-gated from scratch; a pod not ready when called drops back and the next ready pod (never a consumer ahead of its producer) is called; a host merge queue takes a conflict-free head with no rebase; the headless loop calls only the queue head and re-derives the queue each tick |
 | **list the fleet** | `cyberlegion unit who` (`--all` includes exited ships) |
 | **route messages between ships** | `cyberlegion mail send` / `inbox` / `read`, always by handle |
 | **relay a Council decision** | `cyberlegion unit nudge <handle> --message "<the Council's words>"`, as a turn; never `mail send` |

@@ -63,8 +63,9 @@ connected wherever the Council invokes it, including inside a project an agent i
   it until CI is green, with a per-turn timeout (12 minutes unless the work needs longer) and which
   review threads to resolve (by default, fixed ones and discarded bot findings); report on
   this brief's thread to the return address when the work is done or blocked; **never merge** the pull request;
-  and when told trunk moved, rebase onto it, adapt the work to what landed, re-verify, push, and report
-  again.
+  hold for trunk changes — no rebase or push for them until called, while still working review threads
+  and Council decisions; and when called, rebase onto trunk, adapt the work to what landed, re-verify,
+  push, and report again.
 - Every brief spells out the **exact reply command** — the return address is a cyberlegion handle, and
   a pod that is not told how to reach it reaches for its harness's own messaging tool, which cannot see
   cyberlegion handles, so the report is lost. Name the thread id in the brief and write the command
@@ -107,12 +108,21 @@ connected wherever the Council invokes it, including inside a project an agent i
   - **Not clean → hold it.** Do not merge, leave its pod running, and raise a decision-request naming
     the pull request and what holds it.
   - Keep watching until every pod of the order is merged or held, and say which is which.
-- When one order dispatches several pods, orchestrate them: merge in dependency order — a consumer
-  never before its producer, whatever order they finished. After each merge, mail every other
-  still-open pod of the order on its own thread (`cyberlegion mail send --to <handle> --thread <id>`)
-  that trunk moved — rebase, adapt, re-verify, report again — and send nothing to the pod whose work
-  merged. A rebased pull request is gated again from scratch; never merge it on the green it had
-  before the rebase.
+- When one order dispatches several pods, orchestrate them through **one merge queue for the order**
+  (`merge-backstop-governance` §5), so each pod rebases about once rather than once per merge:
+  - **Fix the order as pods report done:** dependency order first — a consumer never before its
+    producer, whatever order they finished — then the order that keeps conflicts small.
+  - **Tell the pods behind the head to hold**, each on its own thread (`cyberlegion mail send --to
+    <handle> --thread <id>`): no rebase or push for trunk changes until called. They keep working
+    review threads and Council decisions.
+  - **After each merge, call only the next pod** to rebase, adapt, re-verify, push and report again;
+    send nothing to the pod whose work merged or to the pods still holding. A rebased pull request is
+    gated again from scratch; never merge it on the green it had before the rebase. Merge it, then call
+    the next.
+  - **A pod not ready when called** (still working, or blocked) drops back, and the next ready pod
+    whose producers have all merged is called instead.
+  - **When the host has a merge queue** that builds CI on the merged result, queue a head pull request
+    that has no conflict without calling its pod to rebase; call it only on a conflict.
 - When the Council asks what's out there: `cyberlegion unit who` to list the fleet; add `--all`
   to include exited ships.
 - When a message needs to cross ships: `cyberlegion mail send --to <handle>`, `cyberlegion mail
