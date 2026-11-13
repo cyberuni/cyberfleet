@@ -1,5 +1,12 @@
 # cyberfleet
 
+## 0.11.0
+
+### Minor Changes
+
+- b924b35: Require cyberlegion 2.0.0. Its `unit prune` now deletes every exited unit with no worktree of its own left on disk, along with its brief and mailbox. `cyberfleet sessions plan` runs that prune first, so those records no longer reach the close, ask, or keep groups. The plan and its summary now list them under `pruned` so the Council sees what went. The Operator, Pod, Crimp, and `headless-operator` resolve cyberlegion at 2.0.0 or later.
+- 55c6dac: The Operator now keeps one merge queue per order and calls only its head to rebase, instead of mailing every other open pod "trunk moved" after each merge (about n²/2 rebases for n pull requests). The queue is fixed as pods report done, dependency order first and then the order that keeps conflicts small. Pods behind the head hold, with no rebase or push for trunk changes until called, while they keep working review threads and Council decisions. A pod not ready when called drops back and the next ready pod is called. When the host has a merge queue that builds the merged result, a conflict-free head is queued without a rebase. `merge-backstop-governance` §5, the Operator skill and its brief, and the `headless-operator` loop all carry the change.
+
 ## 0.10.0
 
 ### Minor Changes
