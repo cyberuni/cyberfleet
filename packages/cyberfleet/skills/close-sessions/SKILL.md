@@ -69,7 +69,9 @@ requests. Handles are not unique, so the id is what identifies a unit. Mark a se
 that closing it leaves its checkout untouched. Likewise, say that closing a unit with a `shared`
 worktree leaves that worktree untouched. Under each ask row, show its `evidence` lines: unread
 mail, `+` commits not on the default branch, or leftover files, with the "N more" line when there is
-one. The keep group is shown by reason with its counts.
+one. The keep group is shown by reason with its counts. Last, name the `pruned` records: exited
+units that `unit prune` deleted before the plan, since they left nothing on disk to close. They are
+in no group and need no answer.
 
 ## 3. Ask two questions
 
@@ -102,6 +104,7 @@ A refusal is the answer: report it, and do not retry, add `--force`, or close th
 Lead with the count closed and the count kept (an ask-group unit the Council did not confirm, and a
 refused unit, count as kept), each split into live sessions and exited records. List the closed
 handles. Then list what was kept by reason, as the summary groups it, with each refusal and why.
+Count the `pruned` records apart, never in the closed count.
 
 ## Never
 

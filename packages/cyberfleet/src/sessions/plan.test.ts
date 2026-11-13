@@ -199,6 +199,12 @@ describe('sessions plan: rule 13 against the host', () => {
 })
 
 describe('sessions plan: local facts', () => {
+	it('records the units unit prune deleted, by id and handle, and none when none were given', async () => {
+		const pruned = await buildPlan({ store, caller, callerMux: 'herdr', run, pruned: [{ id: 'p1', handle: 'h-p1' }] })
+		expect(pruned.pruned).toEqual([{ id: 'p1', handle: 'h-p1' }])
+		expect((await plan()).pruned).toEqual([])
+	})
+
 	it('asks about leftover files in a landed worktree, ignoring the cyberlegion marker', async () => {
 		const r = repo('alpha')
 		const wt = r.worktree('feat/x')

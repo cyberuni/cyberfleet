@@ -7,7 +7,7 @@ work. The sweep itself is the `cyberfleet sessions` CLI; this skill is the gatew
 
 - The Council asks to close finished agent sessions, panes, or pods, clean up idle sessions, or tidy the fleet.
 
-Not for marking dead records only: that is `cyberlegion unit prune`, which `sessions plan` runs first.
+Not for sweeping dead records only: that is `cyberlegion unit prune`, which `sessions plan` runs first.
 Not for retiring a pod's record: that belongs to the pod's Captain (`cyberfleet pod retire`).
 
 ## How it runs
@@ -22,7 +22,9 @@ Not for retiring a pod's record: that belongs to the pod's Captain (`cyberfleet 
 ## The commands
 
 - **`sessions plan [--out <path>] [--format json]`** prunes, reads every unit, and acts only on units
-  in the caller's multiplexer. Per repository, in parallel: one `gh pr list`, the default branch, and
+  in the caller's multiplexer. Since cyberlegion 2.0.0 the prune deletes every exited unit with no
+  worktree of its own left on disk (a seat on a primary checkout counts as none), with its brief and
+  mailbox, and the plan lists those under `pruned`. They reach no rule below. Per repository, in parallel: one `gh pr list`, the default branch, and
   one fetch of it and of every matched, non-open pull request's head, so a squash-merged pull request
   whose branch the host deleted still reads as merged. Then the per-worktree git checks, in parallel.
   Each unit gets a rule, a result (close, ask, or keep), a reason, its pull requests, and the
@@ -66,6 +68,9 @@ The first rule that matches decides. The code and one test per rule are in
 | 13 | HEAD in no pull request's head: live / exited with commits not on the default branch | keep / ask |
 | 14 | landed, with leftover files | ask |
 | 15 | landed and clean | close |
+
+Rules 4b, 4c, 6, and the exited side of 8 still decide a unit handed to the classifier, but since
+cyberlegion 2.0.0 `sessions plan` sees no such exited unit: the prune before it has deleted them.
 
 A live unit that a rule puts in close is then asked (`sessions ask`). This is the interim home for
 the sweep: the planned design moves the close into the Coordinator, at the moment a unit's last pull

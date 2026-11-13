@@ -4,7 +4,7 @@
 
 import { toonList, toonObject } from 'cyberlegion'
 import type { Closed, CloseOutcome, Refused } from './close.ts'
-import type { Plan, UnitPlan } from './plan.ts'
+import type { Plan, PrunedUnit, UnitPlan } from './plan.ts'
 
 /** Rules 1–3 decide units outside this sweep: this session, standing owners, other multiplexers. */
 const OUT_OF_SCOPE = new Set(['1', '2', '3'])
@@ -33,6 +33,8 @@ export interface Summary {
 	close: Row[]
 	ask: (Row & { evidence: EvidenceLine[] })[]
 	keep: { reason: string; live: number; exited: number }[]
+	/** Exited records `unit prune` deleted before the plan; they are in no group. */
+	pruned: PrunedUnit[]
 	/** What to run next, when there is a next step. */
 	next?: string
 }
@@ -88,6 +90,7 @@ export function summarize(plan: Plan, path: string): Summary {
 			.sort(liveFirst)
 			.map((u) => ({ ...row(u), evidence: evidenceOf(u) })),
 		keep: [...keep.values()].sort((a, b) => b.live + b.exited - (a.live + a.exited)),
+		pruned: plan.pruned ?? [],
 		...(unasked && !plan.askedAt ? { next: `cyberfleet sessions ask ${path}` } : {}),
 	}
 }
@@ -137,6 +140,15 @@ export function summaryToon(s: Summary): string {
 				{ key: 'exited', get: (k) => k.exited },
 			],
 			`keep: ${s.keep.reduce((n, k) => n + k.live + k.exited, 0)}`,
+		),
+		toonList(
+			'pruned',
+			s.pruned,
+			[
+				{ key: 'id', get: (p) => p.id },
+				{ key: 'handle', get: (p) => p.handle },
+			],
+			`pruned: ${s.pruned.length} exited records deleted by unit prune`,
 		),
 	].join('\n')
 }

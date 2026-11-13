@@ -19,6 +19,7 @@ const plan: Plan = {
 	version: 1,
 	createdAt: '',
 	caller: { id: 'me', handle: 'council', mux: 'herdr' },
+	pruned: [{ id: 'p1', handle: 'h-p1' }],
 	units: [
 		u('me', { rule: '1', result: 'keep', reason: 'this session' }),
 		u('t', { rule: '3', result: 'keep', reason: 'out of scope', live: false }),
@@ -62,6 +63,12 @@ describe('sessions summary', () => {
 		expect(s.keep).toContainEqual({ reason: 'out of scope', live: 0, exited: 1 })
 	})
 
+	it('lists the exited records unit prune deleted before the plan, and none for an older plan file', () => {
+		expect(s.pruned).toEqual([{ id: 'p1', handle: 'h-p1' }])
+		const { pruned: _, ...older } = plan
+		expect(summarize(older, '/tmp/plan.json').pruned).toEqual([])
+	})
+
 	it('names `sessions ask` as the next step until live close-group units are asked', () => {
 		expect(s.next).toBe('cyberfleet sessions ask /tmp/plan.json')
 		expect(summarize({ ...plan, askedAt: 'now' }, '/tmp/plan.json').next).toBeUndefined()
@@ -74,5 +81,7 @@ describe('sessions summary', () => {
 		expect(text).toContain('  x,h-x,exited,,-,-,15,work landed,#4')
 		expect(text).toContain('  g,h-g,exited,,-,/wt/owner,4c,"no worktree, session ended",-')
 		expect(text).toContain('close: 4 (2 live, 2 exited)')
+		expect(text).toContain('pruned: 1 exited records deleted by unit prune')
+		expect(text).toContain('  p1,h-p1')
 	})
 })

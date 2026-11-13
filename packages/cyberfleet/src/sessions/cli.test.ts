@@ -7,7 +7,8 @@ import { type AgentRecord, FileStore } from 'cyberlegion'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 // `cyberfleet sessions plan | ask | close` through the built CLI (bin → dist/cli.mjs), on a hub of
-// exited records with no worktree, so no git host or pane is needed.
+// exited records with no worktree, so no git host or pane is needed. cyberlegion's `unit prune`,
+// which `sessions plan` runs first, deletes such records before the plan reads them.
 
 const BIN = fileURLToPath(new URL('../../bin/cyberfleet.mjs', import.meta.url))
 
@@ -55,21 +56,27 @@ beforeEach(() => {
 afterEach(() => rmSync(work, { recursive: true, force: true }))
 
 describe('cyberfleet sessions', () => {
-	it('plans, asks, and closes only the confirmed ids', () => {
+	it('deletes exited records that left nothing on disk before planning, and names them as pruned', () => {
 		const out = join(work, 'plan.json')
 		const plan = JSON.parse(cf(['plan', '--out', out]))
 		expect(plan.plan).toBe(out)
-		expect(plan.close.map((r: { id: string }) => r.id).sort()).toEqual(['old1', 'old2'])
-		expect(JSON.parse(readFileSync(out, 'utf8')).units).toHaveLength(3)
+		expect(plan.pruned.map((r: { id: string }) => r.id).sort()).toEqual(['old1', 'old2'])
+		expect(plan.close).toEqual([])
+		expect(store.getAgent('old1')).toBeUndefined()
+		expect(JSON.parse(readFileSync(out, 'utf8')).units).toHaveLength(1)
+	})
 
-		const asked = JSON.parse(cf(['ask', out]))
-		expect(asked.asked).toBe(true)
+	it('asks and closes only the confirmed ids that are in the plan', () => {
+		const out = join(work, 'plan.json')
+		cf(['plan', '--out', out])
+		expect(JSON.parse(cf(['ask', out])).asked).toBe(true)
 
 		const closed = JSON.parse(cf(['close', out, '--ids', 'old1,self0000']))
-		expect(closed.closed.map((c: { id: string }) => c.id)).toEqual(['old1'])
-		expect(closed.refused).toEqual([{ id: 'self0000', handle: 'h-self0000', reason: 'this session' }])
-		expect(store.getAgent('old1')).toBeUndefined()
-		expect(store.getAgent('old2')).toBeDefined()
+		expect(closed.closed).toEqual([])
+		expect(closed.refused).toEqual([
+			{ id: 'old1', reason: 'not in the plan (pass full unit ids)' },
+			{ id: 'self0000', handle: 'h-self0000', reason: 'this session' },
+		])
 	})
 
 	it('refuses to plan outside a multiplexer', () => {
