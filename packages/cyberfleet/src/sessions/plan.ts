@@ -7,7 +7,7 @@
 import { execFile } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
-import type { AgentRecord, Store } from 'cyberlegion'
+import { type AgentRecord, type IdContext, landedWorktrees, prune, type Store } from 'cyberlegion'
 import {
 	classify,
 	type MailItem,
@@ -351,6 +351,19 @@ export async function buildPlan(input: PlanInput): Promise<Plan> {
 		pruned: input.pruned ?? [],
 		units,
 	}
+}
+
+/**
+ * Run cyberlegion's `unit prune` the way `sessions plan` needs it, and return what it deleted. It
+ * deletes every exited unit with nothing left on disk to close, except the last record for a shared
+ * worktree whose work has not landed (cyberlegion 2.0.1); that one reaches rule 4b. `landed` is
+ * the worktree library's judgment, asked before prune's synchronous pass.
+ */
+export async function pruneBeforePlan(ctx: IdContext): Promise<PrunedUnit[]> {
+	const landed = await landedWorktrees(ctx)
+	return prune(ctx, { landed })
+		.filter((r) => r.pruned === 'deleted')
+		.map((r) => ({ id: r.id, handle: r.handle }))
 }
 
 export function writePlan(path: string, plan: Plan): void {
