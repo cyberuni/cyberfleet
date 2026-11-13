@@ -21,6 +21,10 @@ Partial Skill: invoke by name only — the Operator's merge discipline. Not user
   a single-writer graph append), and lands the innocent missions.
 - **Depth** — bounds speculation depth by **predictor confidence**: commit near when unsure, speculate
   far when confident. Speculation never weakens the always-green invariant.
+- **Merge queue** — keeps one queue per order, fixed as pods report done (dependency order first,
+  then the order that keeps conflicts small). Pods behind the head hold; after each merge only the next
+  pod is called to rebase, and is gated from scratch. A pod not ready when called drops back. With a
+  host merge queue that builds the merged result, a conflict-free head is queued without a rebase.
 
 ## What it does not do
 

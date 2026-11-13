@@ -39,8 +39,8 @@ topic, never by a probed location.
   as the fallback when that handle resolves to no live unit. All spawning is Operator's; Pod never
   spawns.
 - Watches the pods it spawns: every brief tells the pod to open a pull request and shepherd it (with
-  the per-turn timeout and the threads to resolve), report on its thread, never merge, and rebase when
-  told trunk moved. A pod still merges on the Council's answer to its own in-session merge offer
+  the per-turn timeout and the threads to resolve), report on its thread, never merge, and hold for
+  trunk changes until called, then rebase. A pod still merges on the Council's answer to its own in-session merge offer
   (`authority-governance` §7), which the brief does not grant and the Operator never answers.
   Operator gates each report against the clean bar in `authority-governance` §7. With the dispatch it announces that it will merge the order's clean pull
   requests; the Council's reply to that, in its own words, is the delegation — the dispatch order alone
@@ -49,8 +49,9 @@ topic, never by a probed location.
   asks for no reply, and the record is read again before each merge. Operator never writes that record. A clean, covered pull request merges with no further Council turn and its pod is closed; an
   unclean one, a clean one with no reply yet, or one whose merge the harness refused is held and raised
   as a decision-request, never retried or worked around.
-  With several pods on one order it merges in dependency order and, after each merge, tells every other
-  open pod to rebase, adapt, re-verify and report again.
+  With several pods on one order it keeps a merge queue, fixed as pods report done in dependency order,
+  tells the pods behind the head to hold, and after each merge calls only the next ready pod to rebase,
+  adapt, re-verify and report again.
 - `cyberlegion unit who` / `mail send` / `mail inbox` / `mail read` / `unit close` / `unit prune` —
   lists, messages, tears down one finished pod, and sweeps the fleet.
 - Routes in-ship mission and crew work to `pod`, by topic — never by probing this working
