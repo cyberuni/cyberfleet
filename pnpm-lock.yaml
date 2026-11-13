@@ -225,8 +225,8 @@ importers:
         specifier: ^0.12.0
         version: 0.12.0
       cyberlegion:
-        specifier: ^1.10.0
-        version: 1.10.0
+        specifier: ^2.0.0
+        version: 2.0.0
       tsdown:
         specifier: ^0.23.0
         version: 0.23.0(oxc-resolver@11.24.2)(tsx@4.23.13)(typescript@7.0.2)
@@ -2385,8 +2385,8 @@ packages:
       clibuilder:
         optional: true
 
-  cyberlegion@1.10.0:
-    resolution: {integrity: sha512-k6Wg02fnMWlAbKcsgIkYMbWedLr/3RVqaZHZ2QjpklTDiibiG2RRIaUqPZiMme7YLjB8ThSnTx2GXEHAIC5WMw==}
+  cyberlegion@2.0.0:
+    resolution: {integrity: sha512-kOBD83VNTXpmIk5nCbL9cicQSJz5ysiwCdwySRGMZqOTiRFvxOcBjTdK2d1ZQv23TJVGcl9O5Nm7eYV9IV0ovQ==}
     engines: {node: '>=22'}
     hasBin: true
     peerDependencies:
@@ -5645,7 +5645,7 @@ snapshots:
     dependencies:
       cyber-agentkit: 2.1.0
 
-  cyberlegion@1.10.0:
+  cyberlegion@2.0.0:
     dependencies:
       cyber-agentkit: 2.1.0
       cyber-mux: 0.12.0

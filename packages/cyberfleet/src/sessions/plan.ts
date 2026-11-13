@@ -78,13 +78,23 @@ export interface Plan {
 	caller: { id: string; handle: string; mux: string }
 	/** Set once `sessions ask` has run against this plan. */
 	askedAt?: string
+	/** The exited records cyberlegion's `unit prune` deleted just before this plan read the fleet:
+	 * each left nothing on disk to close. Absent from plans written before cyberlegion 2.0.0. */
+	pruned?: PrunedUnit[]
 	units: UnitPlan[]
+}
+
+export interface PrunedUnit {
+	id: string
+	handle: string
 }
 
 export interface PlanInput {
 	store: Store
 	caller: { id: string; handle: string }
 	callerMux: string
+	/** What `unit prune` deleted before this plan, recorded so the Council sees it. */
+	pruned?: PrunedUnit[]
 	run?: Run
 	now?: () => number
 	concurrency?: number
@@ -338,6 +348,7 @@ export async function buildPlan(input: PlanInput): Promise<Plan> {
 		version: 1,
 		createdAt: new Date(now()).toISOString(),
 		caller: { ...caller, mux: callerMux },
+		pruned: input.pruned ?? [],
 		units,
 	}
 }

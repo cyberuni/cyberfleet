@@ -10357,7 +10357,7 @@ function resolvePrimaryRoot(exec) {
 	return dirname(commonDir);
 }
 //#endregion
-//#region ../../node_modules/.pnpm/cyberlegion@1.10.0/node_modules/cyberlegion/dist/index.mjs
+//#region ../../node_modules/.pnpm/cyberlegion@2.0.0/node_modules/cyberlegion/dist/index.mjs
 /**
 * Transitional env-normalization seam (mux.feature: "a pane carrying only the legacy fast-path vars
 * is still honored"). cyber-mux's own fast-path reads `$CYBER_MUX`/`$CYBER_MUX_PANE` — its
@@ -10388,8 +10388,6 @@ function normalizeMuxEnv(env) {
 }
 /** The tracked marker file that makes a hub root initialized (see ensureMarker). */
 const MARKER_FILE = "config.json";
-/** Where `spawn` stamps that marker inside a worktree it creates, relative to the worktree root. */
-const WORKTREE_MARKER = `.agents/cyberlegion/${MARKER_FILE}`;
 /** Walk up from `cwd` to the nearest git repo root; fall back to `cwd`. */
 function projectRoot(cwd = process.cwd()) {
 	let dir = resolve(cwd);
@@ -10493,6 +10491,99 @@ function storablePane(env) {
 		pane: cur.pane
 	} : void 0;
 }
+/**
+* This session's own pane as the multiplexer sees it now. The env names the pane the shell was
+* launched in, and for herdr that goes stale: herdr gives a pane a new id when it moves to another
+* tab or workspace, while the shell keeps its launch-time `$HERDR_PANE_ID`, and herdr ids recur on a
+* hub, so the stale id can be another unit's pane (#154). herdr's `pane current` resolves the
+* calling pane itself, so its answer wins on a herdr that answers it truly (0.8.2 on). When herdr
+* gives no answer, or an older herdr disagrees with the env, the env id stands. tmux pane
+* ids last as long as the pane, so tmux needs no second opinion.
+*/
+function selfPane(cur, exec) {
+	if (cur?.mux !== "herdr") return cur;
+	const live = herdrCallingPane(exec);
+	if (!live) return cur;
+	if (live.pane === cur.pane) return {
+		...cur,
+		...live.terminal ? { terminal: live.terminal } : {}
+	};
+	if (!herdrReportsCallingPane(exec)) return cur;
+	return {
+		...cur,
+		pane: live.pane,
+		...live.terminal ? { terminal: live.terminal } : {}
+	};
+}
+/** herdr 0.8.2 fixed `pane current` to answer the calling pane; before it, the command answered
+* another client's focused pane (herdr #2297), which would misattribute exactly as a stale env id
+* does. A version that cannot be read is treated as too old. */
+function herdrReportsCallingPane(exec) {
+	const m = exec("herdr", ["--version"])?.match(/(\d+)\.(\d+)\.(\d+)/);
+	if (!m) return false;
+	const [major, minor, patch] = m.slice(1).map(Number);
+	return major > 0 || minor > 8 || minor === 8 && patch >= 2;
+}
+function herdrCallingPane(exec) {
+	return herdrPaneAnswer(exec("herdr", ["pane", "current"]));
+}
+/** Parse a herdr `pane current` / `pane get` answer into its pane id and terminal id. */
+function herdrPaneAnswer(out) {
+	if (!out) return void 0;
+	try {
+		const pane = JSON.parse(out)?.result?.pane;
+		const id = pane?.pane_id;
+		if (typeof id !== "string" || !id) return void 0;
+		const terminal = pane.terminal_id;
+		return {
+			pane: id,
+			...typeof terminal === "string" && terminal ? { terminal } : {}
+		};
+	} catch {
+		return;
+	}
+}
+/** herdr's live panes keyed by terminal id → current pane id. Empty when herdr gives no list, which
+* says nothing about any pane. */
+function herdrTerminals(exec) {
+	const map = /* @__PURE__ */ new Map();
+	const out = exec("herdr", ["pane", "list"]);
+	if (!out) return map;
+	try {
+		const panes = JSON.parse(out)?.result?.panes;
+		if (!Array.isArray(panes)) return map;
+		for (const p of panes) if (typeof p?.terminal_id === "string" && typeof p?.pane_id === "string") map.set(p.terminal_id, p.pane_id);
+	} catch {
+		return map;
+	}
+	return map;
+}
+/**
+* Where a herdr record that carries its terminal id lives now: the pane id herdr lists for that
+* terminal (`{ id }`), `'gone'` when herdr answered with a list that lacks the terminal, or
+* `undefined` when herdr gave no list. Not called for a record without a terminal id, which keeps
+* being judged by its pane id.
+*/
+function locateTerminal(exec, terminal, cache = {}) {
+	cache.terminals ??= herdrTerminals(exec);
+	if (cache.terminals.size === 0) return void 0;
+	const id = cache.terminals.get(terminal);
+	return id ? { id } : "gone";
+}
+/** Point a record whose herdr pane moved at the pane id it has now, moving its pane pointer with it.
+* The old pointer is dropped only while it still names this record, since herdr hands old ids out
+* again. */
+function followMove(ctx, rec, id) {
+	const pane = rec.pane;
+	if (!pane || pane.id === id) return;
+	if (ctx.store.resolvePaneId(pane.id) === rec.id) ctx.store.removePaneIndex(pane.id);
+	rec.pane = {
+		...pane,
+		id
+	};
+	saveAgent(ctx.store, rec);
+	ctx.store.putPaneIndex(id, rec.id);
+}
 const nowIso = (ctx) => new Date(ctx.now?.() ?? Date.now()).toISOString();
 function randomId() {
 	return randomBytes(8).toString("hex");
@@ -10514,10 +10605,33 @@ function listAgents(store) {
 * explicit via the env var.
 */
 function resolveSelfId(ctx) {
+	return resolveSelf(ctx).id;
+}
+function resolveSelf(ctx) {
 	const env = ctx.env ?? process.env;
-	const cur = currentPane(normalizeMuxEnv(env));
-	if (cur) return ctx.store.resolvePaneId(cur.pane);
-	return env.CYBERLEGION_AGENT_ID || void 0;
+	const cur = selfPane(currentPane(normalizeMuxEnv(env)), ctx.exec ?? realExec);
+	if (cur) return {
+		id: selfIdAt(ctx.store, cur),
+		cur
+	};
+	return {
+		id: env.CYBERLEGION_AGENT_ID || void 0,
+		cur
+	};
+}
+/**
+* The unit a pane belongs to. The pane pointer answers first. When herdr named the calling pane's
+* terminal, a pointer whose record carries a different terminal is stale (the id was handed to
+* this pane after the unit's own pane moved away), and a missing pointer may mean this pane moved:
+* either way the record bearing this terminal is the caller (#272). A record without a terminal id
+* is trusted by its pointer as before.
+*/
+function selfIdAt(store, cur) {
+	const indexed = store.resolvePaneId(cur.pane);
+	if (!cur.terminal) return indexed;
+	const terminal = indexed ? loadAgent(store, indexed)?.pane?.terminal : void 0;
+	if (indexed && (!terminal || terminal === cur.terminal)) return indexed;
+	return listAgents(store).find((a) => a.pane?.mux === "herdr" && a.pane.terminal === cur.terminal)?.id;
 }
 /** Pick the one live record a handle names. A standing record wins over the rest — an owner report
 * must land in the durable standing inbox, not a dying session's. Otherwise two or more matches are
@@ -10581,10 +10695,26 @@ function bumpLastSeen(ctx, id) {
 	rec.lastSeen = nowIso(ctx);
 	saveAgent(ctx.store, rec);
 }
-/** Refresh this session's own last-seen if it is registered — best-effort, never throws. */
+/**
+* Refresh this session's own last-seen if it is registered — best-effort, never throws. In a herdr
+* pane whose calling pane herdr reported, it also heals the record's pane to the id and terminal
+* herdr gave, so a unit whose pane moved fixes its own record on its next turn (#272).
+*/
 function touch(ctx) {
-	const id = resolveSelfId(ctx);
-	if (id) bumpLastSeen(ctx, id);
+	const { id, cur } = resolveSelf(ctx);
+	if (!id) return;
+	bumpLastSeen(ctx, id);
+	if (cur?.mux !== "herdr" || !cur.terminal) return;
+	const rec = loadAgent(ctx.store, id);
+	if (rec?.pane?.mux !== "herdr") return;
+	if (rec.pane.terminal !== cur.terminal) {
+		rec.pane = {
+			...rec.pane,
+			terminal: cur.terminal
+		};
+		saveAgent(ctx.store, rec);
+	}
+	followMove(ctx, rec, cur.pane);
 }
 const STALE_MS = 9e5;
 /** Standing and service records have no session of their own, so nothing about a pane or a timer
@@ -10611,7 +10741,9 @@ function isPrunable(rec) {
 function sessionLive(ctx, rec) {
 	if (rec.status === "exited" || rec.status === "stopped") return false;
 	if (!rec.pane) return true;
-	const panes = PANE_ADAPTERS[rec.pane.mux].listPanes(ctx.exec ?? realExec);
+	const exec = ctx.exec ?? realExec;
+	if (rec.pane.mux === "herdr" && rec.pane.terminal) return locateTerminal(exec, rec.pane.terminal) !== "gone";
+	const panes = PANE_ADAPTERS[rec.pane.mux].listPanes(exec);
 	if (panes.length === 0) return true;
 	const id = rec.pane.id;
 	return panes.some((p) => p.id === id);
@@ -10686,11 +10818,12 @@ function reconcile(ctx, opts) {
 	if (panes.length === 0) return [];
 	const live = new Set(panes.map((p) => p.id));
 	const changed = [];
+	const cache = {};
 	for (const rec of listAgents(ctx.store)) {
 		if (!isPrunable(rec)) continue;
 		if (!rec.pane) continue;
 		if (rec.pane.mux !== cur.mux) continue;
-		if (!live.has(rec.pane.id)) {
+		if (rec.pane.mux === "herdr" && rec.pane.terminal ? terminalGone(ctx, rec, rec.pane.terminal, cache) : !live.has(rec.pane.id)) {
 			rec.status = "exited";
 			saveAgent(ctx.store, rec);
 			changed.push(rec);
@@ -10715,24 +10848,91 @@ function paneGone(exec, pane, lists) {
 	}
 	return panes.length > 0 && !panes.some((p) => p.id === pane.id);
 }
-/** Mark agents whose session is gone as exited. Reconcile-culls against the current mux's live set
-* first, then judges each remaining record (covers the other mux and sessions outside any
-* multiplexer pane): a pane-bound record by its pane alone — a live or unprobeable pane keeps it
-* whatever its last-seen — and a pane-less record by the staleness timer, its only signal. */
+/**
+* Whether a herdr record that carries its terminal id is positively gone: herdr listed its panes and
+* that terminal is not among them. A live terminal under a new pane id is a moved pane, so the record
+* follows it instead (#272). A pane id that herdr now gives another terminal does not keep the record
+* alive, since herdr ids recur. No list at all decides nothing.
+*/
+function terminalGone(ctx, rec, terminal, cache) {
+	const at = locateTerminal(ctx.exec ?? realExec, terminal, cache);
+	if (at === "gone") return true;
+	if (at) followMove(ctx, rec, at.id);
+	return false;
+}
+/**
+* Mark agents whose session is gone as exited, then delete every exited unit with nothing left to
+* work from. Reconcile-culls against the current mux's live set first, then judges each remaining
+* record (covers the other mux and sessions outside any multiplexer pane): a pane-bound record by its
+* pane alone — a live or unprobeable pane keeps it whatever its last-seen — and a pane-less record by
+* the staleness timer, its only signal. An exited unit whose worktree is still on disk is kept, since
+* `unit close` owns removing that worktree; every other exited unit is deleted with `deleteExited`.
+*/
 function prune(ctx) {
 	const exec = ctx.exec ?? realExec;
 	const now = ctx.now?.() ?? Date.now();
-	const changed = reconcile(ctx);
+	const marked = reconcile(ctx);
 	const lists = /* @__PURE__ */ new Map();
+	const cache = {};
 	for (const rec of listAgents(ctx.store)) {
 		if (!isPrunable(rec)) continue;
-		if (rec.pane ? paneGone(exec, rec.pane, lists) : now - new Date(rec.lastSeen).getTime() > STALE_MS) {
+		if (!rec.pane ? now - new Date(rec.lastSeen).getTime() > STALE_MS : rec.pane.mux === "herdr" && rec.pane.terminal ? terminalGone(ctx, rec, rec.pane.terminal, cache) : paneGone(exec, rec.pane, lists)) {
 			rec.status = "exited";
 			saveAgent(ctx.store, rec);
-			changed.push(rec);
+			marked.push(rec);
 		}
 	}
-	return changed;
+	const deleted = deleteExited(ctx);
+	const gone = new Set(deleted.map((r) => r.id));
+	return [...marked.filter((r) => !gone.has(r.id)).map((r) => ({
+		...r,
+		pruned: "exited"
+	})), ...deleted.map((r) => ({
+		...r,
+		pruned: "deleted"
+	}))];
+}
+/** Whether an exited record still has a worktree on disk — the one thing it leaves behind that
+* `unit close` must deal with. A record that never had a worktree has nothing on disk. */
+function worktreeOnDisk(rec) {
+	if (rec.worktree?.root == null || !existsSync(rec.worktree.root)) return false;
+	return !isPrimaryCheckout(rec.worktree.root, rec.worktree.primaryRoot);
+}
+/** Whether a worktree root is its repository's primary checkout — the one test `unit close` and
+* `unit prune` share for "a seat on the main checkout, which nothing removes". */
+function isPrimaryCheckout(worktreeRoot, primaryRoot) {
+	return worktreeRoot != null && primaryRoot != null && resolve(worktreeRoot) === resolve(primaryRoot);
+}
+/**
+* Delete every exited unit with no worktree left to close (none on disk, or only the primary checkout): its record, brief, mailbox, and the pane
+* pointer that still names it. Nothing revives an exited unit (`unit restart` takes only a running or
+* stopped one), so these records are read by nobody. A pane pointer is dropped only when it still
+* resolves to the deleted unit, since a multiplexer may have handed the pane id to another unit
+* since. A worktree that is gone from disk may still be registered with git, and the record is the
+* last place that names its repository, so that registration is cleared first, best-effort, as
+* `unit close` does. No pane is torn down: an exited unit's pane is already gone or belongs to
+* someone else.
+*/
+function deleteExited(ctx) {
+	const exec = ctx.exec ?? realExec;
+	const deleted = [];
+	for (const rec of listAgents(ctx.store)) {
+		if (rec.status !== "exited" || isSessionIndependent(rec) || worktreeOnDisk(rec)) continue;
+		const primaryRoot = rec.worktree?.primaryRoot;
+		if (primaryRoot && existsSync(primaryRoot)) exec("git", [
+			"-C",
+			primaryRoot,
+			"worktree",
+			"prune"
+		]);
+		const pane = rec.pane?.id ?? ctx.store.findPaneByAgentId(rec.id);
+		if (pane && ctx.store.resolvePaneId(pane) === rec.id) ctx.store.removePaneIndex(pane);
+		ctx.store.removeAgent(rec.id);
+		ctx.store.removeAgentData(rec.id);
+		ctx.store.removeMailbox(rec.id);
+		deleted.push(rec);
+	}
+	return deleted;
 }
 /**
 * Backend selection via cyber-mux's two-mode mux probe, normalized through the transitional
@@ -10847,7 +11047,7 @@ async function decommission(ctx, input) {
 	const worktreeExists = worktreeRoot != null && existsSync(worktreeRoot);
 	const primaryRoot = worktreeExists ? await primaryRootOf(exec, worktreeRoot) : rec.worktree?.primaryRoot;
 	const held = rec.worktree?.lease;
-	const onPrimary = worktreeRoot != null && primaryRoot != null && resolve(worktreeRoot) === resolve(primaryRoot);
+	const onPrimary = isPrimaryCheckout(worktreeRoot, primaryRoot);
 	if (onPrimary && input.force) throw new Error(`refusing to close "${input.id}" with --force — its worktree is the primary checkout, which close never alters; close it without --force to end its session and reap its record`);
 	const removesWorktree = worktreeExists && !input.keepWorktree && !held && !onPrimary;
 	if (removesWorktree && !input.force && isDirty(exec, worktreeRoot)) throw new Error(`unit "${input.id}" has uncommitted changes in its worktree — pass --force to discard them`);
@@ -10913,7 +11113,7 @@ function isDirty(exec, worktreeRoot) {
 		"--porcelain",
 		"--untracked-files=all"
 	]);
-	return !!status && status.split("\n").some((line) => line && line !== `?? ${WORKTREE_MARKER}`);
+	return !!status && status.split("\n").some((line) => line && line !== `?? .agents/cyberlegion/config.json`);
 }
 function stringifyCell(v) {
 	if (v == null) return "";
@@ -12769,6 +12969,7 @@ async function buildPlan(input) {
 			...caller,
 			mux: callerMux
 		},
+		pruned: input.pruned ?? [],
 		units
 	};
 }
@@ -13052,6 +13253,7 @@ function summarize(plan, path) {
 			evidence: evidenceOf(u)
 		})),
 		keep: [...keep.values()].sort((a, b) => b.live + b.exited - (a.live + a.exited)),
+		pruned: plan.pruned ?? [],
 		...unasked && !plan.askedAt ? { next: `cyberfleet sessions ask ${path}` } : {}
 	};
 }
@@ -13132,7 +13334,14 @@ function summaryToon(s) {
 				key: "exited",
 				get: (k) => k.exited
 			}
-		], `keep: ${s.keep.reduce((n, k) => n + k.live + k.exited, 0)}`)
+		], `keep: ${s.keep.reduce((n, k) => n + k.live + k.exited, 0)}`),
+		toonList("pruned", s.pruned, [{
+			key: "id",
+			get: (p) => p.id
+		}, {
+			key: "handle",
+			get: (p) => p.handle
+		}], `pruned: ${s.pruned.length} exited records deleted by unit prune`)
 	].join("\n");
 }
 function closeToon(out) {
@@ -13376,7 +13585,10 @@ const ids = (v, all) => [...all, ...v.split(/[\s,]+/).filter(Boolean)];
 rootOpts(sessionsCmd.command("plan")).description("classify every unit as close, ask, or keep by the close-sessions rules; write the full plan to a file and print the summary").option("--out <path>", "where to write the plan (default: a new file under the OS temp dir)").action(async (opts) => {
 	const ctx = ctxOf(opts);
 	const mux = callerMux(ctx.env ?? process.env);
-	prune(ctx);
+	const pruned = prune(ctx).filter((r) => r.pruned === "deleted").map((r) => ({
+		id: r.id,
+		handle: r.handle
+	}));
 	const self = selfOf(ctx);
 	const plan = await buildPlan({
 		store: ctx.store,
@@ -13384,7 +13596,8 @@ rootOpts(sessionsCmd.command("plan")).description("classify every unit as close,
 			id: self.id,
 			handle: self.handle
 		},
-		callerMux: mux
+		callerMux: mux,
+		pruned
 	});
 	const path = opts.out ?? join(tmpdir(), "cyberfleet-sessions", `plan-${plan.createdAt.replace(/[:.]/g, "-")}-${self.id}.json`);
 	writePlan(path, plan);

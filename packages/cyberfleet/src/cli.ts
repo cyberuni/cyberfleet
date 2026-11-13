@@ -265,9 +265,18 @@ rootOpts(sessionsCmd.command('plan'))
 	.action(async (opts) => {
 		const ctx = ctxOf(opts)
 		const mux = callerMux(ctx.env ?? process.env)
-		prune(ctx)
+		// cyberlegion 2.0.0's prune deletes every exited unit that left nothing on disk to close; the
+		// plan names them so the Council sees what went, though they reach no group.
+		const pruned = prune(ctx)
+			.filter((r) => r.pruned === 'deleted')
+			.map((r) => ({ id: r.id, handle: r.handle }))
 		const self = selfOf(ctx)
-		const plan = await buildPlan({ store: ctx.store, caller: { id: self.id, handle: self.handle }, callerMux: mux })
+		const plan = await buildPlan({
+			store: ctx.store,
+			caller: { id: self.id, handle: self.handle },
+			callerMux: mux,
+			pruned,
+		})
 		const path =
 			opts.out ?? join(tmpdir(), 'cyberfleet-sessions', `plan-${plan.createdAt.replace(/[:.]/g, '-')}-${self.id}.json`)
 		writePlan(path, plan)
