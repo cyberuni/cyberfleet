@@ -191,8 +191,8 @@ importers:
         specifier: ^2.10.8
         version: 2.10.12
       universal-plugin:
-        specifier: ^0.19.0
-        version: 0.19.0
+        specifier: ^0.20.0
+        version: 0.20.0
 
   apps/web:
     dependencies:
@@ -3548,8 +3548,8 @@ packages:
   unist-util-visit@5.1.0:
     resolution: {integrity: sha512-m+vIdyeCOpdr/QeQCu2EzxX/ohgS8KbnPDgFni4dQsfSCtpz8UqDyY5GjRru8PDKuYn7Fq19j1CQ+nJSsGKOzg==}
 
-  universal-plugin@0.19.0:
-    resolution: {integrity: sha512-2L6KU7/xfm/OAQuL/cy5ab+D4mnqHjsnTcWkXAfV6cwriz6fccbI+orhbGt3IhUoGxYRiaXdaIjvcugAYzzLvw==}
+  universal-plugin@0.20.0:
+    resolution: {integrity: sha512-mKBZLqQd4RYEj0V3E9uPRzODvS420EpN/TI8gVdrGYKy9NLmKyLdKuwkFY46aMKyHan5ud3Dbh/gCj58480SSQ==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -7034,7 +7034,7 @@ snapshots:
       unist-util-is: 6.0.1
       unist-util-visit-parents: 6.0.2
 
-  universal-plugin@0.19.0:
+  universal-plugin@0.20.0:
     dependencies:
       '@repobuddy/upx': 0.2.0
       rolldown: 1.2.18
