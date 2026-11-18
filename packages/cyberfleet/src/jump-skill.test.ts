@@ -25,7 +25,7 @@ describe('jump skill: discovery', () => {
 	})
 
 	it('ships in a folder every manifest and the package allowlist already cover', () => {
-		expect(JSON.parse(read('.plugin/plugin.json')).skills).toBe('./skills')
+		expect(JSON.parse(read('.claude-plugin/plugin.json')).skills).toBe('./skills')
 		expect(JSON.parse(read('.codex-plugin/plugin.json')).skills).toBe('./skills')
 		expect(JSON.parse(read('package.json')).files).toContain('skills')
 	})

@@ -13,7 +13,6 @@ const text = read(FILE)
 
 describe('headless-close-sessions agent', () => {
 	it('is listed in every manifest that lists agents, and shipped by the package allowlist', () => {
-		expect(JSON.parse(read('.plugin/plugin.json')).agents).toContain(FILE)
 		expect(JSON.parse(read('.claude-plugin/plugin.json')).agents).toContain(FILE)
 		expect(JSON.parse(read('plugin.json')).extensions['org.cyberuni.universal-plugin'].agents).toContain(FILE)
 		expect(JSON.parse(read('package.json')).files).toContain('agents')
