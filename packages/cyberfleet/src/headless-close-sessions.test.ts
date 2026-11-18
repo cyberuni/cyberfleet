@@ -38,7 +38,7 @@ describe('headless-close-sessions agent', () => {
 	})
 
 	it('runs only the cyberfleet its brief names, never another install', () => {
-		expect(text).toContain('node <path>/bin/cyberfleet.mjs')
+		expect(text).toContain('node <path>/cyberfleet.mjs')
 		expect(text).not.toMatch(/npx -y/)
 	})
 })

@@ -148,24 +148,16 @@ assumes a peer runs the same harness. HAL-above-leash detection lives entirely i
 missions --format json`'s `hal` field — Pod only reads it and decides whether to speak, never re-derives
 leash state itself.
 
-## Resolving `cyberlegion`
+## Running `cyberlegion`
 
-Every `cyberlegion …` command in this skill runs whichever CLI resolves below, resolved afresh in each
-session and again after any plugin reload. Never hardcode a versioned
-`~/.claude/plugins/cache/…/<version>/` path: a reload installs a new version beside the old one, and a
-remembered path keeps running the old CLI. The pin is `2.0.1`. Take the first rung that
-resolves and whose `cyberlegion --version` is at or above it; skip a rung that reports an older
-version:
+Every `cyberlegion …` command in this skill means:
 
-1. `cyberlegion` on `PATH`.
-2. The installed cyberlegion plugin: read `~/.claude/plugins/installed_plugins.json` now, take the
-   `installPath` of its `cyberlegion@<marketplace>` entry, and run `node
-   <installPath>/bin/cyberlegion.mjs`.
-3. `npx -y cyberlegion@2.0.1`.
+```bash
+node <this skill's folder>/scripts/cyberlegion.mjs <args>
+```
 
-When no rung resolves, stop and report it to the Council with the
-install hint: install the `cyberlegion` plugin beside this one, or `npm install -g
-cyberlegion@2.0.1`.
+The script runs the cyberlegion version this plugin pins. Never hardcode a
+`~/.claude/plugins/cache/…/<version>/` path: a reload installs a new version beside the old one.
 
 ## Output
 
@@ -192,8 +184,9 @@ work is the **Operator**'s, which the Council invokes directly rather than Pod h
 
 ## References
 
-This plugin ships the `cyberfleet` CLI. Run it from this skill's directory, with no install:
+This plugin ships the `cyberfleet` CLI. Run it through the script in this skill's folder, with no
+install:
 
 ```bash
-node <this skill's directory>/../../bin/cyberfleet.mjs --help
+node <this skill's folder>/scripts/cyberfleet.mjs --help
 ```

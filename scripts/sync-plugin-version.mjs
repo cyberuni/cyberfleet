@@ -28,21 +28,22 @@ for (const file of MANIFESTS) {
 	console.info(`${file} -> ${version}`)
 }
 
-// Skills must be self-contained, so the cyberlegion pin is written into the text of each entry
-// point instead of read from `.plugin/pins.json` at run time. Keep those literals in step with it.
-const PIN_FILES = [
-	'skills/operator/SKILL.md',
-	'skills/pod/SKILL.md',
-	'skills/crimp/SKILL.md',
-	'agents/headless-operator.md',
-].map((f) => `packages/cyberfleet/${f}`)
+// The cyberlegion pin lives in `.plugin/pins.json`. Skills run cyberlegion through a forwarder whose
+// version is the `scripts` entry in plugin.json; the agent, which has no skill folder, carries the pin
+// in its own text. Keep both in step with it. `plugin build`, which runs next, rewrites the forwarders.
 const pin = JSON.parse(readFileSync('packages/cyberfleet/.plugin/pins.json', 'utf8')).cyberlegion
 if (pin) {
-	for (const file of PIN_FILES) {
+	const stamps = {
+		'packages/cyberfleet/plugin.json': (text) =>
+			text.replace(/("package":\s*"cyberlegion",\s*"version":\s*)"[^"]*"/g, `$1"${pin}"`),
+		'packages/cyberfleet/agents/headless-operator.md': (text) =>
+			text
+				.replace(/cyberlegion@\d+\.\d+\.\d+[\w.-]*/g, `cyberlegion@${pin}`)
+				.replace(/The pin is `[^`]*`/g, `The pin is \`${pin}\``),
+	}
+	for (const [file, stamp] of Object.entries(stamps)) {
 		const before = readFileSync(file, 'utf8')
-		const after = before
-			.replace(/cyberlegion@\d+\.\d+\.\d+[\w.-]*/g, `cyberlegion@${pin}`)
-			.replace(/The pin is `[^`]*`/g, `The pin is \`${pin}\``)
+		const after = stamp(before)
 		if (after !== before) writeFileSync(file, after)
 	}
 }

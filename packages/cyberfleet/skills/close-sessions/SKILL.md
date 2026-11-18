@@ -34,11 +34,11 @@ text: the rule table is code with one test per rule (`src/sessions/classify.ts`)
 
 ## Running `cyberfleet`
 
-This plugin ships the `cyberfleet` CLI, so its version always matches this skill. Run it from this
-skill's directory, with no install:
+This plugin ships the `cyberfleet` CLI, so its version always matches this skill. Run it through the
+script in this skill's folder, with no install:
 
 ```bash
-node <this skill's directory>/../../bin/cyberfleet.mjs sessions <plan|ask|close> …
+node <this skill's folder>/scripts/cyberfleet.mjs sessions <plan|ask|close> …
 ```
 
 Every `cyberfleet …` below means that command. Never run `cyberlegion unit close` yourself, and
@@ -48,8 +48,8 @@ its error to the Council and stop.
 ## 1. Run the sweep headless
 
 Spawn the `cyberfleet:headless-close-sessions` subagent. Its brief names the CLI by absolute path:
-"The cyberfleet CLI is `node <plugin root>/bin/cyberfleet.mjs`.", with `<plugin root>` the absolute
-path of `<this skill's directory>/../..`. It runs
+"The cyberfleet CLI is `node <scripts>/cyberfleet.mjs`.", with `<scripts>` the absolute
+path of `<this skill's folder>/scripts`. It runs
 `sessions plan` and `sessions ask`, and returns the summary `sessions ask` printed, whose first line
 is `plan: <path>`. The wait for replies takes up to about two minutes.
 

@@ -17,7 +17,7 @@ judgment: the rules live in `cyberfleet sessions`, and the decision to close bel
 ## What the spawn gives you
 
 The brief names one path: the `cyberfleet` CLI of the plugin that spawned you, as
-`node <path>/bin/cyberfleet.mjs`. Every `cyberfleet …` below means that command. If the brief names
+`node <path>/cyberfleet.mjs`. Every `cyberfleet …` below means that command. If the brief names
 no path, or the command fails to start, stop and return the error. Never install or look for another
 `cyberfleet` or `cyberlegion`.
 

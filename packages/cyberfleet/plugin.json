@@ -14,6 +14,23 @@
 			"vendors": ["claude-code", "codex"],
 			"skills": "./skills",
 			"agents": ["./agents/headless-operator.md", "./agents/headless-close-sessions.md"],
+			"scripts": {
+				"skills/close-sessions/scripts/cyberfleet.mjs": { "forward": "cyberfleet" },
+				"skills/jump/scripts/cyberfleet.mjs": { "forward": "cyberfleet" },
+				"skills/operator/scripts/cyberfleet.mjs": { "forward": "cyberfleet" },
+				"skills/pod/scripts/cyberfleet.mjs": { "forward": "cyberfleet" },
+				"skills/crimp/scripts/cyberlegion.mjs": {
+					"forward": "cyberlegion",
+					"package": "cyberlegion",
+					"version": "2.0.1"
+				},
+				"skills/operator/scripts/cyberlegion.mjs": {
+					"forward": "cyberlegion",
+					"package": "cyberlegion",
+					"version": "2.0.1"
+				},
+				"skills/pod/scripts/cyberlegion.mjs": { "forward": "cyberlegion", "package": "cyberlegion", "version": "2.0.1" }
+			},
 			"harnesses": {
 				"claude-code": {},
 				"codex": {}

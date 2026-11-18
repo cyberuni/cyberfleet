@@ -24,10 +24,8 @@ describe('close-sessions skill', () => {
 		expect(text).toMatch(/\nmodel: haiku\n/)
 	})
 
-	it("runs bin/cyberfleet.mjs from the skill's own directory", () => {
-		expect(section('## Running `cyberfleet`')).toContain(
-			"node <this skill's directory>/../../bin/cyberfleet.mjs sessions",
-		)
+	it("runs cyberfleet through the forwarder in the skill's own folder", () => {
+		expect(section('## Running `cyberfleet`')).toContain("node <this skill's folder>/scripts/cyberfleet.mjs sessions")
 	})
 
 	it('spawns the headless agent, with a fallback that runs plan then ask', () => {

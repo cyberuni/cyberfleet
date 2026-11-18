@@ -3,20 +3,15 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 // The personas issue bare `cyberlegion …` commands, but a plugin-only install puts no `cyberlegion`
-// on PATH. Each entry point that runs those commands must name how to resolve the CLI — PATH, the
-// installed plugin's current installPath, then a pinned npx — so an agent never improvises a
-// versioned plugin-cache path that goes stale on the next plugin reload (cyberfleet#66).
+// on PATH. An entry point with no skill folder of its own (an agent) must name how to resolve the
+// CLI — PATH, the installed plugin's current installPath, then a pinned npx — so an agent never
+// improvises a versioned plugin-cache path that goes stale on the next plugin reload
+// (cyberfleet#66). Skills run it through a forwarder instead (skill-forwarders.test.ts).
 
 const PLUGIN_ROOT = new URL('../', import.meta.url)
 const read = (path: string) => readFileSync(fileURLToPath(new URL(path, PLUGIN_ROOT)), 'utf8')
 
-const ENTRY_POINTS = [
-	'skills/operator/SKILL.md',
-	'skills/pod/SKILL.md',
-	'skills/crimp/SKILL.md',
-	// not skills/jump: it runs only the `cyberfleet` this plugin ships (cyberfleet#156)
-	'agents/headless-operator.md',
-]
+const ENTRY_POINTS = ['agents/headless-operator.md']
 
 describe('cyberlegion pin', () => {
 	it('pins cyberlegion to an exact version in the bundled pins map', () => {

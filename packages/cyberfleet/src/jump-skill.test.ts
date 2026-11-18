@@ -32,10 +32,10 @@ describe('jump skill: discovery', () => {
 })
 
 describe('jump skill: runs the cyberfleet this plugin ships', () => {
-	it("runs bin/cyberfleet.mjs from the skill's own directory, with no install", () => {
+	it("runs cyberfleet through the forwarder in the skill's own folder, with no install", () => {
 		const s = section('## Running `cyberfleet`')
-		expect(s).toContain("node <this skill's directory>/../../bin/cyberfleet.mjs jump")
-		expect(read('bin/cyberfleet.mjs')).toBeTruthy()
+		expect(s).toContain("node <this skill's folder>/scripts/cyberfleet.mjs jump")
+		expect(read('skills/jump/scripts/cyberfleet.mjs')).toBeTruthy()
 	})
 
 	it('resolves no cyberlegion or cyber-mux CLI', () => {
