@@ -45,24 +45,16 @@ slug), `npx skills add` / plugin install and `cyberlegion unit register` to recr
 remove` / plugin uninstall to discharge, then retiring the crew from the registry. Crimp never re-implements the marketplace query
 and never re-implements the fleet registry — it only invokes them.
 
-## Resolving `cyberlegion`
+## Running `cyberlegion`
 
-Every `cyberlegion …` command in this skill runs whichever CLI resolves below, resolved afresh in each
-session and again after any plugin reload. Never hardcode a versioned
-`~/.claude/plugins/cache/…/<version>/` path: a reload installs a new version beside the old one, and a
-remembered path keeps running the old CLI. The pin is `2.0.1`. Take the first rung that
-resolves and whose `cyberlegion --version` is at or above it; skip a rung that reports an older
-version:
+Every `cyberlegion …` command in this skill means:
 
-1. `cyberlegion` on `PATH`.
-2. The installed cyberlegion plugin: read `~/.claude/plugins/installed_plugins.json` now, take the
-   `installPath` of its `cyberlegion@<marketplace>` entry, and run `node
-   <installPath>/bin/cyberlegion.mjs`.
-3. `npx -y cyberlegion@2.0.1`.
+```bash
+node <this skill's folder>/scripts/cyberlegion.mjs <args>
+```
 
-When no rung resolves, stop and report it to the Council with the
-install hint: install the `cyberlegion` plugin beside this one, or `npm install -g
-cyberlegion@2.0.1`.
+The script runs the cyberlegion version this plugin pins. Never hardcode a
+`~/.claude/plugins/cache/…/<version>/` path: a reload installs a new version beside the old one.
 
 ## Output
 

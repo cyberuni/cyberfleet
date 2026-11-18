@@ -15,11 +15,11 @@ one, not even the newest or the most likely.
 
 ## Running `cyberfleet`
 
-This plugin ships the `cyberfleet` CLI, so its version always matches this skill. Run it from this
-skill's directory, with no install:
+This plugin ships the `cyberfleet` CLI, so its version always matches this skill. Run it through the
+script in this skill's folder, with no install:
 
 ```bash
-node <this skill's directory>/../../bin/cyberfleet.mjs jump <argument>
+node <this skill's folder>/scripts/cyberfleet.mjs jump <argument>
 ```
 
 Every `cyberfleet jump …` below means that command. Add `--format json` to read the result as JSON;

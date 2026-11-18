@@ -95,7 +95,9 @@ package's manifests and its `package.json` `files` allowlist, or a client won't 
 
 | Path | Read by |
 | --- | --- |
-| `.plugin/plugin.json` | cyberuni's canonical universal-plugin source; not published |
+| `plugin.json` | the canonical universal-plugin manifest; `plugin build` derives the vendor manifests from it |
+| `.agents/universal-plugin.json` | `universal-plugin`'s build config (`packagePath`); not published |
+| `.claude-plugin/plugin.json` | Claude Code |
 | `.codex-plugin/plugin.json` | Codex |
 | `skills/<name>/SKILL.md` | All of them (fixed location) |
 | `agents/<name>.md` | Claude Code (and any client that reads Agent Plugins subagents) |
