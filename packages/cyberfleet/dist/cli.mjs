@@ -8,7 +8,7 @@ import process$1 from "node:process";
 import { stripVTControlCharacters } from "node:util";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { lstat, readFile, readdir, readlink, realpath, unlink, writeFile } from "node:fs/promises";
-//#region ../../node_modules/.pnpm/commander@15.0.0/node_modules/commander/lib/error.js
+// ../../node_modules/.pnpm/commander@15.1.0/node_modules/commander/lib/error.js
 /**
 * CommanderError class
 */
@@ -42,8 +42,7 @@ var InvalidArgumentError = class extends CommanderError {
 		this.name = this.constructor.name;
 	}
 };
-//#endregion
-//#region ../../node_modules/.pnpm/commander@15.0.0/node_modules/commander/lib/argument.js
+// ../../node_modules/.pnpm/commander@15.1.0/node_modules/commander/lib/argument.js
 var Argument = class {
 	/**
 	* Initialize a new command argument with the given name and description.
@@ -161,8 +160,7 @@ function humanReadableArgName(arg) {
 	const nameOutput = arg.name() + (arg.variadic === true ? "..." : "");
 	return arg.required ? "<" + nameOutput + ">" : "[" + nameOutput + "]";
 }
-//#endregion
-//#region ../../node_modules/.pnpm/commander@15.0.0/node_modules/commander/lib/help.js
+// ../../node_modules/.pnpm/commander@15.1.0/node_modules/commander/lib/help.js
 /**
 * TypeScript import types for JSDoc, used by Visual Studio Code IntelliSense and `npm run typescript-checkJS`
 * https://www.typescriptlang.org/docs/handbook/jsdoc-supported-types.html#import-types
@@ -230,8 +228,8 @@ var Help = class {
 			const removeShort = helpOption.short && cmd._findOption(helpOption.short);
 			const removeLong = helpOption.long && cmd._findOption(helpOption.long);
 			if (!removeShort && !removeLong) visibleOptions.push(helpOption);
-			else if (helpOption.long && !removeLong) visibleOptions.push(cmd.createOption(helpOption.long, helpOption.description));
-			else if (helpOption.short && !removeShort) visibleOptions.push(cmd.createOption(helpOption.short, helpOption.description));
+			else if (helpOption.long && !removeLong) visibleOptions.push(cmd.createOption(helpOption.long, helpOption.description).helpGroup(helpOption.helpGroupHeading));
+			else if (helpOption.short && !removeShort) visibleOptions.push(cmd.createOption(helpOption.short, helpOption.description).helpGroup(helpOption.helpGroupHeading));
 		}
 		if (this.sortOptions) visibleOptions.sort(this.compareOptions);
 		return visibleOptions;
@@ -636,8 +634,7 @@ var Help = class {
 		return wrappedLines.join("\n");
 	}
 };
-//#endregion
-//#region ../../node_modules/.pnpm/commander@15.0.0/node_modules/commander/lib/option.js
+// ../../node_modules/.pnpm/commander@15.1.0/node_modules/commander/lib/option.js
 var Option = class {
 	/**
 	* Initialize a new `Option` with the given `flags` and `description`.
@@ -650,7 +647,7 @@ var Option = class {
 		this.description = description || "";
 		this.required = flags.includes("<");
 		this.optional = flags.includes("[");
-		this.variadic = /\w\.\.\.[>\]]$/.test(flags);
+		this.variadic = /\p{ID_Continue}\.\.\.[>\]]$/u.test(flags);
 		this.mandatory = false;
 		const optionFlags = splitOptionFlags(flags);
 		this.short = optionFlags.shortFlag;
@@ -934,8 +931,7 @@ function splitOptionFlags(flags) {
 		longFlag
 	};
 }
-//#endregion
-//#region ../../node_modules/.pnpm/commander@15.0.0/node_modules/commander/lib/suggestSimilar.js
+// ../../node_modules/.pnpm/commander@15.1.0/node_modules/commander/lib/suggestSimilar.js
 const maxDistance = 3;
 function editDistance(a, b) {
 	if (Math.abs(a.length - b.length) > maxDistance) return Math.max(a.length, b.length);
@@ -986,8 +982,7 @@ function suggestSimilar(word, candidates) {
 	if (similar.length === 1) return `\n(Did you mean ${similar[0]}?)`;
 	return "";
 }
-//#endregion
-//#region ../../node_modules/.pnpm/commander@15.0.0/node_modules/commander/lib/command.js
+// ../../node_modules/.pnpm/commander@15.1.0/node_modules/commander/lib/command.js
 var Command = class Command extends EventEmitter {
 	/**
 	* Initialize a new `Command`.
@@ -1737,7 +1732,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
 	getOptionValueSourceWithGlobals(key) {
 		let source;
 		this._getCommandAndAncestors().forEach((cmd) => {
-			if (cmd.getOptionValueSource(key) !== void 0) source = cmd.getOptionValueSource(key);
+			if (Object.hasOwn(cmd._optionValueSources, key)) source = cmd.getOptionValueSource(key);
 		});
 		return source;
 	}
@@ -2246,7 +2241,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
 			return arg.length > 1 && arg[0] === "-";
 		}
 		const negativeNumberArg = (arg) => {
-			if (!/^-(\d+|\d*\.\d+)(e[+-]?\d+)?$/.test(arg)) return false;
+			if (!/^-(\d+|\d*\.\d+)([eE][+-]?\d+)?$/.test(arg)) return false;
 			return !this._getCommandAndAncestors().some((cmd) => cmd.options.map((opt) => opt.short).some((short) => /^-\d$/.test(short)));
 		};
 		let activeVariadicOption = null;
@@ -2646,7 +2641,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
 	* (This does not override a group set directly on the subcommand using .helpGroup().)
 	*
 	* @example
-	* program.commandsGroup('Development Commands:);
+	* program.commandsGroup('Development Commands:');
 	* program.command('watch')...
 	* program.command('lint')...
 	* ...
@@ -2815,7 +2810,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
 	* Pass in false to disable the built-in help option.
 	*
 	* @example
-	* program.helpOption('-?, --help' 'show help'); // customise
+	* program.helpOption('-?, --help', 'show help'); // customise
 	* program.helpOption(false); // disable
 	*
 	* @param {(string | boolean)} flags
@@ -2937,12 +2932,12 @@ function incrementNodeInspectorPort(args) {
 		let debugHost = "127.0.0.1";
 		let debugPort = "9229";
 		let match;
-		if ((match = arg.match(/^(--inspect(-brk)?)$/)) !== null) debugOption = match[1];
-		else if ((match = arg.match(/^(--inspect(-brk|-port)?)=([^:]+)$/)) !== null) {
+		if ((match = arg.match(/^(--inspect(-brk|-wait)?)$/)) !== null) debugOption = match[1];
+		else if ((match = arg.match(/^(--inspect(-brk|-port|-wait)?)=(\[[^\]]+\]|[^:]+)$/)) !== null) {
 			debugOption = match[1];
 			if (/^\d+$/.test(match[3])) debugPort = match[3];
 			else debugHost = match[3];
-		} else if ((match = arg.match(/^(--inspect(-brk|-port)?)=([^:]+):(\d+)$/)) !== null) {
+		} else if ((match = arg.match(/^(--inspect(-brk|-port|-wait)?)=(\[[^\]]+\]|[^:]+):(\d+)$/)) !== null) {
 			debugOption = match[1];
 			debugHost = match[3];
 			debugPort = match[4];
@@ -2962,8 +2957,7 @@ function useColor() {
 	if (process$1.env.FORCE_COLOR || process$1.env.CLICOLOR_FORCE !== void 0) return true;
 }
 new Command();
-//#endregion
-//#region ../../node_modules/.pnpm/cyber-mux@0.12.0/node_modules/cyber-mux/dist/exec-Bmdcg_T7.mjs
+// ../../node_modules/.pnpm/cyber-mux@0.12.0/node_modules/cyber-mux/dist/exec-Bmdcg_T7.mjs
 const nodeExec$1 = (cmd, args) => {
 	try {
 		const out = execFileSync(cmd, args, {
@@ -2990,8 +2984,7 @@ const nodeExec$1 = (cmd, args) => {
 function withReason(exec, message) {
 	return exec.lastError ? `${message} — ${exec.lastError}` : message;
 }
-//#endregion
-//#region ../../node_modules/.pnpm/cyber-mux@0.12.0/node_modules/cyber-mux/dist/backend-D3VSsev4.mjs
+// ../../node_modules/.pnpm/cyber-mux@0.12.0/node_modules/cyber-mux/dist/backend-D3VSsev4.mjs
 const KNOWN_MUX = [
 	"tmux",
 	"rmux",
@@ -9227,8 +9220,7 @@ function resolveMuxAdapter(env, exec = nodeExec$1) {
 	if (probe.mux === "screen") throw new Error("cyber-mux detected GNU Screen, which it cannot drive: Screen addresses its split regions positionally (no per-pane id) and leaves $WINDOW unset in panes opened via `screen -X`, so a pane has no stable identity to send to, read from, or self-identify by. Run inside tmux ($TMUX), rmux ($RMUX set), herdr ($HERDR_ENV=1), wezterm ($WEZTERM_PANE set), zellij ($ZELLIJ set), or cmux ($CMUX_WORKSPACE_ID set) instead.");
 	throw new Error("cyber-mux requires a session backend — run inside tmux ($TMUX), rmux ($RMUX set), herdr ($HERDR_ENV=1), wezterm ($WEZTERM_PANE set), zellij ($ZELLIJ set), cmux ($CMUX_WORKSPACE_ID set), or otty ($OTTY_PANE_ID set)");
 }
-//#endregion
-//#region ../../node_modules/.pnpm/cyber-agentkit@2.1.0/node_modules/cyber-agentkit/dist/worktrees.js
+// ../../node_modules/.pnpm/cyber-agentkit@2.10.0/node_modules/cyber-agentkit/dist/worktrees.js
 /**
 * Whether a checkout has uncommitted changes, tracked or untracked, or `undefined` when git could not
 * say. `undefined` is not `false`: a caller deciding whether a worktree is safe to reuse must not read
@@ -10301,8 +10293,7 @@ async function exists(path) {
 		return false;
 	}
 }
-//#endregion
-//#region ../../node_modules/.pnpm/cyber-mux@0.12.0/node_modules/cyber-mux/dist/worktree.mjs
+// ../../node_modules/.pnpm/cyber-mux@0.12.0/node_modules/cyber-mux/dist/worktree.mjs
 /**
 * This module's own refusals and failures — plain cyber-mux prose, never a dependency's raw words.
 * `reportWorktreeFailure` (`cli.ts`) forwards a `WorktreeGitError`'s message onto stdout verbatim
@@ -10356,8 +10347,7 @@ function resolvePrimaryRoot(exec) {
 	if (!commonDir) throw new WorktreeGitError("cannot resolve the primary checkout — not inside a git repository");
 	return dirname(commonDir);
 }
-//#endregion
-//#region ../../node_modules/.pnpm/cyberlegion@2.0.1/node_modules/cyberlegion/dist/index.mjs
+// ../../node_modules/.pnpm/cyberlegion@2.1.0/node_modules/cyberlegion/dist/index.mjs
 /**
 * Transitional env-normalization seam (mux.feature: "a pane carrying only the legacy fast-path vars
 * is still honored"). cyber-mux's own fast-path reads `$CYBER_MUX`/`$CYBER_MUX_PANE` — its
@@ -10508,13 +10498,19 @@ function selfPane(cur, exec) {
 	if (!live) return cur;
 	if (live.pane === cur.pane) return {
 		...cur,
-		...live.terminal ? { terminal: live.terminal } : {}
+		...liveFacts(live)
 	};
 	if (!herdrReportsCallingPane(exec)) return cur;
 	return {
 		...cur,
 		pane: live.pane,
-		...live.terminal ? { terminal: live.terminal } : {}
+		...liveFacts(live)
+	};
+}
+function liveFacts(live) {
+	return {
+		...live.terminal ? { terminal: live.terminal } : {},
+		...live.conversation ? { conversation: live.conversation } : {}
 	};
 }
 /** herdr 0.8.2 fixed `pane current` to answer the calling pane; before it, the command answered
@@ -10529,7 +10525,8 @@ function herdrReportsCallingPane(exec) {
 function herdrCallingPane(exec) {
 	return herdrPaneAnswer(exec("herdr", ["pane", "current"]));
 }
-/** Parse a herdr `pane current` / `pane get` answer into its pane id and terminal id. */
+/** Parse a herdr `pane current` / `pane get` answer into its pane id, terminal id, and the agent
+* session id herdr resumes the pane with (`agent_session.value`, #242). */
 function herdrPaneAnswer(out) {
 	if (!out) return void 0;
 	try {
@@ -10537,16 +10534,60 @@ function herdrPaneAnswer(out) {
 		const id = pane?.pane_id;
 		if (typeof id !== "string" || !id) return void 0;
 		const terminal = pane.terminal_id;
+		const conversation = pane.agent_session?.value;
 		return {
 			pane: id,
-			...typeof terminal === "string" && terminal ? { terminal } : {}
+			...typeof terminal === "string" && terminal ? { terminal } : {},
+			...typeof conversation === "string" && conversation ? { conversation } : {}
 		};
 	} catch {
 		return;
 	}
 }
-/** herdr's live panes keyed by terminal id → current pane id. Empty when herdr gives no list, which
-* says nothing about any pane. */
+/** The multiplexer server a caller with this env reaches: the herdr socket, or the tmux socket (the
+* first field of `$TMUX`). Undefined when the env names none. */
+function serverOf(env, mux) {
+	if (mux === "herdr") return env.HERDR_SOCKET_PATH || void 0;
+	return env.TMUX?.split(",")[0] || void 0;
+}
+/**
+* The server a pane reached from this env lives on, and its session name there (#241): for herdr the
+* session whose socket is that server (`herdr session list --json`), for tmux the session holding the
+* pane. Each is left out when it cannot be read.
+*/
+function muxScope(exec, env, mux, paneId) {
+	const server = serverOf(env, mux);
+	const session = mux === "tmux" ? exec("tmux", [
+		"display-message",
+		"-p",
+		"-t",
+		paneId,
+		"#{session_name}"
+	]) || void 0 : server ? herdrSessionAt(exec, server) : void 0;
+	return {
+		...server ? { server } : {},
+		...session ? { session } : {}
+	};
+}
+/** The name of the herdr session whose socket is `server`, when herdr lists one. */
+function herdrSessionAt(exec, server) {
+	const out = exec("herdr", [
+		"session",
+		"list",
+		"--json"
+	]);
+	if (!out) return void 0;
+	try {
+		const sessions = JSON.parse(out)?.sessions;
+		if (!Array.isArray(sessions)) return void 0;
+		const name = sessions.find((s) => s?.socket_path === server)?.name;
+		return typeof name === "string" && name ? name : void 0;
+	} catch {
+		return;
+	}
+}
+/** herdr's live panes keyed by terminal id. Empty when herdr gives no list, which says nothing about
+* any pane. */
 function herdrTerminals(exec) {
 	const map = /* @__PURE__ */ new Map();
 	const out = exec("herdr", ["pane", "list"]);
@@ -10554,7 +10595,14 @@ function herdrTerminals(exec) {
 	try {
 		const panes = JSON.parse(out)?.result?.panes;
 		if (!Array.isArray(panes)) return map;
-		for (const p of panes) if (typeof p?.terminal_id === "string" && typeof p?.pane_id === "string") map.set(p.terminal_id, p.pane_id);
+		for (const p of panes) {
+			if (typeof p?.terminal_id !== "string" || typeof p?.pane_id !== "string") continue;
+			const conversation = p.agent_session?.value;
+			map.set(p.terminal_id, {
+				pane: p.pane_id,
+				...typeof conversation === "string" && conversation ? { conversation } : {}
+			});
+		}
 	} catch {
 		return map;
 	}
@@ -10569,8 +10617,8 @@ function herdrTerminals(exec) {
 function locateTerminal(exec, terminal, cache = {}) {
 	cache.terminals ??= herdrTerminals(exec);
 	if (cache.terminals.size === 0) return void 0;
-	const id = cache.terminals.get(terminal);
-	return id ? { id } : "gone";
+	const live = cache.terminals.get(terminal);
+	return live ? { id: live.pane } : "gone";
 }
 /** Point a record whose herdr pane moved at the pane id it has now, moving its pane pointer with it.
 * The old pointer is dropped only while it still names this record, since herdr hands old ids out
@@ -10606,20 +10654,63 @@ function listAgents(store) {
 * multiplexer pane at all). There is no shared bare "self" file — self-id is always pane-keyed or
 * explicit via the env var.
 */
-function resolveSelfId(ctx) {
-	return resolveSelf(ctx).id;
+function resolveSelfId(ctx, opts = {}) {
+	return resolveSelf(ctx, opts).id;
 }
-function resolveSelf(ctx) {
+function resolveSelf(ctx, opts = {}) {
 	const env = ctx.env ?? process.env;
 	const cur = selfPane(currentPane(normalizeMuxEnv(env)), ctx.exec ?? realExec);
-	if (cur) return {
-		id: selfIdAt(ctx.store, cur),
-		cur
+	if (!cur) return {
+		id: env.CYBERLEGION_AGENT_ID || void 0,
+		cur,
+		conversation: void 0,
+		byConversation: false
+	};
+	const conversation = opts.conversation || callerConversation(env, cur);
+	const byPane = selfIdAt(ctx.store, ctx.exec ?? realExec, cur);
+	if (!conversation) return {
+		id: byPane,
+		cur,
+		conversation,
+		byConversation: false
+	};
+	if ((byPane ? loadAgent(ctx.store, byPane) : void 0)?.conversation === conversation) return {
+		id: byPane,
+		cur,
+		conversation,
+		byConversation: false
+	};
+	const holder = conversationHolder(ctx.store, conversation);
+	if (holder) return {
+		id: holder.id,
+		cur,
+		conversation,
+		byConversation: holder.id !== byPane
 	};
 	return {
-		id: env.CYBERLEGION_AGENT_ID || void 0,
-		cur
+		id: byPane,
+		cur,
+		conversation,
+		byConversation: false
 	};
+}
+/**
+* The harness conversation the caller is in: the harness's own word for it (`$CLAUDE_CODE_SESSION_ID`)
+* first, else the agent session herdr reports for the calling pane. It survives a device shutdown and
+* a herdr resume, which hand out new terminal ids and may hand out new pane ids (#284).
+*/
+function callerConversation(env, cur) {
+	return env.CLAUDE_CODE_SESSION_ID || cur.conversation || void 0;
+}
+/** The unit that carries this conversation — the most recently seen one, if a duplicate minted before
+* the conversation was recorded carries it too. Standing and service records have no session. */
+function conversationHolder(store, conversation) {
+	let best;
+	for (const a of listAgents(store)) {
+		if (a.conversation !== conversation || isSessionIndependent(a)) continue;
+		if (!best || a.lastSeen > best.lastSeen) best = a;
+	}
+	return best;
 }
 /**
 * The unit a pane belongs to. The pane pointer answers first. When herdr named the calling pane's
@@ -10627,13 +10718,45 @@ function resolveSelf(ctx) {
 * this pane after the unit's own pane moved away), and a missing pointer may mean this pane moved:
 * either way the record bearing this terminal is the caller (#272). A record without a terminal id
 * is trusted by its pointer as before.
+*
+* A pointer whose record's terminal herdr lists nowhere is not a move: a moved pane keeps its terminal
+* live under another pane id. It is a resume, which keeps the pane id and hands it a new terminal, so
+* the pointer's unit is the caller and `touch` records the new terminal (#284). A herdr that gives no
+* pane list cannot tell a resume from a move, and the pointer stays untrusted.
 */
-function selfIdAt(store, cur) {
+function selfIdAt(store, exec, cur) {
 	const indexed = store.resolvePaneId(cur.pane);
 	if (!cur.terminal) return indexed;
 	const terminal = indexed ? loadAgent(store, indexed)?.pane?.terminal : void 0;
 	if (indexed && (!terminal || terminal === cur.terminal)) return indexed;
-	return listAgents(store).find((a) => a.pane?.mux === "herdr" && a.pane.terminal === cur.terminal)?.id;
+	const bearer = listAgents(store).find((a) => a.pane?.mux === "herdr" && a.pane.terminal === cur.terminal)?.id;
+	if (bearer) return bearer;
+	if (indexed && terminal && locateTerminal(exec, terminal) === "gone") return indexed;
+}
+/** Build the record's pane locator. `window` is tmux-only; `server` and `session` name where the
+* pane lives for either multiplexer (#241). */
+function paneLocator(cur, exec, env) {
+	if (cur.mux === "tmux") {
+		const window = exec("tmux", [
+			"display-message",
+			"-p",
+			"-t",
+			cur.pane,
+			"#{window_id}"
+		]) || void 0;
+		return {
+			mux: "tmux",
+			id: cur.pane,
+			...window ? { window } : {},
+			...muxScope(exec, env, cur.mux, cur.pane)
+		};
+	}
+	return {
+		mux: cur.mux,
+		id: cur.pane,
+		...cur.terminal ? { terminal: cur.terminal } : {},
+		...muxScope(exec, env, cur.mux, cur.pane)
+	};
 }
 /** Pick the one live record a handle names. A standing record wins over the rest — an owner report
 * must land in the durable standing inbox, not a dying session's. Otherwise two or more matches are
@@ -10700,14 +10823,27 @@ function bumpLastSeen(ctx, id) {
 /**
 * Refresh this session's own last-seen if it is registered — best-effort, never throws. In a herdr
 * pane whose calling pane herdr reported, it also heals the record's pane to the id and terminal
-* herdr gave, so a unit whose pane moved fixes its own record on its next turn (#272).
+* herdr gave, so a unit whose pane moved fixes its own record on its next turn (#272). It records the
+* harness conversation the caller is in, and a unit found by that conversation from a pane it does not
+* hold — a session a device shutdown and resume put in a new pane or terminal — takes this pane and is
+* active again (#284).
 */
-function touch(ctx) {
-	const { id, cur } = resolveSelf(ctx);
+function touch(ctx, opts = {}) {
+	const { id, cur, conversation, byConversation } = resolveSelf(ctx, opts);
 	if (!id) return;
 	bumpLastSeen(ctx, id);
-	if (cur?.mux !== "herdr" || !cur.terminal) return;
 	const rec = loadAgent(ctx.store, id);
+	if (!rec || isSessionIndependent(rec)) return;
+	if (conversation && rec.conversation !== conversation) {
+		rec.conversation = conversation;
+		saveAgent(ctx.store, rec);
+	}
+	if (byConversation && cur) {
+		rebindToCaller(ctx, rec);
+		return;
+	}
+	recordServer(ctx, rec, cur);
+	if (cur?.mux !== "herdr" || !cur.terminal) return;
 	if (rec?.pane?.mux !== "herdr") return;
 	if (rec.pane.terminal !== cur.terminal) {
 		rec.pane = {
@@ -10717,6 +10853,32 @@ function touch(ctx) {
 		saveAgent(ctx.store, rec);
 	}
 	followMove(ctx, rec, cur.pane);
+}
+/** Name the server on the caller's own pane record when it names none (a record written before
+* `server` existed), so a unit that takes a turn becomes placeable by `--same-server` (#241). */
+function recordServer(ctx, rec, cur) {
+	const pane = rec.pane;
+	if (!pane || pane.server || !cur || pane.mux !== cur.mux || pane.id !== cur.pane) return;
+	const scope = muxScope(ctx.exec ?? realExec, ctx.env ?? process.env, pane.mux, pane.id);
+	if (!scope.server) return;
+	rec.pane = {
+		...pane,
+		...scope
+	};
+	saveAgent(ctx.store, rec);
+}
+/** Point a unit found by its conversation at the calling pane, the way `register` would. */
+function rebindToCaller(ctx, rec) {
+	const env = ctx.env ?? process.env;
+	const exec = ctx.exec ?? realExec;
+	const cur = selfPane(storablePane(env), exec);
+	if (!cur) return;
+	const oldPane = rec.pane?.id;
+	rec.pane = paneLocator(cur, exec, env);
+	rec.status = "active";
+	saveAgent(ctx.store, rec);
+	if (oldPane && oldPane !== cur.pane && ctx.store.resolvePaneId(oldPane) === rec.id) ctx.store.removePaneIndex(oldPane);
+	ctx.store.putPaneIndex(cur.pane, rec.id);
 }
 const STALE_MS = 9e5;
 /** Standing and service records have no session of their own, so nothing about a pane or a timer
@@ -11882,8 +12044,7 @@ async function awaitReply(ctx, input) {
 		await sleep(POLL_MS$1);
 	}
 }
-//#endregion
-//#region src/project-address.ts
+// src/project-address.ts
 const KEY_SCHEME = "cyberlegion";
 /** The project address of a checkout: a path in any checkout, a key this returned, or a unique name. */
 function projectAddressOf(ctx, ref) {
@@ -11895,8 +12056,7 @@ function projectAddressOf(ctx, ref) {
 		home: project.root
 	};
 }
-//#endregion
-//#region src/captain.ts
+// src/captain.ts
 const CAPTAIN_SERVICE = "captain";
 /**
 * Where the project's Captain stands, read-only: no claim, no start. A project whose Captain was
@@ -12072,8 +12232,7 @@ function writeBinding(ctx, binding) {
 	renameSync(tmp, file);
 	return binding;
 }
-//#endregion
-//#region src/jump.ts
+// src/jump.ts
 /** A unit's repo name: the folder of its primary checkout, else of its cwd. cyberlegion's rule. */
 function repoNameOf(rec) {
 	return basename(rec.worktree?.primaryRoot ?? rec.cwd);
@@ -12273,8 +12432,7 @@ function jumpToon(r) {
 		}], `${r.units.length} live units — no exact match, nothing focused`)].join("\n");
 	}
 }
-//#endregion
-//#region src/sdd/hal.ts
+// src/sdd/hal.ts
 /**
 * Infer whether a CR's persisted gate lines show a self-assertion the run-level leash did not
 * cover.
@@ -12324,8 +12482,7 @@ function computeNeedsCouncil(ledger, hasHaltLine) {
 	}
 	return false;
 }
-//#endregion
-//#region src/sdd/read.ts
+// src/sdd/read.ts
 /**
 * Locate every project's ledger sibling dir under the three SDD spec conventions this reader
 * supports: `.agents/specs/<project>/` (multi-project) and `.agents/spec/` (single-project, named
@@ -12534,8 +12691,7 @@ function readSpecStatus(agentsRoot, project) {
 	}
 	return null;
 }
-//#endregion
-//#region src/missions.ts
+// src/missions.ts
 /**
 * Resolve the root under which `.agents/` lives — the primary checkout (so `missions` sees the
 * whole fleet's SDD state regardless of which ship's worktree it is invoked from), falling back to
@@ -12611,8 +12767,7 @@ function buildMissionRow(agentsRoot, agent) {
 function buildMissions(agentsRoot, agents) {
 	return agents.map((a) => buildMissionRow(agentsRoot, a));
 }
-//#endregion
-//#region src/sessions/classify.ts
+// src/sessions/classify.ts
 /** The marker cyberlegion stamps into every worktree it spawns; `unit close` sets it aside too. */
 const MARKER = "?? .agents/cyberlegion/config.json";
 const SHOWN = 10;
@@ -12683,8 +12838,7 @@ function classify(f) {
 	if (leftover.length > 0) return v("14", "ask", "work landed, leftover files", { leftover: cap(leftover) });
 	return v("15", "close", "work landed");
 }
-//#endregion
-//#region src/sessions/plan.ts
+// src/sessions/plan.ts
 const realRun = (cmd, args, cwd) => new Promise((resolve) => {
 	execFile(cmd, args, {
 		cwd,
@@ -13053,8 +13207,7 @@ function readPlan(path) {
 	if (plan?.version !== 1 || !Array.isArray(plan.units)) throw new Error(`${path} is not a cyberfleet sessions plan`);
 	return plan;
 }
-//#endregion
-//#region src/sessions/ask.ts
+// src/sessions/ask.ts
 const ASK_BUDGET_MS = 12e4;
 /** Read a reply body: `DONE`, `UNFINISHED: <reason>`, or anything else. */
 function readAnswer(body) {
@@ -13145,8 +13298,7 @@ async function askUnits(input) {
 	plan.askedAt = new Date(now()).toISOString();
 	return plan;
 }
-//#endregion
-//#region src/sessions/close.ts
+// src/sessions/close.ts
 function changed(was, now) {
 	const diff = [];
 	if (was.status !== now.status) diff.push(`status ${was.status} → ${now.status}`);
@@ -13242,8 +13394,7 @@ async function closeUnits(input) {
 	}
 	return out;
 }
-//#endregion
-//#region src/sessions/summary.ts
+// src/sessions/summary.ts
 /** Rules 1–3 decide units outside this sweep: this session, standing owners, other multiplexers. */
 const OUT_OF_SCOPE = /* @__PURE__ */ new Set([
 	"1",
@@ -13452,8 +13603,7 @@ function closeToon(out) {
 		}
 	], `${out.refused.length} refused`)].join("\n");
 }
-//#endregion
-//#region src/cli.ts
+// src/cli.ts
 function ctxOf(opts) {
 	return {
 		store: new FileStore(resolveRoot({
@@ -13729,5 +13879,4 @@ program.parseAsync(process.argv).catch((err) => {
 	process.stderr.write(`${err instanceof Error ? err.message : String(err)}\n`);
 	process.exit(1);
 });
-//#endregion
 export {};
