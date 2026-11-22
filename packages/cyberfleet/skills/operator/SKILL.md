@@ -73,6 +73,21 @@ connected wherever the Council invokes it, including inside a project an agent i
   --body "<pull request URL, CI state, anything held>"`. Say not to use the harness's own messaging
   tool (Claude Code's SendMessage and the like) for fleet handles. The fallback goes through the same
   command: if the return handle resolves to no live unit, the same send with `--to operator`.
+- **This session can lose its own identity mid-order** (a device shutdown and a multiplexer resume).
+  The return handle then still shows as a live unit, so a pod's report goes to it and never falls back
+  to `operator`. The signs: the doorbell rings and `mail inbox` shows nothing, `cyberlegion unit
+  whoami` names a unit other than the handle this order's briefs carry, or `unit register` says on
+  stderr that it minted a new unit. Never run `unit register` again to fix it: a new handle leaves the
+  pods' reports stranded under the old one. Recover the old handle instead:
+  1. Run `cyberlegion unit whoami`. When it names the order's handle, cyberlegion has already found
+     this resumed session by its harness conversation: read the inbox again.
+  2. When it names another unit, a duplicate this session minted, run
+     `cyberlegion unit rebind <order's handle>` from this session, then `unit whoami` and `mail inbox --unread` again. If the
+     duplicate holds unread mail, read and ack it first (`mail read <msg-id> --ack`), then rebind.
+  3. Only when rebind still refuses, keep working under the new handle: read the old handle's mail with
+     `cyberlegion mail inbox --unit <order's handle>`, which lists it read-only and cannot ack it, and
+     send each of the order's pods the new return handle on its own thread (`cyberlegion mail send
+     --to <pod handle> --thread <thread id>`), so its next report reaches this session.
 - With the dispatch, **announce the merges** to the Council: say that you will merge each pull request of
   this order's pods once it is clean, name the four-part bar below, and ask the Council to reply before
   the first one lands. The Council's reply, in its own words, is what authorizes those merges — the order

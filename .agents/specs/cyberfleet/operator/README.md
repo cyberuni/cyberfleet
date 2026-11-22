@@ -97,6 +97,15 @@ peer to route to, when a ship is dead enough to prune). All four eval layers car
   `cyberlegion mail send --to <return handle> --thread <thread id> --subject ... --body ...`, says not
   to use the harness's own messaging tool for fleet handles, and routes the fallback through the same
   command with `--to operator`.
+- **Recover a lost identity, never mint a new one** — a device shutdown and a multiplexer resume
+  can leave this session on a duplicate unit while its return handle still shows as live, so a pod's
+  report goes to the old handle and the `operator` fallback never fires (cyberfleet#191). Running
+  `unit register` again mints yet another handle and strands the reports. cyberlegion finds a resumed
+  session's unit by its harness conversation, and `unit rebind <id>` returns a session that already
+  minted a duplicate to its old unit ([cyberlegion#284](https://github.com/cyberuni/cyberlegion/issues/284)).
+  So Operator checks `unit whoami`, rebinds onto the order's handle when it names another unit, and
+  only when rebind refuses reads the old mailbox read-only (`mail inbox --unit <old>`) and tells each
+  pod of the order the new return handle on its thread. A pod applies the same check before it reports.
 - **Own every spawn** — spawning a worktree-ship is fleet-level work the Council calls Operator for,
   including parallel work on a project that is already a ship. Pod never spawns (ADR-0022 decision
   8, as amended — this reverses d8's original "spawning is a ship capability, not something reserved
@@ -219,6 +228,7 @@ Every scenario in [`operator.feature`](./operator.feature) maps to one of these 
 | **read what the command center took** | the claim holder, on connecting, leads the board with `mail inbox --owner operator --unread`; an acted-on report is acked (`mail read --owner operator --ack`), an unacted one stays unread; a session not holding the claim neither reads nor acks that mailbox |
 | **the return address is the spawning session** | a spawn brief names this session's own registered handle, never its id and never `operator`; the pod falls back to `operator` only when that handle resolves to no live unit |
 | **name the reply command** | a spawn brief names its thread id and spells out `cyberlegion mail send --to <return handle> --thread <thread id> --subject ... --body ...`, with the same send `--to operator` as the fallback; never the harness's own messaging tool |
+| **recover a lost identity** | when `unit whoami` names a unit other than the order's return handle, or the doorbell rings on an empty inbox, Operator runs `unit rebind <order's handle>` rather than `unit register`; only when rebind refuses does it read `mail inbox --unit <old>` and tell each pod of the order the new return handle on its thread |
 | **delivery is not the doorbell** | a sent message whose ring never landed is reported delivered and not resent; only a handle that resolved to no live unit is undelivered |
 | **describe the work, not the location** | the `description` names the fleet-level work and states no location condition a harness cannot evaluate |
 | **leave in-ship work to Pod, by topic** | mission work and specialist crew inside one ship are routed to Pod topically, not via a mode probe |
