@@ -301,6 +301,22 @@ Feature: pod — the ship's bridge persona
     And it does not use the harness's own messaging tool to reach the handle
     And when that handle resolves to no live unit it sends the same command --to operator
 
+  @behavior
+  Scenario: a resumed Pod reports from the handle it was spawned under
+    Given Pod was spawned under the handle "spec2-migration"
+    And a multiplexer resume left this session on another unit, so cyberlegion unit whoami names "e14849"
+    When Pod reports to its dispatcher
+    Then it first runs cyberlegion unit rebind spec2-migration from this session
+    And it does not run cyberlegion unit register to recover it
+    And the report goes out from "spec2-migration"
+
+  @behavior
+  Scenario: a resumed Pod whose rebind refuses names both handles in its report
+    Given Pod was spawned under the handle "spec2-migration" and cyberlegion unit whoami names "e14849"
+    And cyberlegion unit rebind spec2-migration refuses
+    When Pod reports to its dispatcher
+    Then the report says the rebind was refused and names both "spec2-migration" and "e14849"
+
   # ── Discharge and the merge offer ──
 
   @behavior

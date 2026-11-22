@@ -134,6 +134,31 @@ Feature: operator — the command-center persona
     And the brief says not to use the harness's own messaging tool for fleet handles
     And the brief tells the ship to send the same command --to operator when the return handle resolves to no live unit
 
+  # ── Losing this session's own identity mid-order (cyberfleet#191) ──
+
+  @behavior
+  Scenario: a resumed Operator recovers its old handle rather than minting a new one
+    Given Operator dispatched pods whose briefs name the return handle "833787"
+    And a multiplexer resume left this session on a duplicate unit, so the doorbell rang and mail inbox showed nothing
+    When Operator recovers
+    Then it runs cyberlegion unit whoami and, seeing a unit other than "833787", runs cyberlegion unit rebind 833787 from this session
+    And it does not run cyberlegion unit register to mint a new handle
+    And it reads the inbox again under "833787"
+
+  @behavior
+  Scenario: a resumed Operator whose session already found its unit only reads the inbox again
+    Given Operator dispatched pods whose briefs name the return handle "833787"
+    And after a multiplexer resume cyberlegion unit whoami names "833787"
+    When Operator recovers
+    Then it runs no cyberlegion unit rebind and reads the inbox again
+
+  @behavior
+  Scenario: when rebind refuses, Operator reads the old mailbox and tells each pod the new return handle
+    Given Operator's return handle "833787" is stranded and cyberlegion unit rebind 833787 refuses
+    When Operator recovers
+    Then it lists the old mail with cyberlegion mail inbox --unit 833787
+    And it sends each of the order's pods the new return handle on that pod's own thread
+
   # ── Triggering ──
 
   @trigger

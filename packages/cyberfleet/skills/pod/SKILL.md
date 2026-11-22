@@ -25,6 +25,13 @@ folder to decide whether it is allowed to work here, and it never spawns (that i
   --handle <name>` then `cyberlegion mail inbox --unread`; read and speak any mail before acting
   further. Receive the mission brief with `cyberlegion mail read <msg-id> --ack` so the brief is
   consumed in the same step it is read — never leave the brief dangling as unread mail.
+- **Report from the identity you were spawned under.** A device shutdown and a multiplexer resume can
+  leave this session on another unit, and your spawner, which knows only your old handle, would then
+  get reports from a stranger and send its calls where you no longer read. Before each report, run
+  `cyberlegion unit whoami`. When it names a unit other than the handle you were spawned under, run
+  `cyberlegion unit rebind <your spawned handle>` from this session, then `mail inbox --unread`, and
+  report from that handle. Never run `unit register` again to recover it: that mints a new handle.
+  When rebind refuses, say so in the report and name both handles, so the spawner can reach you.
 - When the Council wants a change made to this ship's project: dispatch to SDD's `start-mission` —
   Pod is the persona wrapper around the mission engine, never a replacement for it.
 - When a concern mid-mission belongs to a specialist: hail them by name and speak the handoff aloud
