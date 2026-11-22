@@ -12264,6 +12264,8 @@ function rowOf(rec) {
 function liveUnits(store) {
 	return store.listAgents().filter((a) => a.status !== "exited" && (a.kind === void 0 || a.kind === "session")).sort((a, b) => a.id.localeCompare(b.id));
 }
+/** cyberlegion's message id: the send time in ms, a dash, six hex digits. */
+const MESSAGE_ID = /^\d{13}-[0-9a-f]{6}$/;
 const TASK = /^(?:([\w.-]+)#|#)?(\d+)$/;
 function jump(deps, req) {
 	const { target, repo, branches, mentions } = req;
@@ -12273,6 +12275,7 @@ function jump(deps, req) {
 	if (target === void 0 || target.trim() === "") throw new Error("a target or --repo is required");
 	const word = target.trim();
 	if (word === "back") return goBack(deps);
+	if (MESSAGE_ID.test(word)) return senderOf(deps, word);
 	const task = TASK.exec(word);
 	if (task) return taskOf(deps, task[1], Number(task[2]));
 	const live = liveUnits(deps.store);
@@ -12339,6 +12342,49 @@ function readBrief(store, rec) {
 		return readFileSync(rec.brief, "utf8");
 	} catch {}
 	return store.readBrief(rec.id);
+}
+/** The message with this id in any mailbox on the hub, read or unread. Ids are unique hub-wide. */
+function findMessage(store, msgId) {
+	for (const a of store.listAgents()) {
+		if (!store.hasMailbox(a.id)) continue;
+		const { unread, read } = store.listInbox(a.id);
+		const hit = [...unread, ...read].find((m) => m.id === msgId);
+		if (hit) return hit;
+	}
+}
+/**
+* A message id: focus the pane of the unit that sent it (cyberfleet#192). A sender whose session has
+* ended is not an error: the result names the repo and branch it was working in, and focuses nothing.
+* The message carries only the sender's id and handle, so the location comes from its unit record;
+* once that record is pruned there is nothing left to name.
+*/
+function senderOf(deps, msgId) {
+	const msg = findMessage(deps.store, msgId);
+	if (!msg) throw new Error(`no message ${msgId} in any mailbox on this hub`);
+	const rec = deps.store.getAgent(msg.from);
+	if (!rec) throw new Error(`message ${msgId} came from ${msg.fromHandle} (${msg.from}), which has no record on this hub any more — its pane, repo, and branch are not known`);
+	if (rec.id === deps.selfId) fail(`message ${msgId}`);
+	const pane = rec.status === "exited" || rec.status === "stopped" ? void 0 : rec.pane?.id ?? deps.store.findPaneByAgentId(rec.id);
+	if (!pane) {
+		const branch = rec.worktree?.branch;
+		return {
+			result: "closed",
+			message: msgId,
+			id: rec.id,
+			handle: rec.handle,
+			repo: repoNameOf(rec),
+			...branch ? { branch } : {},
+			dir: rec.worktree?.root ?? rec.cwd
+		};
+	}
+	deps.focus(pane);
+	return {
+		result: "jumped",
+		id: rec.id,
+		handle: rec.handle,
+		pane,
+		message: msgId
+	};
 }
 function goBack(deps) {
 	const { from, to } = deps.back();
@@ -12434,6 +12480,7 @@ const ROW = [
 function jumpToon(r) {
 	switch (r.result) {
 		case "jumped":
+		case "closed":
 		case "task": return toonObject({ ...r });
 		case "candidates": return ["result: candidates", toonList("candidates", r.units, ROW, `${r.units.length} units match — nothing focused; jump to one by id`)].join("\n");
 		case "prose": return [toonObject({
@@ -13706,7 +13753,7 @@ rootOpts(program.command("missions")).description("who needs the Council's hands
 		json: rows
 	});
 });
-rootOpts(program.command("jump")).description("focus the one live unit a repo, branch, unit, or task names, or go back — never this session, never a pick among several").argument("[target...]", "back, a unit id/handle/branch/repo name, a task ref (#123, color-map#123), or words").option("--repo <name>", "pick the live unit in this repo (its primary checkout's folder name)").option("--branch <name>", "with --repo: a branch the unit may be on (repeatable)", (v, all) => [...all, v], []).option("--mentions <n>", "with --repo: when no branch has a unit, one whose handle ends in -<n> or brief names #<n>").action((words, opts) => {
+rootOpts(program.command("jump")).description("focus the one live unit a repo, branch, unit, or task names, or go back — never this session, never a pick among several").argument("[target...]", "back, a unit id/handle/branch/repo name, a task ref (#123, color-map#123), a message id (its sender), or words").option("--repo <name>", "pick the live unit in this repo (its primary checkout's folder name)").option("--branch <name>", "with --repo: a branch the unit may be on (repeatable)", (v, all) => [...all, v], []).option("--mentions <n>", "with --repo: when no branch has a unit, one whose handle ends in -<n> or brief names #<n>").action((words, opts) => {
 	const ctx = ctxOf(opts);
 	touch(ctx);
 	const env = ctx.env ?? process.env;

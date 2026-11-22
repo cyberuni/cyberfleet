@@ -21,7 +21,13 @@ function section(heading: string): string {
 describe('jump skill: discovery', () => {
 	it('is named jump and takes the argument forms the issue lists', () => {
 		expect(text).toMatch(/^---\nname: jump\n/)
-		expect(text).toMatch(/argument-hint: .*repo.*branch.*pod.*task.*back/)
+		expect(text).toMatch(/argument-hint: .*repo.*branch.*pod.*task.*message.*back/)
+	})
+
+	it('names a message, or the unit that sent one, as a target (cyberfleet#192)', () => {
+		const description = /^description: (.*)$/m.exec(text)?.[1] ?? ''
+		expect(description).toMatch(/message id/)
+		expect(description).toMatch(/sent (this|a|the) mail/)
 	})
 
 	it('ships in a folder every manifest and the package allowlist already cover', () => {
@@ -49,7 +55,7 @@ describe('jump skill: runs the cyberfleet this plugin ships', () => {
 describe('jump skill: the four steps', () => {
 	it('step 1 runs cyberfleet jump and branches on each result kind', () => {
 		const s = section('## 1. Run `cyberfleet jump <argument>`')
-		for (const kind of ['jumped', 'candidates', 'task', 'prose']) expect(s).toContain(`\`${kind}\``)
+		for (const kind of ['jumped', 'closed', 'candidates', 'task', 'prose']) expect(s).toContain(`\`${kind}\``)
 		expect(s).toMatch(/non-zero exit/)
 	})
 
@@ -71,12 +77,22 @@ describe('jump skill: the four steps', () => {
 		const s = section('## 4. Report the result')
 		expect(s).toContain('`jumped`')
 		expect(s).toContain('`candidates`')
+		expect(s).toMatch(/`closed`[\s\S]*has closed[\s\S]*repo[\s\S]*branch/)
 		expect(s).toMatch(/verbatim/)
 	})
 
 	it('runs the steps in order', () => {
 		const order = ['## 1. ', '## 2. ', '## 3. ', '## 4. '].map((h) => text.indexOf(h))
 		expect(order.every((at, i) => at > -1 && (i === 0 || at > (order[i - 1] as number)))).toBe(true)
+	})
+})
+
+describe('jump skill: a message as the target', () => {
+	it('takes "the unit that sent this mail" from the one message in view, and asks when there is not one', () => {
+		const s = section('## 1. Run `cyberfleet jump <argument>`')
+		expect(s).toMatch(/sent this mail/)
+		expect(s).toMatch(/message id/)
+		expect(s).toMatch(/more than one.*ask/i)
 	})
 })
 

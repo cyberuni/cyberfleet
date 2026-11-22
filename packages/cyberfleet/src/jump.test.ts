@@ -302,6 +302,72 @@ describe('jump: back', () => {
 	})
 })
 
+describe('jump: a message id', () => {
+	const MSG = '1791701431577-733fbf'
+
+	function mail(from: AgentRecord | { id: string; handle: string }, to = 'standing-operator', read = false) {
+		const ts = 1791701431577
+		if (!store.getAgent(to)) unit(to, { kind: 'standing', handle: 'operator', pane: null })
+		store.putMessage(to, {
+			id: MSG,
+			from: from.id,
+			fromHandle: from.handle,
+			to,
+			subject: 'held on Q1-Q3',
+			body: 'waiting on the Council',
+			ts,
+			sentAt: new Date(ts).toISOString(),
+		})
+		if (read) store.ackMessage(to, MSG)
+	}
+
+	it('focuses the pane of the unit that sent the message, from any mailbox, read or unread', () => {
+		const sender = unit('s1', { repo: 'color-map', branch: 'feat/x' })
+		unit('other', { repo: 'color-map', branch: 'feat/y' })
+		mail(sender, 'standing-operator', true)
+		expect(run(MSG)).toEqual({ result: 'jumped', id: 's1', handle: 'h-s1', pane: '%s1', message: MSG })
+		expect(focused).toEqual(['%s1'])
+	})
+
+	it('names the repo and branch, and focuses nothing, when the sender has exited', () => {
+		const sender = unit('s1', { repo: 'color-map', branch: 'feat/x', status: 'exited' })
+		mail(sender)
+		expect(run(MSG)).toEqual({
+			result: 'closed',
+			message: MSG,
+			id: 's1',
+			handle: 'h-s1',
+			repo: 'color-map',
+			branch: 'feat/x',
+			dir: join(work, 'wt', 's1'),
+		})
+		expect(focused).toEqual([])
+	})
+
+	it('reports closed when the live sender has no known pane', () => {
+		const sender = unit('s1', { repo: 'color-map', pane: null })
+		mail(sender)
+		expect(run(MSG)).toMatchObject({ result: 'closed', id: 's1', repo: 'color-map' })
+		expect(focused).toEqual([])
+	})
+
+	it("says the sender's record is gone when it was pruned, naming the handle the message carries", () => {
+		mail({ id: 'gone', handle: 'pod-192' })
+		expect(() => run(MSG)).toThrow(/pod-192.*no record/)
+	})
+
+	it('refuses to focus the caller when the caller sent the message', () => {
+		const sender = unit('me', { repo: 'color-map' })
+		mail(sender)
+		expect(() => run(MSG, { selfId: 'me' })).toThrow(/this session/)
+	})
+
+	it('errors on a message id no mailbox holds', () => {
+		unit('s1')
+		expect(() => run(MSG)).toThrow(/no message 1791701431577-733fbf/)
+	})
+})
+
 describe('jump: arguments', () => {
 	it('refuses a target combined with --repo, and --branch or --mentions without --repo', () => {
 		expect(() => run({ target: 'x', repo: 'r', branches: [] })).toThrow(/not both/)
@@ -321,5 +387,11 @@ describe('jump: toon output', () => {
 		).toBe(
 			'result: prose\nwords: auth\nunits[1]{id,handle,branch,repo,brief}:\n  a1,pod,-,r,/b.md\n1 live units — no exact match, nothing focused',
 		)
+	})
+
+	it('renders closed as its fields', () => {
+		expect(
+			jumpToon({ result: 'closed', message: 'm', id: 'a1', handle: 'pod', repo: 'r', branch: 'b', dir: '/w' }),
+		).toBe('result: closed\nmessage: m\nid: a1\nhandle: pod\nrepo: r\nbranch: b\ndir: /w')
 	})
 })

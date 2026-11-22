@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { basename, dirname } from 'node:path'
 import { focusBack, JumpBackError, jumpStatePath, nodeJumpStore, resolveMuxAdapter } from 'cyber-mux'
-import { type AgentRecord, type Exec, realExec, type Store, toonList, toonObject } from 'cyberlegion'
+import { type AgentRecord, type Exec, type Message, realExec, type Store, toonList, toonObject } from 'cyberlegion'
 
 // `cyberfleet jump` — the deterministic half of /jump (cyberfleet#156). It resolves the argument
 // against the live units and focuses exactly one, or returns what is left for the skill to decide:
@@ -39,7 +39,8 @@ interface UnitRow {
 }
 
 export type JumpResult =
-	| { result: 'jumped'; id?: string; handle?: string; pane: string; from?: string }
+	| { result: 'jumped'; id?: string; handle?: string; pane: string; from?: string; message?: string }
+	| { result: 'closed'; message: string; id: string; handle: string; repo: string; branch?: string; dir: string }
 	| { result: 'candidates'; units: UnitRow[] }
 	| { result: 'task'; repo: string; slug: string; number: number }
 	| { result: 'prose'; words: string; units: (UnitRow & { brief?: string })[] }
@@ -64,6 +65,9 @@ function liveUnits(store: Store): AgentRecord[] {
 		.sort((a, b) => a.id.localeCompare(b.id))
 }
 
+/** cyberlegion's message id: the send time in ms, a dash, six hex digits. */
+const MESSAGE_ID = /^\d{13}-[0-9a-f]{6}$/
+
 const TASK = /^(?:([\w.-]+)#|#)?(\d+)$/
 
 export function jump(deps: JumpDeps, req: JumpRequest): JumpResult {
@@ -76,6 +80,8 @@ export function jump(deps: JumpDeps, req: JumpRequest): JumpResult {
 
 	const word = target.trim()
 	if (word === 'back') return goBack(deps)
+
+	if (MESSAGE_ID.test(word)) return senderOf(deps, word)
 
 	const task = TASK.exec(word)
 	if (task) return taskOf(deps, task[1], Number(task[2]))
@@ -155,6 +161,52 @@ function readBrief(store: Store, rec: AgentRecord): string | undefined {
 		}
 	}
 	return store.readBrief(rec.id)
+}
+
+/** The message with this id in any mailbox on the hub, read or unread. Ids are unique hub-wide. */
+function findMessage(store: Store, msgId: string): Message | undefined {
+	for (const a of store.listAgents()) {
+		if (!store.hasMailbox(a.id)) continue
+		const { unread, read } = store.listInbox(a.id)
+		const hit = [...unread, ...read].find((m) => m.id === msgId)
+		if (hit) return hit
+	}
+	return undefined
+}
+
+/**
+ * A message id: focus the pane of the unit that sent it (cyberfleet#192). A sender whose session has
+ * ended is not an error: the result names the repo and branch it was working in, and focuses nothing.
+ * The message carries only the sender's id and handle, so the location comes from its unit record;
+ * once that record is pruned there is nothing left to name.
+ */
+function senderOf(deps: JumpDeps, msgId: string): JumpResult {
+	const msg = findMessage(deps.store, msgId)
+	if (!msg) throw new Error(`no message ${msgId} in any mailbox on this hub`)
+	const rec = deps.store.getAgent(msg.from)
+	if (!rec)
+		throw new Error(
+			`message ${msgId} came from ${msg.fromHandle} (${msg.from}), which has no record on this hub any more — its pane, repo, and branch are not known`,
+		)
+	if (rec.id === deps.selfId) fail(`message ${msgId}`)
+	const pane =
+		rec.status === 'exited' || rec.status === 'stopped'
+			? undefined
+			: (rec.pane?.id ?? deps.store.findPaneByAgentId(rec.id))
+	if (!pane) {
+		const branch = rec.worktree?.branch
+		return {
+			result: 'closed',
+			message: msgId,
+			id: rec.id,
+			handle: rec.handle,
+			repo: repoNameOf(rec),
+			...(branch ? { branch } : {}),
+			dir: rec.worktree?.root ?? rec.cwd,
+		}
+	}
+	deps.focus(pane)
+	return { result: 'jumped', id: rec.id, handle: rec.handle, pane, message: msgId }
 }
 
 function goBack(deps: JumpDeps): JumpResult {
@@ -237,6 +289,7 @@ const ROW = [
 export function jumpToon(r: JumpResult): string {
 	switch (r.result) {
 		case 'jumped':
+		case 'closed':
 		case 'task':
 			return toonObject({ ...r })
 		case 'candidates':
