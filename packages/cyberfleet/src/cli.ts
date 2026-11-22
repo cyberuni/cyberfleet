@@ -117,7 +117,10 @@ rootOpts(program.command('jump'))
 	.description(
 		'focus the one live unit a repo, branch, unit, or task names, or go back — never this session, never a pick among several',
 	)
-	.argument('[target...]', 'back, a unit id/handle/branch/repo name, a task ref (#123, color-map#123), or words')
+	.argument(
+		'[target...]',
+		'back, a unit id/handle/branch/repo name, a task ref (#123, color-map#123), a message id (its sender), or words',
+	)
 	.option('--repo <name>', "pick the live unit in this repo (its primary checkout's folder name)")
 	.option(
 		'--branch <name>',

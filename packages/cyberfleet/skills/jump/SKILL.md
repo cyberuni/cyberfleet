@@ -1,7 +1,7 @@
 ---
 name: jump
-description: "Moves the attached view to the one pane working on a repo, a branch, a pod, a GitHub issue or pull request (`#123`, `color-map#123`), or a task described in words, and back along the last jump. Use when the Council runs /jump, or asks to go to, switch to, or show the pane working on one of these, or to go back to the pane the last jump came from (`/jump back`). Not for opening a new pane or spawning a pod, and not for messaging a unit."
-argument-hint: "[repo|branch|pod|task|back|<prose>]"
+description: "Moves the attached view to the one pane working on a repo, a branch, a pod, a GitHub issue or pull request (`#123`, `color-map#123`), the unit that sent a mail message (by its message id), or a task described in words, and back along the last jump. Use when the Council runs /jump, or asks to go to, switch to, or show the pane working on one of these or the unit that sent this mail, or to go back to the pane the last jump came from (`/jump back`). Not for opening a new pane or spawning a pod, and not for messaging a unit."
+argument-hint: "[repo|branch|pod|task|message|back|<prose>]"
 ---
 
 # Jump
@@ -30,11 +30,17 @@ its `result` field names the kind.
 Claude Code appends the argument as `ARGUMENTS: <value>`; other runtimes pass the text after the
 skill name. With no argument, ask the Council where to jump and stop.
 
+A message id (`1791701431577-733fbf`, as the mail doorbell and the inbox show it) is an argument
+like any other. When the Council asks for "the unit that sent this mail" without an id, pass the
+message id of the one message in view: the doorbell or inbox entry the Council is answering. When
+more than one message could be meant, ask which one and stop.
+
 Pass the argument as it came, quoted as one value. The command prints one result:
 
 | `result` | What it means | Next |
 | -------- | ------------- | ---- |
-| `jumped` | It focused one unit: its `id`, `handle`, and `pane` (`back` also gives `from`). | Step 4 |
+| `jumped` | It focused one unit: its `id`, `handle`, and `pane` (`back` also gives `from`; a message id also gives `message`). | Step 4 |
+| `closed` | A message id whose sender has no open pane: its `id`, `handle`, `repo`, `branch` (when it had one), and `dir`. Nothing was focused. | Step 4 |
 | `candidates` | More than one unit matched. Nothing was focused. | Step 4 |
 | `task` | A task ref: its `repo` name, `slug` (`<owner>/<repo>` from that checkout's `origin`), and `number`. Nothing was focused. | Step 2 |
 | `prose` | No exact match: the `words`, and the live units with `id`, `handle`, `branch`, `repo`, and `brief` (a path). Nothing was focused. | Step 3 |
@@ -77,6 +83,8 @@ stretched to fit.
 
 - `jumped`: one line naming the unit's handle and id and the pane, then that `/jump back` returns.
   After a `back` with no unit at the pane, name the pane alone.
+- `closed`: say the pane of the unit that sent the message has closed, and name its handle, the
+  repo, the branch, and the `dir` it was working in. Do not jump, and do not open a pane there.
 - `candidates`: one row per unit with its id, handle, branch, and repo name, then a line saying the
   Council can narrow the argument (a repo, a branch, or an id). Do not jump.
 - An error: quote the command's error verbatim with its exit code. Do not retry with other flags,
@@ -90,6 +98,7 @@ stretched to fit.
 Before reporting, check the result against what the commands printed:
 
 - A reported jump comes from a `jumped` result, and names the `id`, `handle`, and `pane` it gave.
+- A closed-pane report comes from a `closed` result, and names the `repo` and `branch` it gave.
 - Every `cyberfleet jump` run after the first took an id from a result, or `--repo` with the
   branches `gh` returned. None took a handle, and none was guessed.
 - A candidates report has at least two rows, each a unit from the `candidates` or `prose` result,
