@@ -121,8 +121,7 @@ function unreadOf(store: Store, id: string): MailItem[] {
 		from: m.fromHandle || m.from,
 		...(m.subject ? { subject: m.subject } : {}),
 		sentAt: m.sentAt,
-		// `blocked` is written by a cyberlegion newer than the one pinned (cyberlegion#302).
-		...((m as { blocked?: boolean }).blocked === true ? { blocked: true as const } : {}),
+		...(m.blocked ? { blocked: true as const } : {}),
 	}))
 }
 
