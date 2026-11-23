@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { type AgentRecord, FileStore, send } from 'cyberlegion'
+import { type AgentRecord, FileStore, type Message, send } from 'cyberlegion'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { buildPlan, pool, pruneBeforePlan, type Run, realRun } from './plan.ts'
 
@@ -242,6 +242,24 @@ describe('sessions plan: local facts', () => {
 		const mailed = p.units.find((u) => u.id === 'mailed')
 		expect(mailed).toMatchObject({ rule: '4c', result: 'ask' })
 		expect(mailed?.evidence?.mail?.items[0]).toMatchObject({ from: caller.handle, subject: 'report' })
+	})
+
+	it('carries the blocked mark a message records into the mail it shows (cyberfleet#205)', async () => {
+		unit('mailed', { status: 'exited' })
+		const ts = Date.now()
+		const msg = {
+			from: caller.id,
+			fromHandle: caller.handle,
+			to: 'mailed',
+			body: 'x',
+			ts,
+			sentAt: new Date(ts).toISOString(),
+		}
+		store.putMessage('mailed', { ...msg, id: `${ts}-aaaaaa`, subject: 'Q1', blocked: true } as Message)
+		store.putMessage('mailed', { ...msg, id: `${ts + 1}-bbbbbb`, subject: 'fyi' })
+		const items = (await unitOf('mailed'))?.evidence?.mail?.items
+		expect(items?.find((m) => m.subject === 'Q1')).toMatchObject({ blocked: true })
+		expect(items?.find((m) => m.subject === 'fyi')).not.toHaveProperty('blocked')
 	})
 
 	it('closes an exited unit sharing a worktree whose owner is still recorded, without reading it', async () => {

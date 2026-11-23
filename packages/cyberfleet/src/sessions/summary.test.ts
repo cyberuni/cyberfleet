@@ -33,6 +33,21 @@ const plan: Plan = {
 			reason: 'commits not on the default branch',
 			evidence: { commits: { lines: ['+ c1 a'], more: 12 } },
 		}),
+		u('m', {
+			rule: '4c',
+			result: 'ask',
+			live: false,
+			reason: 'no worktree, unread mail',
+			evidence: {
+				mail: {
+					items: [
+						{ id: 'm1', from: 'pod-1', subject: 'Q1', sentAt: 't1', blocked: true },
+						{ id: 'm2', from: 'pod-2', sentAt: 't2' },
+					],
+					more: 0,
+				},
+			},
+		}),
 		u('k', { rule: '10', result: 'keep', reason: 'pull request open' }),
 		u('g', {
 			rule: '4c',
@@ -47,7 +62,7 @@ describe('sessions summary', () => {
 	const s = summarize(plan, '/tmp/plan.json')
 
 	it('counts live sessions and exited records in scope, apart, leaving out rules 1–3', () => {
-		expect(s.scope).toEqual({ live: 3, exited: 3 })
+		expect(s.scope).toEqual({ live: 3, exited: 4 })
 	})
 
 	it('lists close and ask rows live first, with the ask evidence and how many more', () => {
@@ -55,6 +70,13 @@ describe('sessions summary', () => {
 		expect(s.ask[0]?.evidence).toEqual([
 			{ id: 'a', kind: 'commit', line: '+ c1 a' },
 			{ id: 'a', kind: 'more', line: '12 more commits' },
+		])
+	})
+
+	it('marks unread mail whose sender is blocked on the reader (cyberfleet#205)', () => {
+		expect(s.ask.find((r) => r.id === 'm')?.evidence).toEqual([
+			{ id: 'm', kind: 'mail', line: '[blocked] pod-1 · Q1 · t1' },
+			{ id: 'm', kind: 'mail', line: 'pod-2 · (no subject) · t2' },
 		])
 	})
 
@@ -76,7 +98,7 @@ describe('sessions summary', () => {
 
 	it('prints the groups as toon, marking seats, shared worktrees, and pull requests', () => {
 		const text = summaryToon(s)
-		expect(text).toContain('scope: 3 live sessions, 3 exited records')
+		expect(text).toContain('scope: 3 live sessions, 4 exited records')
 		expect(text).toContain('  s,h-s,live,seat,-,-,8d,seat finished,-')
 		expect(text).toContain('  x,h-x,exited,,-,-,15,work landed,#4')
 		expect(text).toContain('  g,h-g,exited,,-,/wt/owner,4c,"no worktree, session ended",-')

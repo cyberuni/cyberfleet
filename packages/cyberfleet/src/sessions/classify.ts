@@ -27,6 +27,8 @@ export interface MailItem {
 	from: string
 	subject?: string
 	sentAt: string
+	/** The sender is blocked waiting on the reader's answer (`mail send --blocked`). */
+	blocked?: true
 }
 
 /** The checkout a unit works in but does not own (cyberlegion's `sharedWorktree`), read only when

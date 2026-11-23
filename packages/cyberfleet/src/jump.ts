@@ -20,9 +20,38 @@ export interface JumpDeps {
 	exec: Exec
 	/** Focuses a pane, recording the jump in cyber-mux's history. */
 	focus(pane: string): void
+	/** Whether a pane a message recorded is still open, in a multiplexer this session can focus. */
+	paneAlive(pane: OriginPane): boolean
 	/** Follows cyber-mux's jump history for the calling pane. */
 	back(): { from: string; to: string }
 }
+
+/** The pane a message's sender was in when it sent it: cyberlegion's pane locator. */
+interface OriginPane {
+	mux: string
+	id: string
+	terminal?: string
+	window?: string
+	server?: string
+	session?: string
+}
+
+/**
+ * Where a message's sender was when it sent it (cyberlegion#302): a snapshot of its unit record,
+ * so it outlives that record being pruned. Every field is optional, and a message sent before
+ * origins were recorded, or by a cyberlegion that does not record them, has none.
+ */
+export interface MessageOrigin {
+	pane?: OriginPane
+	/** The primary checkout of the sender's repository, else its worktree root. */
+	repo?: string
+	/** The checkout the sender worked in. */
+	worktree?: string
+	branch?: string
+}
+
+/** A message as a newer cyberlegion writes it: `origin`, and `blocked` from `mail send --blocked`. */
+type OriginMessage = Message & { origin?: MessageOrigin; blocked?: boolean }
 
 export interface JumpRequest {
 	target?: string | undefined
@@ -39,8 +68,25 @@ interface UnitRow {
 }
 
 export type JumpResult =
-	| { result: 'jumped'; id?: string; handle?: string; pane: string; from?: string; message?: string }
-	| { result: 'closed'; message: string; id: string; handle: string; repo: string; branch?: string; dir: string }
+	| {
+			result: 'jumped'
+			id?: string
+			handle?: string
+			pane: string
+			from?: string
+			message?: string
+			blocked?: true
+	  }
+	| {
+			result: 'closed'
+			message: string
+			id: string
+			handle: string
+			repo?: string
+			branch?: string
+			dir?: string
+			blocked?: true
+	  }
 	| { result: 'candidates'; units: UnitRow[] }
 	| { result: 'task'; repo: string; slug: string; number: number }
 	| { result: 'prose'; words: string; units: (UnitRow & { brief?: string })[] }
@@ -164,7 +210,7 @@ function readBrief(store: Store, rec: AgentRecord): string | undefined {
 }
 
 /** The message with this id in any mailbox on the hub, read or unread. Ids are unique hub-wide. */
-function findMessage(store: Store, msgId: string): Message | undefined {
+function findMessage(store: Store, msgId: string): OriginMessage | undefined {
 	for (const a of store.listAgents()) {
 		if (!store.hasMailbox(a.id)) continue
 		const { unread, read } = store.listInbox(a.id)
@@ -175,38 +221,71 @@ function findMessage(store: Store, msgId: string): Message | undefined {
 }
 
 /**
- * A message id: focus the pane of the unit that sent it (cyberfleet#192). A sender whose session has
- * ended is not an error: the result names the repo and branch it was working in, and focuses nothing.
- * The message carries only the sender's id and handle, so the location comes from its unit record;
- * once that record is pruned there is nothing left to name.
+ * A message id: focus the pane of the unit that sent it (cyberfleet#192, cyberfleet#205). The pane
+ * the message recorded comes first, then the pane on the sender's live record. A sender whose pane
+ * has closed is not an error: the result names the repo and branch it was working in, from the
+ * message's origin first and the sender's record second, and focuses nothing.
  */
 function senderOf(deps: JumpDeps, msgId: string): JumpResult {
 	const msg = findMessage(deps.store, msgId)
 	if (!msg) throw new Error(`no message ${msgId} in any mailbox on this hub`)
+	const origin = msg.origin
 	const rec = deps.store.getAgent(msg.from)
+	if (msg.from === deps.selfId) fail(`message ${msgId}`)
+	const ended = rec?.status === 'exited' || rec?.status === 'stopped'
+	const blocked = msg.blocked === true ? { blocked: true as const } : {}
+	const who = { id: msg.from, handle: rec?.handle ?? msg.fromHandle }
+
+	const pane = ended
+		? undefined
+		: (originPane(deps, msg) ?? (rec && (rec.pane?.id ?? deps.store.findPaneByAgentId(rec.id))))
+	if (pane) {
+		deps.focus(pane)
+		return { result: 'jumped', ...who, pane, message: msgId, ...blocked }
+	}
+
+	const checkout = origin?.repo ?? origin?.worktree
+	if (checkout) {
+		const branch = origin?.branch
+		const dir = origin?.worktree ?? origin?.repo
+		return {
+			result: 'closed',
+			message: msgId,
+			...who,
+			repo: basename(checkout),
+			...(branch ? { branch } : {}),
+			...(dir ? { dir } : {}),
+			...blocked,
+		}
+	}
 	if (!rec)
 		throw new Error(
 			`message ${msgId} came from ${msg.fromHandle} (${msg.from}), which has no record on this hub any more — its pane, repo, and branch are not known`,
 		)
-	if (rec.id === deps.selfId) fail(`message ${msgId}`)
-	const pane =
-		rec.status === 'exited' || rec.status === 'stopped'
-			? undefined
-			: (rec.pane?.id ?? deps.store.findPaneByAgentId(rec.id))
-	if (!pane) {
-		const branch = rec.worktree?.branch
-		return {
-			result: 'closed',
-			message: msgId,
-			id: rec.id,
-			handle: rec.handle,
-			repo: repoNameOf(rec),
-			...(branch ? { branch } : {}),
-			dir: rec.worktree?.root ?? rec.cwd,
-		}
+	const branch = rec.worktree?.branch
+	return {
+		result: 'closed',
+		message: msgId,
+		...who,
+		repo: repoNameOf(rec),
+		...(branch ? { branch } : {}),
+		dir: rec.worktree?.root ?? rec.cwd,
+		...blocked,
 	}
-	deps.focus(pane)
-	return { result: 'jumped', id: rec.id, handle: rec.handle, pane, message: msgId }
+}
+
+/**
+ * The pane the message recorded, while it is still open and still the sender's: a pane the hub now
+ * gives to another unit (an id reused after a multiplexer restart) is not, and the caller's own
+ * pane is never focused.
+ */
+function originPane(deps: JumpDeps, msg: OriginMessage): string | undefined {
+	const pane = msg.origin?.pane
+	if (!pane || !deps.paneAlive(pane)) return undefined
+	const holder = deps.store.resolvePaneId(pane.id)
+	if (holder !== undefined && holder === deps.selfId) fail(`message ${msg.id}`)
+	if (holder !== undefined && holder !== msg.from) return undefined
+	return pane.id
 }
 
 function goBack(deps: JumpDeps): JumpResult {

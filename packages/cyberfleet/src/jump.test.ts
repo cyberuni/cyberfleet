@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { type AgentRecord, FileStore } from 'cyberlegion'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { type JumpDeps, type JumpRequest, jump, jumpToon } from './jump.ts'
+import { type JumpDeps, type JumpRequest, jump, jumpToon, type MessageOrigin } from './jump.ts'
 
 // `cyberfleet jump` does /jump's deterministic work (cyberfleet#156): it resolves the argument
 // against the live units and focuses one, or returns what the skill must decide. These tests drive
@@ -14,8 +14,10 @@ let store: FileStore
 let focused: string[]
 let backs: number
 let git: Record<string, string>
+let alive: Set<string>
 
 beforeEach(() => {
+	alive = new Set()
 	work = mkdtempSync(join(tmpdir(), 'cf-jump-'))
 	store = new FileStore(join(work, 'hub'))
 	focused = []
@@ -53,6 +55,7 @@ function deps(over: Partial<JumpDeps> = {}): JumpDeps {
 		focus: (pane) => {
 			focused.push(pane)
 		},
+		paneAlive: (pane) => alive.has(`${pane.mux}:${pane.id}`),
 		back: () => {
 			backs++
 			return { from: '%self', to: '%a', skipped: [] }
@@ -305,10 +308,16 @@ describe('jump: back', () => {
 describe('jump: a message id', () => {
 	const MSG = '1791701431577-733fbf'
 
-	function mail(from: AgentRecord | { id: string; handle: string }, to = 'standing-operator', read = false) {
+	function mail(
+		from: AgentRecord | { id: string; handle: string },
+		to = 'standing-operator',
+		read = false,
+		extra: { origin?: MessageOrigin; blocked?: boolean } = {},
+	) {
 		const ts = 1791701431577
 		if (!store.getAgent(to)) unit(to, { kind: 'standing', handle: 'operator', pane: null })
 		store.putMessage(to, {
+			...extra,
 			id: MSG,
 			from: from.id,
 			fromHandle: from.handle,
@@ -360,6 +369,87 @@ describe('jump: a message id', () => {
 		const sender = unit('me', { repo: 'color-map' })
 		mail(sender)
 		expect(() => run(MSG, { selfId: 'me' })).toThrow(/this session/)
+	})
+
+	describe('with the origin the message records (cyberlegion#302)', () => {
+		const ORIGIN: MessageOrigin = {
+			pane: { mux: 'tmux', id: '%9', session: 'fleet' },
+			repo: '/src/color-map',
+			worktree: '/src/color-map.worktrees/pod-192',
+			branch: 'feat/x',
+		}
+		const pruned = { id: 'gone', handle: 'pod-192' }
+
+		it("focuses the origin's pane while it is open, even after the sender's record is pruned", () => {
+			alive.add('tmux:%9')
+			mail(pruned, 'standing-operator', false, { origin: ORIGIN })
+			expect(run(MSG)).toEqual({ result: 'jumped', id: 'gone', handle: 'pod-192', pane: '%9', message: MSG })
+			expect(focused).toEqual(['%9'])
+		})
+
+		it("prefers the origin's pane to the pane on the sender's live record", () => {
+			alive.add('tmux:%9')
+			const sender = unit('s1', { repo: 'color-map' })
+			mail(sender, 'standing-operator', false, { origin: ORIGIN })
+			expect(run(MSG)).toMatchObject({ result: 'jumped', id: 's1', pane: '%9' })
+			expect(focused).toEqual(['%9'])
+		})
+
+		it("falls back to the live record's pane when the origin's pane has closed", () => {
+			const sender = unit('s1', { repo: 'color-map' })
+			mail(sender, 'standing-operator', false, { origin: ORIGIN })
+			expect(run(MSG)).toMatchObject({ result: 'jumped', id: 's1', pane: '%s1' })
+			expect(focused).toEqual(['%s1'])
+		})
+
+		it("names the origin's repo, branch, and worktree when its pane has closed and the record is gone", () => {
+			mail(pruned, 'standing-operator', false, { origin: ORIGIN })
+			expect(run(MSG)).toEqual({
+				result: 'closed',
+				message: MSG,
+				id: 'gone',
+				handle: 'pod-192',
+				repo: 'color-map',
+				branch: 'feat/x',
+				dir: '/src/color-map.worktrees/pod-192',
+			})
+			expect(focused).toEqual([])
+		})
+
+		it("names the origin's checkout over the record's when the sender has exited", () => {
+			alive.add('tmux:%9')
+			const sender = unit('s1', { repo: 'other-repo', branch: 'feat/later', status: 'exited' })
+			mail(sender, 'standing-operator', false, { origin: ORIGIN })
+			expect(run(MSG)).toMatchObject({ result: 'closed', repo: 'color-map', branch: 'feat/x' })
+			expect(focused).toEqual([])
+		})
+
+		it('does not focus an origin pane the hub now gives to another unit', () => {
+			alive.add('tmux:%9')
+			unit('newcomer', { pane: { mux: 'tmux', id: '%9' } })
+			store.putPaneIndex('%9', 'newcomer')
+			mail(pruned, 'standing-operator', false, { origin: ORIGIN })
+			expect(run(MSG)).toMatchObject({ result: 'closed', repo: 'color-map' })
+			expect(focused).toEqual([])
+		})
+
+		it("refuses to focus the caller's own pane", () => {
+			alive.add('tmux:%9')
+			store.putPaneIndex('%9', 'me')
+			mail(pruned, 'standing-operator', false, { origin: ORIGIN })
+			expect(() => run(MSG, { selfId: 'me' })).toThrow(/this session/)
+		})
+
+		it('still says the location is unknown when the origin holds only a closed pane and the record is gone', () => {
+			mail(pruned, 'standing-operator', false, { origin: { pane: { mux: 'tmux', id: '%9' } } })
+			expect(() => run(MSG)).toThrow(/pod-192.*no record/)
+		})
+
+		it('marks a message whose sender is blocked on the reader', () => {
+			alive.add('tmux:%9')
+			mail(pruned, 'standing-operator', false, { origin: ORIGIN, blocked: true })
+			expect(run(MSG)).toMatchObject({ result: 'jumped', blocked: true })
+		})
 	})
 
 	it('errors on a message id no mailbox holds', () => {
