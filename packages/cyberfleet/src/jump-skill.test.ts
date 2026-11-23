@@ -94,6 +94,11 @@ describe('jump skill: a message as the target', () => {
 		expect(s).toMatch(/message id/)
 		expect(s).toMatch(/more than one.*ask/i)
 	})
+
+	it('says when the sender is blocked waiting on the Council (cyberfleet#205)', () => {
+		const s = section('## 4. Report the result')
+		expect(s).toMatch(/`blocked: true`[\s\S]*blocked\s+waiting/)
+	})
 })
 
 describe('jump skill: boundaries', () => {

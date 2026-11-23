@@ -12353,38 +12353,72 @@ function findMessage(store, msgId) {
 	}
 }
 /**
-* A message id: focus the pane of the unit that sent it (cyberfleet#192). A sender whose session has
-* ended is not an error: the result names the repo and branch it was working in, and focuses nothing.
-* The message carries only the sender's id and handle, so the location comes from its unit record;
-* once that record is pruned there is nothing left to name.
+* A message id: focus the pane of the unit that sent it (cyberfleet#192, cyberfleet#205). The pane
+* the message recorded comes first, then the pane on the sender's live record. A sender whose pane
+* has closed is not an error: the result names the repo and branch it was working in, from the
+* message's origin first and the sender's record second, and focuses nothing.
 */
 function senderOf(deps, msgId) {
 	const msg = findMessage(deps.store, msgId);
 	if (!msg) throw new Error(`no message ${msgId} in any mailbox on this hub`);
+	const origin = msg.origin;
 	const rec = deps.store.getAgent(msg.from);
-	if (!rec) throw new Error(`message ${msgId} came from ${msg.fromHandle} (${msg.from}), which has no record on this hub any more — its pane, repo, and branch are not known`);
-	if (rec.id === deps.selfId) fail(`message ${msgId}`);
-	const pane = rec.status === "exited" || rec.status === "stopped" ? void 0 : rec.pane?.id ?? deps.store.findPaneByAgentId(rec.id);
-	if (!pane) {
-		const branch = rec.worktree?.branch;
+	if (msg.from === deps.selfId) fail(`message ${msgId}`);
+	const ended = rec?.status === "exited" || rec?.status === "stopped";
+	const blocked = msg.blocked === true ? { blocked: true } : {};
+	const who = {
+		id: msg.from,
+		handle: rec?.handle ?? msg.fromHandle
+	};
+	const pane = ended ? void 0 : originPane(deps, msg) ?? (rec && (rec.pane?.id ?? deps.store.findPaneByAgentId(rec.id)));
+	if (pane) {
+		deps.focus(pane);
+		return {
+			result: "jumped",
+			...who,
+			pane,
+			message: msgId,
+			...blocked
+		};
+	}
+	const checkout = origin?.repo ?? origin?.worktree;
+	if (checkout) {
+		const branch = origin?.branch;
+		const dir = origin?.worktree ?? origin?.repo;
 		return {
 			result: "closed",
 			message: msgId,
-			id: rec.id,
-			handle: rec.handle,
-			repo: repoNameOf(rec),
+			...who,
+			repo: basename(checkout),
 			...branch ? { branch } : {},
-			dir: rec.worktree?.root ?? rec.cwd
+			...dir ? { dir } : {},
+			...blocked
 		};
 	}
-	deps.focus(pane);
+	if (!rec) throw new Error(`message ${msgId} came from ${msg.fromHandle} (${msg.from}), which has no record on this hub any more — its pane, repo, and branch are not known`);
+	const branch = rec.worktree?.branch;
 	return {
-		result: "jumped",
-		id: rec.id,
-		handle: rec.handle,
-		pane,
-		message: msgId
+		result: "closed",
+		message: msgId,
+		...who,
+		repo: repoNameOf(rec),
+		...branch ? { branch } : {},
+		dir: rec.worktree?.root ?? rec.cwd,
+		...blocked
 	};
+}
+/**
+* The pane the message recorded, while it is still open and still the sender's: a pane the hub now
+* gives to another unit (an id reused after a multiplexer restart) is not, and the caller's own
+* pane is never focused.
+*/
+function originPane(deps, msg) {
+	const pane = msg.origin?.pane;
+	if (!pane || !deps.paneAlive(pane)) return void 0;
+	const holder = deps.store.resolvePaneId(pane.id);
+	if (holder !== void 0 && holder === deps.selfId) fail(`message ${msg.id}`);
+	if (holder !== void 0 && holder !== msg.from) return void 0;
+	return pane.id;
 }
 function goBack(deps) {
 	const { from, to } = deps.back();
@@ -13765,6 +13799,14 @@ rootOpts(program.command("jump")).description("focus the one live unit a repo, b
 		cwd: process.cwd(),
 		exec: realExec,
 		focus: (pane) => selectSessionAdapter(env, realExec).focus(realExec, { id: pane }),
+		paneAlive: (pane) => {
+			try {
+				const adapter = selectSessionAdapter(env, realExec);
+				return adapter.name === pane.mux && adapter.paneExists(realExec, { id: pane.id });
+			} catch {
+				return false;
+			}
+		},
 		back: () => jumpBack(env)
 	}, {
 		target: words.length > 0 ? words.join(" ") : void 0,

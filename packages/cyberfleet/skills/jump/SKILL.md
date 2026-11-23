@@ -40,7 +40,7 @@ Pass the argument as it came, quoted as one value. The command prints one result
 | `result` | What it means | Next |
 | -------- | ------------- | ---- |
 | `jumped` | It focused one unit: its `id`, `handle`, and `pane` (`back` also gives `from`; a message id also gives `message`). | Step 4 |
-| `closed` | A message id whose sender has no open pane: its `id`, `handle`, `repo`, `branch` (when it had one), and `dir`. Nothing was focused. | Step 4 |
+| `closed` | A message id whose sender has no open pane: its `id`, `handle`, and the `repo`, `branch`, and `dir` it sent from, each when known. Nothing was focused. | Step 4 |
 | `candidates` | More than one unit matched. Nothing was focused. | Step 4 |
 | `task` | A task ref: its `repo` name, `slug` (`<owner>/<repo>` from that checkout's `origin`), and `number`. Nothing was focused. | Step 2 |
 | `prose` | No exact match: the `words`, and the live units with `id`, `handle`, `branch`, `repo`, and `brief` (a path). Nothing was focused. | Step 3 |
@@ -85,6 +85,8 @@ stretched to fit.
   After a `back` with no unit at the pane, name the pane alone.
 - `closed`: say the pane of the unit that sent the message has closed, and name its handle, the
   repo, the branch, and the `dir` it was working in. Do not jump, and do not open a pane there.
+- A `jumped` or `closed` result for a message with `blocked: true`: add that the sender is blocked
+  waiting on the Council's answer.
 - `candidates`: one row per unit with its id, handle, branch, and repo name, then a line saying the
   Council can narrow the argument (a repo, a branch, or an id). Do not jump.
 - An error: quote the command's error verbatim with its exit code. Do not retry with other flags,

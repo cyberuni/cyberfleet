@@ -143,6 +143,15 @@ rootOpts(program.command('jump'))
 				cwd: process.cwd(),
 				exec: realExec,
 				focus: (pane) => selectSessionAdapter(env, realExec).focus(realExec, { id: pane }),
+				// A pane in another multiplexer, or none here to ask, cannot be focused from this session.
+				paneAlive: (pane) => {
+					try {
+						const adapter = selectSessionAdapter(env, realExec)
+						return adapter.name === pane.mux && adapter.paneExists(realExec, { id: pane.id })
+					} catch {
+						return false
+					}
+				},
 				back: () => jumpBack(env),
 			},
 			{ target: words.length > 0 ? words.join(' ') : undefined, repo: opts.repo, branches: opts.branch, mentions },
