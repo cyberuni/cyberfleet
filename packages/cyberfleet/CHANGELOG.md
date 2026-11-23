@@ -1,5 +1,20 @@
 # cyberfleet
 
+## 0.11.2
+
+### Patch Changes
+
+- 2553bb2: Pin `cyberlegion` 2.1.0. A session that herdr resumes after a device shutdown now keeps its unit and reads its own mail, and `unit rebind <id>` returns a session that already minted a duplicate to its stranded unit.
+- c62d6b7: Pin `cyberlegion` 2.2.0. Messages now record the sender's origin and the `mail send --blocked` mark, so `cyberfleet jump <message-id>` and the close-sessions sweep read them from the pinned CLI rather than only when a newer cyberlegion happens to be installed.
+- 0b7141a: `cyberfleet jump <message-id>` reads the sender's origin a message records (from cyberlegion's next release): it focuses the recorded pane while it is open, and when the pane has closed it names the recorded repo, branch, and worktree even after the sender's unit record is pruned. A message with `blocked: true` carries that mark in the result, and `/jump` says the sender is waiting on the Council. Messages without an origin resolve through the sender's live record as before.
+- 83c3d15: `/jump` takes a mail message id and focuses the pane of the unit that sent it. When that unit's pane has closed, `cyberfleet jump <message-id>` returns `result: closed` with the unit's repo, branch, and directory instead of focusing anything.
+- 29cebce: The Operator recovers its own return handle when a multiplexer resume leaves its session on another unit. It checks `cyberlegion unit whoami` and runs `unit rebind <order's handle>` rather than `unit register`, which minted a new handle and stranded the pods' reports. Only when rebind refuses does it read the old mailbox with `mail inbox --unit <old>` and tell each pod of the order the new return handle. A Pod applies the same check before each report.
+- 3d467e7: Drop the stale `.plugin/plugin.json`, which outranked the canonical `plugin.json`, and declare `packagePath` in `.agents/universal-plugin.json`, where `universal-plugin` reads it.
+- 3a5b8b7: Update runtime dependencies.
+- 7b84d57: `cyberfleet sessions plan` carries a message's `blocked: true` (from cyberlegion's next release) into the unread mail it shows, and the close-sessions summary marks those lines `[blocked]`.
+- d6fe110: Skills run `cyberfleet` and `cyberlegion` through a forwarding script in their own folder (`node <this skill's folder>/scripts/<bin>.mjs`), written by `universal-plugin plugin build`. The script runs the checkout's CLI in development and the pinned published one on every install route. It replaces the `../../bin/cyberfleet.mjs` path that climbed out of the skill folder, and the PATH, installed-plugin and npx fallback chain for `cyberlegion`.
+- 6d67a6f: Build the plugin manifests with universal-plugin 0.22.0, and check them (`check`, `check-version`) in CI.
+
 ## 0.11.1
 
 ### Patch Changes
