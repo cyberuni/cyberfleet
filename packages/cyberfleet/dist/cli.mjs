@@ -10357,7 +10357,7 @@ function resolvePrimaryRoot(exec) {
 	return dirname(commonDir);
 }
 //#endregion
-//#region ../../node_modules/.pnpm/cyberlegion@2.1.0/node_modules/cyberlegion/dist/index.mjs
+//#region ../../node_modules/.pnpm/cyberlegion@2.2.0/node_modules/cyberlegion/dist/index.mjs
 /**
 * Transitional env-normalization seam (mux.feature: "a pane carrying only the legacy fast-path vars
 * is still honored"). cyber-mux's own fast-path reads `$CYBER_MUX`/`$CYBER_MUX_PANE` — its
@@ -11163,10 +11163,26 @@ function asyncExec(exec) {
 * cyberlegion's own file, not the unit's work, and counting it would keep every slot from reuse in a
 * project that does not track it. */
 const LEASE_IGNORE = [WORKTREE_MARKER];
+/** Snapshot where a sender is running from its record: its pane and its checkout (owned, else
+* shared). `undefined` when there is no record or it locates the sender nowhere. */
+function originOf(rec) {
+	if (!rec) return void 0;
+	const checkout = rec.worktree ?? rec.sharedWorktree;
+	const origin = {
+		...rec.pane ? { pane: rec.pane } : {},
+		...checkout ? {
+			repo: checkout.primaryRoot ?? checkout.root,
+			worktree: checkout.root,
+			...checkout.branch ? { branch: checkout.branch } : {}
+		} : {}
+	};
+	return Object.keys(origin).length > 0 ? origin : void 0;
+}
 /** Write one message into the recipient's inbox. Collision-free by <epochMs>-<hex>. */
 function send(ctx, input) {
 	const toId = resolveRecipient(ctx.store, input.to);
 	const from = loadAgent(ctx.store, input.fromId);
+	const origin = originOf(from);
 	const ts = ctx.now?.() ?? Date.now();
 	const msg = {
 		id: `${ts}-${randomBytes(3).toString("hex")}`,
@@ -11177,6 +11193,8 @@ function send(ctx, input) {
 		body: input.body,
 		...input.thread ? { thread: input.thread } : {},
 		...input.replyTo ? { replyTo: input.replyTo } : {},
+		...origin ? { origin } : {},
+		...input.blocked ? { blocked: true } : {},
 		ts,
 		sentAt: new Date(ts).toISOString()
 	};

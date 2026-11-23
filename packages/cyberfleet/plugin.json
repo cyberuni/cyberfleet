@@ -22,14 +22,14 @@
 				"skills/crimp/scripts/cyberlegion.mjs": {
 					"forward": "cyberlegion",
 					"package": "cyberlegion",
-					"version": "2.1.0"
+					"version": "2.2.0"
 				},
 				"skills/operator/scripts/cyberlegion.mjs": {
 					"forward": "cyberlegion",
 					"package": "cyberlegion",
-					"version": "2.1.0"
+					"version": "2.2.0"
 				},
-				"skills/pod/scripts/cyberlegion.mjs": { "forward": "cyberlegion", "package": "cyberlegion", "version": "2.1.0" }
+				"skills/pod/scripts/cyberlegion.mjs": { "forward": "cyberlegion", "package": "cyberlegion", "version": "2.2.0" }
 			},
 			"harnesses": {
 				"claude-code": {},

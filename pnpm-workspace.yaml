@@ -25,3 +25,5 @@ minimumReleaseAgeExclude:
   - 'cyberlegion@2.0.1'
   # min-release-age: lift universal-plugin@0.23.0 until 2026-11-19T18:00:00Z
   - 'universal-plugin@0.23.0'
+  # min-release-age: exempt cyberlegion@2.2.0 until 2026-11-24T06:00:00Z
+  - 'cyberlegion@2.2.0'
