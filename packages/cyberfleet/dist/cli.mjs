@@ -12977,7 +12977,8 @@ function unreadOf(store, id) {
 		id: m.id,
 		from: m.fromHandle || m.from,
 		...m.subject ? { subject: m.subject } : {},
-		sentAt: m.sentAt
+		sentAt: m.sentAt,
+		...m.blocked === true ? { blocked: true } : {}
 	}));
 }
 /** herdr's `agent_status` per pane id, from one `herdr pane list`. */
@@ -13520,7 +13521,7 @@ function evidenceOf(u) {
 	for (const m of e?.mail?.items ?? []) out.push({
 		id: u.id,
 		kind: "mail",
-		line: `${m.from} · ${m.subject ?? "(no subject)"} · ${m.sentAt}`
+		line: `${m.blocked ? "[blocked] " : ""}${m.from} · ${m.subject ?? "(no subject)"} · ${m.sentAt}`
 	});
 	if (e?.mail?.more) out.push({
 		id: u.id,

@@ -55,7 +55,11 @@ function evidenceOf(u: UnitPlan): EvidenceLine[] {
 	const out: EvidenceLine[] = []
 	const e = u.evidence
 	for (const m of e?.mail?.items ?? [])
-		out.push({ id: u.id, kind: 'mail', line: `${m.from} · ${m.subject ?? '(no subject)'} · ${m.sentAt}` })
+		out.push({
+			id: u.id,
+			kind: 'mail',
+			line: `${m.blocked ? '[blocked] ' : ''}${m.from} · ${m.subject ?? '(no subject)'} · ${m.sentAt}`,
+		})
 	if (e?.mail?.more) out.push({ id: u.id, kind: 'more', line: `${e.mail.more} more messages` })
 	for (const l of e?.commits?.lines ?? []) out.push({ id: u.id, kind: 'commit', line: l })
 	if (e?.commits?.more) out.push({ id: u.id, kind: 'more', line: `${e.commits.more} more commits` })
