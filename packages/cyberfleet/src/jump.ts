@@ -21,37 +21,17 @@ export interface JumpDeps {
 	/** Focuses a pane, recording the jump in cyber-mux's history. */
 	focus(pane: string): void
 	/** Whether a pane a message recorded is still open, in a multiplexer this session can focus. */
-	paneAlive(pane: OriginPane): boolean
+	paneAlive(pane: NonNullable<MessageOrigin['pane']>): boolean
 	/** Follows cyber-mux's jump history for the calling pane. */
 	back(): { from: string; to: string }
-}
-
-/** The pane a message's sender was in when it sent it: cyberlegion's pane locator. */
-interface OriginPane {
-	mux: string
-	id: string
-	terminal?: string
-	window?: string
-	server?: string
-	session?: string
 }
 
 /**
  * Where a message's sender was when it sent it (cyberlegion#302): a snapshot of its unit record,
  * so it outlives that record being pruned. Every field is optional, and a message sent before
- * origins were recorded, or by a cyberlegion that does not record them, has none.
+ * origins were recorded has none.
  */
-export interface MessageOrigin {
-	pane?: OriginPane
-	/** The primary checkout of the sender's repository, else its worktree root. */
-	repo?: string
-	/** The checkout the sender worked in. */
-	worktree?: string
-	branch?: string
-}
-
-/** A message as a newer cyberlegion writes it: `origin`, and `blocked` from `mail send --blocked`. */
-type OriginMessage = Message & { origin?: MessageOrigin; blocked?: boolean }
+export type MessageOrigin = NonNullable<Message['origin']>
 
 export interface JumpRequest {
 	target?: string | undefined
@@ -210,7 +190,7 @@ function readBrief(store: Store, rec: AgentRecord): string | undefined {
 }
 
 /** The message with this id in any mailbox on the hub, read or unread. Ids are unique hub-wide. */
-function findMessage(store: Store, msgId: string): OriginMessage | undefined {
+function findMessage(store: Store, msgId: string): Message | undefined {
 	for (const a of store.listAgents()) {
 		if (!store.hasMailbox(a.id)) continue
 		const { unread, read } = store.listInbox(a.id)
@@ -279,7 +259,7 @@ function senderOf(deps: JumpDeps, msgId: string): JumpResult {
  * gives to another unit (an id reused after a multiplexer restart) is not, and the caller's own
  * pane is never focused.
  */
-function originPane(deps: JumpDeps, msg: OriginMessage): string | undefined {
+function originPane(deps: JumpDeps, msg: Message): string | undefined {
 	const pane = msg.origin?.pane
 	if (!pane || !deps.paneAlive(pane)) return undefined
 	const holder = deps.store.resolvePaneId(pane.id)

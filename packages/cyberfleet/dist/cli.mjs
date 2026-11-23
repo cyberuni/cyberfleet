@@ -12996,7 +12996,7 @@ function unreadOf(store, id) {
 		from: m.fromHandle || m.from,
 		...m.subject ? { subject: m.subject } : {},
 		sentAt: m.sentAt,
-		...m.blocked === true ? { blocked: true } : {}
+		...m.blocked ? { blocked: true } : {}
 	}));
 }
 /** herdr's `agent_status` per pane id, from one `herdr pane list`. */

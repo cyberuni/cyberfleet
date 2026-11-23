@@ -312,7 +312,7 @@ describe('jump: a message id', () => {
 		from: AgentRecord | { id: string; handle: string },
 		to = 'standing-operator',
 		read = false,
-		extra: { origin?: MessageOrigin; blocked?: boolean } = {},
+		extra: { origin?: MessageOrigin; blocked?: true } = {},
 	) {
 		const ts = 1791701431577
 		if (!store.getAgent(to)) unit(to, { kind: 'standing', handle: 'operator', pane: null })
