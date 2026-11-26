@@ -8,7 +8,7 @@ import process$1 from "node:process";
 import { stripVTControlCharacters } from "node:util";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { lstat, readFile, readdir, readlink, realpath, unlink, writeFile } from "node:fs/promises";
-//#region ../../node_modules/.pnpm/commander@15.0.0/node_modules/commander/lib/error.js
+// ../../node_modules/.pnpm/commander@15.1.0/node_modules/commander/lib/error.js
 /**
 * CommanderError class
 */
@@ -42,8 +42,7 @@ var InvalidArgumentError = class extends CommanderError {
 		this.name = this.constructor.name;
 	}
 };
-//#endregion
-//#region ../../node_modules/.pnpm/commander@15.0.0/node_modules/commander/lib/argument.js
+// ../../node_modules/.pnpm/commander@15.1.0/node_modules/commander/lib/argument.js
 var Argument = class {
 	/**
 	* Initialize a new command argument with the given name and description.
@@ -161,8 +160,7 @@ function humanReadableArgName(arg) {
 	const nameOutput = arg.name() + (arg.variadic === true ? "..." : "");
 	return arg.required ? "<" + nameOutput + ">" : "[" + nameOutput + "]";
 }
-//#endregion
-//#region ../../node_modules/.pnpm/commander@15.0.0/node_modules/commander/lib/help.js
+// ../../node_modules/.pnpm/commander@15.1.0/node_modules/commander/lib/help.js
 /**
 * TypeScript import types for JSDoc, used by Visual Studio Code IntelliSense and `npm run typescript-checkJS`
 * https://www.typescriptlang.org/docs/handbook/jsdoc-supported-types.html#import-types
@@ -230,8 +228,8 @@ var Help = class {
 			const removeShort = helpOption.short && cmd._findOption(helpOption.short);
 			const removeLong = helpOption.long && cmd._findOption(helpOption.long);
 			if (!removeShort && !removeLong) visibleOptions.push(helpOption);
-			else if (helpOption.long && !removeLong) visibleOptions.push(cmd.createOption(helpOption.long, helpOption.description));
-			else if (helpOption.short && !removeShort) visibleOptions.push(cmd.createOption(helpOption.short, helpOption.description));
+			else if (helpOption.long && !removeLong) visibleOptions.push(cmd.createOption(helpOption.long, helpOption.description).helpGroup(helpOption.helpGroupHeading));
+			else if (helpOption.short && !removeShort) visibleOptions.push(cmd.createOption(helpOption.short, helpOption.description).helpGroup(helpOption.helpGroupHeading));
 		}
 		if (this.sortOptions) visibleOptions.sort(this.compareOptions);
 		return visibleOptions;
@@ -636,8 +634,7 @@ var Help = class {
 		return wrappedLines.join("\n");
 	}
 };
-//#endregion
-//#region ../../node_modules/.pnpm/commander@15.0.0/node_modules/commander/lib/option.js
+// ../../node_modules/.pnpm/commander@15.1.0/node_modules/commander/lib/option.js
 var Option = class {
 	/**
 	* Initialize a new `Option` with the given `flags` and `description`.
@@ -650,7 +647,7 @@ var Option = class {
 		this.description = description || "";
 		this.required = flags.includes("<");
 		this.optional = flags.includes("[");
-		this.variadic = /\w\.\.\.[>\]]$/.test(flags);
+		this.variadic = /\p{ID_Continue}\.\.\.[>\]]$/u.test(flags);
 		this.mandatory = false;
 		const optionFlags = splitOptionFlags(flags);
 		this.short = optionFlags.shortFlag;
@@ -934,8 +931,7 @@ function splitOptionFlags(flags) {
 		longFlag
 	};
 }
-//#endregion
-//#region ../../node_modules/.pnpm/commander@15.0.0/node_modules/commander/lib/suggestSimilar.js
+// ../../node_modules/.pnpm/commander@15.1.0/node_modules/commander/lib/suggestSimilar.js
 const maxDistance = 3;
 function editDistance(a, b) {
 	if (Math.abs(a.length - b.length) > maxDistance) return Math.max(a.length, b.length);
@@ -986,8 +982,7 @@ function suggestSimilar(word, candidates) {
 	if (similar.length === 1) return `\n(Did you mean ${similar[0]}?)`;
 	return "";
 }
-//#endregion
-//#region ../../node_modules/.pnpm/commander@15.0.0/node_modules/commander/lib/command.js
+// ../../node_modules/.pnpm/commander@15.1.0/node_modules/commander/lib/command.js
 var Command = class Command extends EventEmitter {
 	/**
 	* Initialize a new `Command`.
@@ -1737,7 +1732,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
 	getOptionValueSourceWithGlobals(key) {
 		let source;
 		this._getCommandAndAncestors().forEach((cmd) => {
-			if (cmd.getOptionValueSource(key) !== void 0) source = cmd.getOptionValueSource(key);
+			if (Object.hasOwn(cmd._optionValueSources, key)) source = cmd.getOptionValueSource(key);
 		});
 		return source;
 	}
@@ -2246,7 +2241,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
 			return arg.length > 1 && arg[0] === "-";
 		}
 		const negativeNumberArg = (arg) => {
-			if (!/^-(\d+|\d*\.\d+)(e[+-]?\d+)?$/.test(arg)) return false;
+			if (!/^-(\d+|\d*\.\d+)([eE][+-]?\d+)?$/.test(arg)) return false;
 			return !this._getCommandAndAncestors().some((cmd) => cmd.options.map((opt) => opt.short).some((short) => /^-\d$/.test(short)));
 		};
 		let activeVariadicOption = null;
@@ -2646,7 +2641,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
 	* (This does not override a group set directly on the subcommand using .helpGroup().)
 	*
 	* @example
-	* program.commandsGroup('Development Commands:);
+	* program.commandsGroup('Development Commands:');
 	* program.command('watch')...
 	* program.command('lint')...
 	* ...
@@ -2815,7 +2810,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
 	* Pass in false to disable the built-in help option.
 	*
 	* @example
-	* program.helpOption('-?, --help' 'show help'); // customise
+	* program.helpOption('-?, --help', 'show help'); // customise
 	* program.helpOption(false); // disable
 	*
 	* @param {(string | boolean)} flags
@@ -2937,12 +2932,12 @@ function incrementNodeInspectorPort(args) {
 		let debugHost = "127.0.0.1";
 		let debugPort = "9229";
 		let match;
-		if ((match = arg.match(/^(--inspect(-brk)?)$/)) !== null) debugOption = match[1];
-		else if ((match = arg.match(/^(--inspect(-brk|-port)?)=([^:]+)$/)) !== null) {
+		if ((match = arg.match(/^(--inspect(-brk|-wait)?)$/)) !== null) debugOption = match[1];
+		else if ((match = arg.match(/^(--inspect(-brk|-port|-wait)?)=(\[[^\]]+\]|[^:]+)$/)) !== null) {
 			debugOption = match[1];
 			if (/^\d+$/.test(match[3])) debugPort = match[3];
 			else debugHost = match[3];
-		} else if ((match = arg.match(/^(--inspect(-brk|-port)?)=([^:]+):(\d+)$/)) !== null) {
+		} else if ((match = arg.match(/^(--inspect(-brk|-port|-wait)?)=(\[[^\]]+\]|[^:]+):(\d+)$/)) !== null) {
 			debugOption = match[1];
 			debugHost = match[3];
 			debugPort = match[4];
@@ -2962,8 +2957,7 @@ function useColor() {
 	if (process$1.env.FORCE_COLOR || process$1.env.CLICOLOR_FORCE !== void 0) return true;
 }
 new Command();
-//#endregion
-//#region ../../node_modules/.pnpm/cyber-mux@0.12.0/node_modules/cyber-mux/dist/exec-Bmdcg_T7.mjs
+// ../../node_modules/.pnpm/cyber-mux@0.12.0/node_modules/cyber-mux/dist/exec-Bmdcg_T7.mjs
 const nodeExec$1 = (cmd, args) => {
 	try {
 		const out = execFileSync(cmd, args, {
@@ -2990,8 +2984,7 @@ const nodeExec$1 = (cmd, args) => {
 function withReason(exec, message) {
 	return exec.lastError ? `${message} — ${exec.lastError}` : message;
 }
-//#endregion
-//#region ../../node_modules/.pnpm/cyber-mux@0.12.0/node_modules/cyber-mux/dist/backend-D3VSsev4.mjs
+// ../../node_modules/.pnpm/cyber-mux@0.12.0/node_modules/cyber-mux/dist/backend-D3VSsev4.mjs
 const KNOWN_MUX = [
 	"tmux",
 	"rmux",
@@ -9227,8 +9220,7 @@ function resolveMuxAdapter(env, exec = nodeExec$1) {
 	if (probe.mux === "screen") throw new Error("cyber-mux detected GNU Screen, which it cannot drive: Screen addresses its split regions positionally (no per-pane id) and leaves $WINDOW unset in panes opened via `screen -X`, so a pane has no stable identity to send to, read from, or self-identify by. Run inside tmux ($TMUX), rmux ($RMUX set), herdr ($HERDR_ENV=1), wezterm ($WEZTERM_PANE set), zellij ($ZELLIJ set), or cmux ($CMUX_WORKSPACE_ID set) instead.");
 	throw new Error("cyber-mux requires a session backend — run inside tmux ($TMUX), rmux ($RMUX set), herdr ($HERDR_ENV=1), wezterm ($WEZTERM_PANE set), zellij ($ZELLIJ set), cmux ($CMUX_WORKSPACE_ID set), or otty ($OTTY_PANE_ID set)");
 }
-//#endregion
-//#region ../../node_modules/.pnpm/cyber-agentkit@2.1.0/node_modules/cyber-agentkit/dist/worktrees.js
+// ../../node_modules/.pnpm/cyber-agentkit@2.14.0/node_modules/cyber-agentkit/dist/worktrees.js
 /**
 * Whether a checkout has uncommitted changes, tracked or untracked, or `undefined` when git could not
 * say. `undefined` is not `false`: a caller deciding whether a worktree is safe to reuse must not read
@@ -10301,8 +10293,7 @@ async function exists(path) {
 		return false;
 	}
 }
-//#endregion
-//#region ../../node_modules/.pnpm/cyber-mux@0.12.0/node_modules/cyber-mux/dist/worktree.mjs
+// ../../node_modules/.pnpm/cyber-mux@0.12.0/node_modules/cyber-mux/dist/worktree.mjs
 /**
 * This module's own refusals and failures — plain cyber-mux prose, never a dependency's raw words.
 * `reportWorktreeFailure` (`cli.ts`) forwards a `WorktreeGitError`'s message onto stdout verbatim
@@ -10356,8 +10347,7 @@ function resolvePrimaryRoot(exec) {
 	if (!commonDir) throw new WorktreeGitError("cannot resolve the primary checkout — not inside a git repository");
 	return dirname(commonDir);
 }
-//#endregion
-//#region ../../node_modules/.pnpm/cyberlegion@2.2.0/node_modules/cyberlegion/dist/index.mjs
+// ../../node_modules/.pnpm/cyberlegion@2.2.0/node_modules/cyberlegion/dist/index.mjs
 /**
 * Transitional env-normalization seam (mux.feature: "a pane carrying only the legacy fast-path vars
 * is still honored"). cyber-mux's own fast-path reads `$CYBER_MUX`/`$CYBER_MUX_PANE` — its
@@ -12072,8 +12062,7 @@ async function awaitReply(ctx, input) {
 		await sleep(POLL_MS$1);
 	}
 }
-//#endregion
-//#region src/project-address.ts
+// src/project-address.ts
 const KEY_SCHEME = "cyberlegion";
 /** The project address of a checkout: a path in any checkout, a key this returned, or a unique name. */
 function projectAddressOf(ctx, ref) {
@@ -12085,8 +12074,7 @@ function projectAddressOf(ctx, ref) {
 		home: project.root
 	};
 }
-//#endregion
-//#region src/captain.ts
+// src/captain.ts
 const CAPTAIN_SERVICE = "captain";
 /**
 * Where the project's Captain stands, read-only: no claim, no start. A project whose Captain was
@@ -12262,8 +12250,7 @@ function writeBinding(ctx, binding) {
 	renameSync(tmp, file);
 	return binding;
 }
-//#endregion
-//#region src/jump.ts
+// src/jump.ts
 /** A unit's repo name: the folder of its primary checkout, else of its cwd. cyberlegion's rule. */
 function repoNameOf(rec) {
 	return basename(rec.worktree?.primaryRoot ?? rec.cwd);
@@ -12544,8 +12531,7 @@ function jumpToon(r) {
 		}], `${r.units.length} live units — no exact match, nothing focused`)].join("\n");
 	}
 }
-//#endregion
-//#region src/sdd/hal.ts
+// src/sdd/hal.ts
 /**
 * Infer whether a CR's persisted gate lines show a self-assertion the run-level leash did not
 * cover.
@@ -12595,8 +12581,7 @@ function computeNeedsCouncil(ledger, hasHaltLine) {
 	}
 	return false;
 }
-//#endregion
-//#region src/sdd/read.ts
+// src/sdd/read.ts
 /**
 * Locate every project's ledger sibling dir under the three SDD spec conventions this reader
 * supports: `.agents/specs/<project>/` (multi-project) and `.agents/spec/` (single-project, named
@@ -12805,8 +12790,7 @@ function readSpecStatus(agentsRoot, project) {
 	}
 	return null;
 }
-//#endregion
-//#region src/missions.ts
+// src/missions.ts
 /**
 * Resolve the root under which `.agents/` lives — the primary checkout (so `missions` sees the
 * whole fleet's SDD state regardless of which ship's worktree it is invoked from), falling back to
@@ -12882,8 +12866,7 @@ function buildMissionRow(agentsRoot, agent) {
 function buildMissions(agentsRoot, agents) {
 	return agents.map((a) => buildMissionRow(agentsRoot, a));
 }
-//#endregion
-//#region src/sessions/classify.ts
+// src/sessions/classify.ts
 /** The marker cyberlegion stamps into every worktree it spawns; `unit close` sets it aside too. */
 const MARKER = "?? .agents/cyberlegion/config.json";
 const SHOWN = 10;
@@ -12954,8 +12937,7 @@ function classify(f) {
 	if (leftover.length > 0) return v("14", "ask", "work landed, leftover files", { leftover: cap(leftover) });
 	return v("15", "close", "work landed");
 }
-//#endregion
-//#region src/sessions/plan.ts
+// src/sessions/plan.ts
 const realRun = (cmd, args, cwd) => new Promise((resolve) => {
 	execFile(cmd, args, {
 		cwd,
@@ -13325,8 +13307,7 @@ function readPlan(path) {
 	if (plan?.version !== 1 || !Array.isArray(plan.units)) throw new Error(`${path} is not a cyberfleet sessions plan`);
 	return plan;
 }
-//#endregion
-//#region src/sessions/ask.ts
+// src/sessions/ask.ts
 const ASK_BUDGET_MS = 12e4;
 /** Read a reply body: `DONE`, `UNFINISHED: <reason>`, or anything else. */
 function readAnswer(body) {
@@ -13417,8 +13398,7 @@ async function askUnits(input) {
 	plan.askedAt = new Date(now()).toISOString();
 	return plan;
 }
-//#endregion
-//#region src/sessions/close.ts
+// src/sessions/close.ts
 function changed(was, now) {
 	const diff = [];
 	if (was.status !== now.status) diff.push(`status ${was.status} → ${now.status}`);
@@ -13514,8 +13494,7 @@ async function closeUnits(input) {
 	}
 	return out;
 }
-//#endregion
-//#region src/sessions/summary.ts
+// src/sessions/summary.ts
 /** Rules 1–3 decide units outside this sweep: this session, standing owners, other multiplexers. */
 const OUT_OF_SCOPE = /* @__PURE__ */ new Set([
 	"1",
@@ -13724,8 +13703,7 @@ function closeToon(out) {
 		}
 	], `${out.refused.length} refused`)].join("\n");
 }
-//#endregion
-//#region src/cli.ts
+// src/cli.ts
 function ctxOf(opts) {
 	return {
 		store: new FileStore(resolveRoot({
@@ -14009,5 +13987,4 @@ program.parseAsync(process.argv).catch((err) => {
 	process.stderr.write(`${err instanceof Error ? err.message : String(err)}\n`);
 	process.exit(1);
 });
-//#endregion
 export {};
