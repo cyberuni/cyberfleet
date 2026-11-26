@@ -1,5 +1,5 @@
 // Written by `universal-plugin plugin build` to forward to the cyberfleet CLI of cyberfleet. Edit plugin.json, not this file.
-globalThis.__SKILL_SCRIPT__ = {"package":"cyberfleet","bin":"cyberfleet","version":"0.11.2","entry":"skills/close-sessions/scripts/cyberfleet.mjs","commands":{},"forward":"own"};
+globalThis.__SKILL_SCRIPT__ = {"package":"cyberfleet","bin":"cyberfleet","version":"0.11.3","entry":"skills/close-sessions/scripts/cyberfleet.mjs","commands":{},"forward":"own"};
 import { spawnSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
