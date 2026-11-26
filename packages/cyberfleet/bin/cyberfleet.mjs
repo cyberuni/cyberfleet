@@ -20,4 +20,6 @@ if (!existsSync(cli)) {
 	process.exit(1)
 }
 
-await import(cli)
+// A literal specifier, not `cli`: the skill forwarders read the bin's imports to confirm the local
+// build is present, and treat a computed import as unverifiable, falling back to npx (issue #213).
+await import('../dist/cli.mjs')
