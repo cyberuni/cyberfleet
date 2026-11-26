@@ -23,3 +23,5 @@ minimumReleaseAgeExclude:
   - astro@7.2.8
   # min-release-age: exempt cyberlegion@2.2.0 until 2026-11-24T06:00:00Z
   - 'cyberlegion@2.2.0'
+  # min-release-age: exempt universal-plugin@0.24.1 until 2026-11-27T06:00:00Z
+  - 'universal-plugin@0.24.1'
